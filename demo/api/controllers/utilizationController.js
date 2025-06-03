@@ -9,15 +9,11 @@ const UtilizationReport = require('../models/UtilizationReport');
 const Cubicle = require('../models/Cubicle');
 const Reservation = require('../models/Reservation');
 const { validarUsuario, validarAdmin } = require('../middleware/auth');
-const NotificationService = require('../services/NotificationService');
 
 /**
  * @file utilizationController.js
  * Express router for utilization report management endpoints.
  */
-
-// Initialize notification service
-const notificationService = new NotificationService();
 
 /**
  * Generate utilization report data for a given week
@@ -155,78 +151,25 @@ async function generateReportData(startDate, endDate) {
       };
     }).sort((a, b) => b.totalReservations - a.totalReservations);
 
-    // Enhanced Advanced analytics with more meaningful data
+    // Advanced analytics
     const peakHours = [
-      { hour: 8, utilizationPercent: Math.round(avgUtilization * 0.6), description: 'Early Morning' },
-      { hour: 9, utilizationPercent: Math.round(avgUtilization * 0.8), description: 'Morning Peak' },
-      { hour: 10, utilizationPercent: Math.round(avgUtilization * 1.2), description: 'Peak Usage' },
-      { hour: 11, utilizationPercent: Math.round(avgUtilization * 1.1), description: 'High Activity' },
-      { hour: 12, utilizationPercent: Math.round(avgUtilization * 0.7), description: 'Lunch Break' },
-      { hour: 13, utilizationPercent: Math.round(avgUtilization * 0.9), description: 'Post-Lunch' },
-      { hour: 14, utilizationPercent: Math.round(avgUtilization * 1.1), description: 'Afternoon Peak' },
-      { hour: 15, utilizationPercent: Math.round(avgUtilization * 0.9), description: 'Late Afternoon' },
-      { hour: 16, utilizationPercent: Math.round(avgUtilization * 0.7), description: 'End of Day' },
-      { hour: 17, utilizationPercent: Math.round(avgUtilization * 0.4), description: 'Evening' }
+      { hour: 9, utilizationPercent: Math.round(avgUtilization * 0.8) },
+      { hour: 10, utilizationPercent: Math.round(avgUtilization * 1.2) },
+      { hour: 14, utilizationPercent: Math.round(avgUtilization * 1.1) },
+      { hour: 15, utilizationPercent: Math.round(avgUtilization * 0.9) }
     ];
-
-    // Calculate week-over-week trend by comparing with previous week
-    let weekOverWeekChange = 0;
-    let utilizationTrend = 'stable';
-    try {
-      const prevWeekStart = new Date(startDate);
-      prevWeekStart.setDate(prevWeekStart.getDate() - 7);
-      const prevWeekEnd = new Date(endDate);
-      prevWeekEnd.setDate(prevWeekEnd.getDate() - 7);
-      
-      const prevWeekData = await generateReportData(prevWeekStart, prevWeekEnd);
-      if (prevWeekData.summary.avgUtilization > 0) {
-        weekOverWeekChange = Math.round(
-          ((avgUtilization - prevWeekData.summary.avgUtilization) / prevWeekData.summary.avgUtilization) * 100
-        );
-        utilizationTrend = weekOverWeekChange > 5 ? 'increasing' : 
-                          weekOverWeekChange < -5 ? 'decreasing' : 'stable';
-      }
-    } catch (error) {
-      // Previous week data not available
-    }
-
-    // Enhanced efficiency metrics
-    const workingDaysInWeek = daily.filter(day => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(day.dayOfWeek)).length;
-    const weekendDaysInWeek = daily.filter(day => ['Saturday', 'Sunday'].includes(day.dayOfWeek)).length;
-    
-    const workdayAvgUtilization = daily
-      .filter(day => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(day.dayOfWeek))
-      .reduce((sum, day) => sum + day.utilizationPercent, 0) / workingDaysInWeek || 0;
-      
-    const weekendAvgUtilization = daily
-      .filter(day => ['Saturday', 'Sunday'].includes(day.dayOfWeek))
-      .reduce((sum, day) => sum + day.utilizationPercent, 0) / weekendDaysInWeek || 0;
 
     const advanced = {
       peakHours,
       trendAnalysis: {
-        weekOverWeekChange,
-        utilizationTrend,
-        predictedNextWeek: Math.round(avgUtilization + (weekOverWeekChange * 0.1)),
-        workdayVsWeekend: {
-          workdayAverage: Math.round(workdayAvgUtilization),
-          weekendAverage: Math.round(weekendAvgUtilization),
-          difference: Math.round(workdayAvgUtilization - weekendAvgUtilization)
-        }
+        weekOverWeekChange: 0, // Would need previous week data
+        utilizationTrend: 'stable',
+        predictedNextWeek: Math.round(avgUtilization)
       },
       efficiency: {
         spaceTurnover: totalReservations > 0 ? +(totalCubicles / totalReservations).toFixed(2) : 0,
         averageSessionDuration: 8, // Assuming 8-hour sessions
-        utilizationEfficiency: Math.round(avgUtilization),
-        capacityUtilization: Math.round((totalReservations / (totalCubicles * daily.length)) * 100),
-        peakCapacityStrain: Math.round((peakUtilization / 100) * totalCubicles),
-        recommendedCapacity: Math.round(totalCubicles * 1.2) // 20% buffer recommendation
-      },
-      insights: {
-        mostActiveDay: daily.reduce((max, day) => day.utilizationPercent > max.utilizationPercent ? day : max, daily[0]),
-        leastActiveDay: daily.reduce((min, day) => day.utilizationPercent < min.utilizationPercent ? day : min, daily[0]),
-        consistencyScore: Math.round(100 - (Math.abs(peakUtilization - lowestUtilization) * 2)), // Lower variance = higher consistency
-        growthIndicator: weekOverWeekChange > 0 ? 'expanding' : weekOverWeekChange < 0 ? 'contracting' : 'stable'
+        utilizationEfficiency: Math.round(avgUtilization)
       }
     };
 
@@ -374,15 +317,6 @@ router.post('/generate', validarUsuario, validarAdmin, [
 
     await report.save();
 
-    // Send notifications after successful report generation
-    try {
-      await notificationService.sendSlackReportNotification(report, 'custom');
-      await notificationService.createMondayTask(report);
-    } catch (notificationError) {
-      // Log notification errors but don't fail the request
-      console.error('Notification error:', notificationError.message);
-    }
-
     res.status(201).json(report);
   } catch (err) {
     res.status(500).json({ error: 'Error generating utilization report', details: err.message });
@@ -433,15 +367,6 @@ router.post('/generate-current', validarUsuario, validarAdmin, async (req, res) 
     });
 
     await report.save();
-
-    // Send notifications after successful report generation
-    try {
-      await notificationService.sendSlackReportNotification(report, 'current-week');
-      await notificationService.createMondayTask(report);
-    } catch (notificationError) {
-      // Log notification errors but don't fail the request
-      console.error('Notification error:', notificationError.message);
-    }
 
     res.status(201).json(report);
   } catch (err) {

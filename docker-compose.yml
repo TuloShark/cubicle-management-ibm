@@ -1,83 +1,50 @@
 version: "3.8"
-
 services:
-  # MongoDB Database
-  mongodb:
-    image: mongo:7
-    container_name: space-optimization-mongodb
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: admin
-      MONGO_INITDB_ROOT_PASSWORD: password
-      MONGO_INITDB_DATABASE: space_optimization
+  mongo:
+    image: mongo:5.0
     ports:
       - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-      - ./api/seed.js:/docker-entrypoint-initdb.d/seed.js:ro
-    networks:
-      - space-optimization-network
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  # Backend API Service
-  api:
-    build: 
-      context: ./api
-      dockerfile: Dockerfile
-    container_name: space-optimization-api
+    command: ["--quiet"]
     environment:
-      - NODE_ENV=production
-      - MONGODB_URI=mongodb://admin:password@mongodb:27017/space_optimization?authSource=admin
-      - PORT=3000
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+  api:
+    build: ./demo/api
     ports:
       - "3000:3000"
     depends_on:
-      mongodb:
-        condition: service_healthy
-    volumes:
-      - ./api:/usr/src/app
-      - /usr/src/app/node_modules
-    networks:
-      - space-optimization-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
-
-  # Frontend Service
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: space-optimization-frontend
+      - mongo
     environment:
-      - VITE_API_BASE_URL=http://localhost:3000
+      - MONGO_URI=mongodb://admin:password@mongo:27017/space_optimization?authSource=admin
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+  frontend:
+    build: ./demo/frontend
     ports:
       - "8080:80"
     depends_on:
       api:
         condition: service_healthy
-    networks:
-      - space-optimization-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost"]
-      interval: 15s
+      interval: 10s
       timeout: 5s
-      retries: 3
-      start_period: 30s
-    restart: unless-stopped
-
-volumes:
-  mongodb_data:
-    driver: local
-
-networks:
-  space-optimization-network:
-    driver: bridge
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
