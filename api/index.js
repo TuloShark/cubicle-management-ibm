@@ -139,6 +139,7 @@ async function start() {
 
   // Healthcheck endpoint for Docker
   app.get('/health', (req, res) => res.send('OK'));
+  app.get('/api/health', (req, res) => res.json({ status: 'OK', timestamp: new Date().toISOString() }));
 
   // Test endpoint for notification system
   app.post('/api/test/health-notification', validarUsuario, validarAdmin, async (req, res) => {
