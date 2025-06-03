@@ -1,0 +1,123 @@
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  /* Remove flex layout that causes scrolling issues */
+  min-width: 320px;
+  min-height: 100vh;
+  /* Ensure normal document flow */
+  overflow-x: hidden; /* Prevent horizontal scroll */
+  /* Force single scrollbar behavior */
+  height: 100%;
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
+
+.card {
+  padding: 2em;
+}
+
+#app {
+  /* Remove fixed width and centering that can cause layout issues */
+  width: 100%;
+  min-height: 100vh;
+  /* Ensure app doesn't create its own scroll context */
+  position: relative;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+  button {
+    background-color: #f9f9f9;
+  }
+}
+
+/* Fix double scrollbar issues caused by Carbon Design System */
+html {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: 100% !important;
+}
+
+body {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  height: auto !important;
+}
+
+/* Ensure Carbon components don't create additional scroll contexts */
+.bx--content,
+.bx--body,
+[class*="bx--"] {
+  overflow-x: visible !important;
+}
+
+/* Prevent modal backdrop from affecting document scroll */
+.bx--modal,
+.cv-modal {
+  /* Don't hide scrollbar, just prevent scroll jumping */
+  overflow-x: hidden !important;
+}
+
+/* Ensure modal container doesn't interfere with document scroll */
+.bx--modal-container {
+  overflow: visible !important;
+}
+
+/* Keep vertical scrollbar visible when Carbon modal is open */
+body.bx--body--with-modal-open,
+html.bx--body--with-modal-open {
+  overflow-y: scroll !important;
+  overflow-x: hidden !important;
+}
