@@ -29,9 +29,9 @@
             >Utilization Reports</cv-side-nav-menu-item>
             <cv-side-nav-menu-item 
               href="javascript:void(0)" 
-              :active="$route.name === 'manage'" 
-              @click="navigate('manage')"
-            >Manage</cv-side-nav-menu-item>
+              :active="$route.name === 'notifications'" 
+              @click="navigate('notifications')"
+            >Notifications</cv-side-nav-menu-item>
           </cv-side-nav-menu>
           <cv-side-nav-menu-divider/>
           <cv-side-nav-menu title="User">

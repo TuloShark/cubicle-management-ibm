@@ -1,0 +1,529 @@
+<template>
+  <div class="notifications-container">
+    <div class="page-header">
+      <h1 class="page-title">Notifications</h1>
+      <p class="page-subtitle">Manage cubicle sequence notifications and integrations</p>
+    </div>
+    
+    <!-- Main Content Area -->
+    <cv-grid class="notifications-grid">
+      <!-- Settings and Actions Row -->
+      <cv-row class="settings-row">
+        <!-- Settings Column -->
+        <cv-column :sm="4" :md="8" :lg="8">
+          <cv-tile class="settings-tile">
+            <h3 class="tile-title">Settings</h3>
+            
+            <cv-form class="settings-form">
+              <div class="settings-group">
+                <cv-toggle 
+                  v-model="notificationSettings.emailEnabled"
+                  label="Email Notifications"
+                  @change="updateSettings"
+                />
+                <cv-toggle 
+                  v-model="notificationSettings.slackEnabled"
+                  label="Slack Notifications"
+                  @change="updateSettings"
+                />
+                <cv-toggle 
+                  v-model="notificationSettings.mondayEnabled"
+                  label="Monday.com Notifications"
+                  @change="updateSettings"
+                />
+              </div>
+              
+              <cv-text-input
+                v-model="notificationSettings.email"
+                label="Email Address"
+                placeholder="Enter your email"
+                @input="updateSettings"
+              />
+              
+              <cv-dropdown
+                v-model="notificationSettings.frequency"
+                label="Frequency"
+                :options="frequencyOptions"
+                @change="updateSettings"
+              />
+            </cv-form>
+          </cv-tile>
+        </cv-column>
+        
+        <!-- Actions Column -->
+        <cv-column :sm="4" :md="8" :lg="8">
+          <cv-tile class="actions-tile">
+            <h3 class="tile-title">Actions</h3>
+            
+            <div class="actions-group">
+              <cv-button 
+                kind="primary" 
+                @click="sendCubicleSequenceNotification"
+                :disabled="sendingNotification"
+              >
+                <template v-if="sendingNotification">Sending...</template>
+                <template v-else>Send Cubicle Sequence</template>
+              </cv-button>
+              
+              <cv-button 
+                kind="secondary" 
+                @click="sendSlackNotification"
+                :disabled="sendingSlack"
+              >
+                <template v-if="sendingSlack">Sending...</template>
+                <template v-else>Send Slack Update</template>
+              </cv-button>
+              
+              <cv-button 
+                kind="tertiary" 
+                @click="createMondayTask"
+                :disabled="sendingMonday"
+              >
+                <template v-if="sendingMonday">Creating...</template>
+                <template v-else>Create Monday Task</template>
+              </cv-button>
+              
+              <cv-button 
+                kind="ghost" 
+                @click="refreshUserData"
+                :disabled="refreshingData"
+              >
+                <template v-if="refreshingData">Refreshing...</template>
+                <template v-else>Refresh Data</template>
+              </cv-button>
+            </div>
+          </cv-tile>
+        </cv-column>
+      </cv-row>
+      
+      <!-- User Data Table -->
+      <cv-row>
+        <cv-column :sm="4" :md="16" :lg="16">
+          <cv-tile>
+            <h3 class="tile-title">User Data</h3>
+            
+            <div v-if="loading" class="loading-container">
+              <cv-loading />
+            </div>
+            
+            <div v-else-if="userTableData.length === 0" class="empty-state">
+              <p>No user data available</p>
+              <cv-button kind="tertiary" @click="refreshUserData">Refresh Data</cv-button>
+            </div>
+            
+            <div v-else class="table-container">
+              <cv-data-table
+                :rows="userTableData"
+                :headers="userTableHeaders"
+              >
+                <template slot="cell" slot-scope="props">
+                  <!-- Custom cell rendering for Cubicle Sequence -->
+                  <span v-if="props.column === 'cubicleSequence'">
+                    <cv-tag :kind="props.value ? 'green' : 'gray'" type="outline">
+                      {{ props.value || 'No reservations' }}
+                    </cv-tag>
+                  </span>
+                  
+                  <!-- Custom cell rendering for Actions -->
+                  <span v-else-if="props.column === 'actions'">
+                    <cv-button 
+                      kind="ghost" 
+                      size="small"
+                      @click="sendIndividualNotification(props.row)"
+                      :disabled="sendingIndividual[props.row.uid]"
+                    >
+                      {{ sendingIndividual[props.row.uid] ? 'Sending...' : 'Send' }}
+                    </cv-button>
+                  </span>
+                  
+                  <!-- Default rendering for other columns -->
+                  <span v-else>
+                    {{ props.value }}
+                  </span>
+                </template>
+              </cv-data-table>
+            </div>
+          </cv-tile>
+        </cv-column>
+      </cv-row>
+      
+      <!-- Notification History -->
+      <cv-row>
+        <cv-column :sm="4" :md="16" :lg="16">
+          <cv-tile>
+            <h3 class="tile-title">Notification History</h3>
+            
+            <div v-if="notificationHistory.length === 0" class="empty-state">
+              <p>No notifications have been sent yet</p>
+            </div>
+            
+            <div v-else class="history-list">
+              <cv-data-table
+                :rows="notificationHistoryData"
+                :headers="notificationHistoryHeaders"
+              >
+                <template slot="cell" slot-scope="props">
+                  <!-- Status cell with tag -->
+                  <span v-if="props.column === 'status'">
+                    <cv-tag :kind="props.value === 'sent' ? 'green' : 'red'">
+                      {{ props.value }}
+                    </cv-tag>
+                  </span>
+                  <span v-else>{{ props.value }}</span>
+                </template>
+              </cv-data-table>
+            </div>
+          </cv-tile>
+        </cv-column>
+      </cv-row>
+    </cv-grid>
+    
+    <!-- Notification Banner -->
+    <cv-toast-notification
+      v-if="showNotification"
+      :kind="notificationKind"
+      :title="notificationTitle"
+      :subtitle="notificationMessage"
+      @close="clearNotification"
+    />
+  </div>
+</template>
+
+<script>
+import axios from 'axios';
+
+export default {
+  name: 'NotificationsView',
+  data() {
+    return {
+      // Notification settings
+      notificationSettings: {
+        emailEnabled: true,
+        slackEnabled: false,
+        mondayEnabled: false,
+        email: '',
+        frequency: 'daily'
+      },
+      
+      // Loading states
+      loading: false,
+      sendingNotification: false,
+      sendingSlack: false,
+      sendingMonday: false,
+      refreshingData: false,
+      sendingIndividual: {},
+      
+      // User data
+      userTableData: [],
+      userTableHeaders: [
+        { key: 'email', header: 'Email' },
+        { key: 'displayName', header: 'Name' },
+        { key: 'totalReservations', header: 'Reservations' },
+        { key: 'cubicleSequence', header: 'Sequence' },
+        { key: 'lastActivity', header: 'Last Activity' },
+        { key: 'actions', header: 'Actions' }
+      ],
+      
+      // Notification history
+      notificationHistory: [],
+      notificationHistoryHeaders: [
+        { key: 'type', header: 'Type' },
+        { key: 'timestamp', header: 'Time' },
+        { key: 'status', header: 'Status' },
+        { key: 'recipients', header: 'Recipients' }
+      ],
+      
+      // Notification banner
+      showNotification: false,
+      notificationKind: 'success',
+      notificationTitle: '',
+      notificationMessage: '',
+      
+      // Options
+      frequencyOptions: [
+        { value: 'realtime', label: 'Real-time' },
+        { value: 'hourly', label: 'Hourly' },
+        { value: 'daily', label: 'Daily' },
+        { value: 'weekly', label: 'Weekly' }
+      ]
+    };
+  },
+  
+  computed: {
+    notificationHistoryData() {
+      return this.notificationHistory.map(item => ({
+        type: item.type,
+        timestamp: this.formatTimestamp(item.timestamp),
+        status: item.status,
+        recipients: item.recipients ? item.recipients.join(', ') : 'None'
+      }));
+    }
+  },
+  
+  async created() {
+    await this.loadUserSettings();
+    await this.loadUserData();
+    await this.loadNotificationHistory();
+  },
+  
+  methods: {
+    async loadUserSettings() {
+      try {
+        // Mock data for now, will be replaced with actual API call
+        this.notificationSettings = {
+          emailEnabled: true,
+          slackEnabled: false,
+          mondayEnabled: false,
+          email: 'user@example.com',
+          frequency: 'daily'
+        };
+      } catch (error) {
+        console.error('Error loading user settings:', error);
+        this.showErrorNotification('Failed to load settings');
+      }
+    },
+    
+    async loadUserData() {
+      this.loading = true;
+      try {
+        // Mock data for testing, replace with actual API call
+        setTimeout(() => {
+          this.userTableData = [
+            {
+              uid: '123',
+              email: 'john.doe@example.com',
+              displayName: 'John Doe',
+              totalReservations: 5,
+              cubicleSequence: 'A1-A3, B5',
+              lastActivity: '2025-06-01'
+            },
+            {
+              uid: '456',
+              email: 'jane.smith@example.com',
+              displayName: 'Jane Smith',
+              totalReservations: 3,
+              cubicleSequence: 'C2-C4',
+              lastActivity: '2025-06-02'
+            }
+          ];
+          this.loading = false;
+        }, 1000);
+      } catch (error) {
+        console.error('Error loading user data:', error);
+        this.showErrorNotification('Failed to load user data');
+        this.loading = false;
+      }
+    },
+    
+    async loadNotificationHistory() {
+      try {
+        // Mock data for testing, replace with actual API call
+        this.notificationHistory = [
+          {
+            id: '1',
+            type: 'email',
+            timestamp: new Date(),
+            status: 'sent',
+            recipients: ['john.doe@example.com']
+          },
+          {
+            id: '2',
+            type: 'slack',
+            timestamp: new Date(Date.now() - 3600000),
+            status: 'sent',
+            recipients: ['#general']
+          }
+        ];
+      } catch (error) {
+        console.error('Error loading notification history:', error);
+      }
+    },
+    
+    async updateSettings() {
+      try {
+        // Mock API call, replace with actual implementation
+        console.log('Saving settings:', this.notificationSettings);
+        this.showSuccessNotification('Settings updated successfully');
+      } catch (error) {
+        console.error('Error updating settings:', error);
+        this.showErrorNotification('Failed to update settings');
+      }
+    },
+    
+    async sendCubicleSequenceNotification() {
+      this.sendingNotification = true;
+      try {
+        // Mock API call, replace with actual implementation
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        this.showSuccessNotification('Notifications sent successfully');
+        await this.loadNotificationHistory();
+      } catch (error) {
+        console.error('Error sending notifications:', error);
+        this.showErrorNotification('Failed to send notifications');
+      } finally {
+        this.sendingNotification = false;
+      }
+    },
+    
+    async sendSlackNotification() {
+      this.sendingSlack = true;
+      try {
+        // Mock API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        this.showSuccessNotification('Slack notification sent');
+        await this.loadNotificationHistory();
+      } catch (error) {
+        console.error('Error sending Slack notification:', error);
+        this.showErrorNotification('Failed to send Slack notification');
+      } finally {
+        this.sendingSlack = false;
+      }
+    },
+    
+    async createMondayTask() {
+      this.sendingMonday = true;
+      try {
+        // Mock API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        this.showSuccessNotification('Monday.com task created successfully');
+        await this.loadNotificationHistory();
+      } catch (error) {
+        console.error('Error creating Monday task:', error);
+        this.showErrorNotification('Failed to create Monday.com task');
+      } finally {
+        this.sendingMonday = false;
+      }
+    },
+    
+    async refreshUserData() {
+      this.refreshingData = true;
+      try {
+        await this.loadUserData();
+        this.showSuccessNotification('User data refreshed');
+      } catch (error) {
+        console.error('Error refreshing user data:', error);
+        this.showErrorNotification('Failed to refresh user data');
+      } finally {
+        this.refreshingData = false;
+      }
+    },
+    
+    async sendIndividualNotification(user) {
+      this.$set(this.sendingIndividual, user.uid, true);
+      try {
+        // Mock API call
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        this.showSuccessNotification(`Notification sent to ${user.email}`);
+        await this.loadNotificationHistory();
+      } catch (error) {
+        console.error('Error sending individual notification:', error);
+        this.showErrorNotification(`Failed to send notification to ${user.email}`);
+      } finally {
+        this.$set(this.sendingIndividual, user.uid, false);
+      }
+    },
+    
+    formatTimestamp(timestamp) {
+      return new Date(timestamp).toLocaleString();
+    },
+    
+    showSuccessNotification(message) {
+      this.notificationKind = 'success';
+      this.notificationTitle = 'Success';
+      this.notificationMessage = message;
+      this.showNotification = true;
+      
+      setTimeout(() => {
+        this.clearNotification();
+      }, 5000);
+    },
+    
+    showErrorNotification(message) {
+      this.notificationKind = 'error';
+      this.notificationTitle = 'Error';
+      this.notificationMessage = message;
+      this.showNotification = true;
+      
+      setTimeout(() => {
+        this.clearNotification();
+      }, 8000);
+    },
+    
+    clearNotification() {
+      this.showNotification = false;
+    }
+  }
+};
+</script>
+
+<style scoped>
+.notifications-container {
+  padding-top: 48px;
+  background-color: #f4f4f4;
+  min-height: calc(100vh - 48px);
+}
+
+.page-header {
+  padding: 2rem;
+  background-color: #ffffff;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.page-title {
+  font-size: 1.75rem;
+  font-weight: 400;
+  margin-bottom: 0.5rem;
+  color: #161616;
+}
+
+.page-subtitle {
+  font-size: 1rem;
+  color: #6f6f6f;
+  font-weight: 400;
+}
+
+.notifications-grid {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.tile-title {
+  font-size: 1.25rem;
+  font-weight: 400;
+  margin-bottom: 1.5rem;
+  color: #161616;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 1rem;
+}
+
+.settings-group {
+  margin-bottom: 2rem;
+}
+
+.actions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.table-container {
+  margin-top: 1rem;
+}
+
+.history-list {
+  margin-top: 1rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem;
+  color: #6f6f6f;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  padding: 2rem;
+}
+</style>

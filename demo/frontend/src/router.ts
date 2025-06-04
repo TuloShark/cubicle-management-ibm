@@ -3,6 +3,7 @@ import LoginView from './views/LoginView.vue';
 import ReservationsView from './views/ReservationsView.vue';
 import StatisticsView from './views/StatisticsView.vue';
 import UtilizationView from './views/UtilizationView.vue';
+import NotificationsView from './views/NotificationsView.vue';
 import useAuth from './composables/useAuth';
 
 const routes = [
@@ -10,6 +11,7 @@ const routes = [
   { path: '/reservations', name: 'reservations', component: ReservationsView },
   { path: '/statistics', name: 'statistics', component: StatisticsView },
   { path: '/utilization', name: 'utilization', component: UtilizationView },
+  { path: '/notifications', name: 'notifications', component: NotificationsView },
 ];
 
 const router = createRouter({

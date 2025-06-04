@@ -65,7 +65,8 @@ const utilizationReportSchema = new mongoose.Schema({
     totalReservations: { type: Number, default: 0 },
     daysActive: { type: Number, default: 0 },
     favoriteSection: { type: String },
-    avgDailyReservations: { type: Number, default: 0 }
+    avgDailyReservations: { type: Number, default: 0 },
+    cubicleSequence: { type: String, default: '' }
   }],
   
   // Advanced analytics
@@ -87,7 +88,7 @@ const utilizationReportSchema = new mongoose.Schema({
   }
 });
 
-// Create compound index for week queries
-utilizationReportSchema.index({ weekStartDate: 1, weekEndDate: 1 }, { unique: true });
+// Create compound index for week queries (removed unique constraint to allow updates)
+utilizationReportSchema.index({ weekStartDate: 1, weekEndDate: 1 });
 
 module.exports = mongoose.model('UtilizationReport', utilizationReportSchema);

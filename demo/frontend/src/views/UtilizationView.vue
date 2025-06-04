@@ -120,9 +120,9 @@
                 <cv-button 
                   @click="exportLatestReport" 
                   kind="primary" 
-                  size="sm"
+                  size="md"
                   :disabled="loading.exportLatest"
-                  class="quick-export-btn"
+                  class="control-button"
                 >
                   <template #icon>
                     <Download16 />
@@ -161,56 +161,126 @@
               />
             </div>
             
-            <!-- Reports Table -->
-            <div class="reports-table-container">
-              <cv-data-table 
-                v-if="reports.length > 0"
-                :columns="tableColumns"
-                :data="tableData"
-                :pagination="{ numberOfItems: pagination.totalReports }"
-                @sort="handleSort"
-              >
-                <template v-slot:cell-actions="{ row }">
-                  <div class="action-buttons">
+            <!-- Reports Cards -->
+            <div class="reports-container">
+              <div v-if="reports.length > 0" class="reports-grid">
+                <div 
+                  v-for="report in reports" 
+                  :key="report._id"
+                  class="report-card"
+                  :class="{ 'latest-report': report === latestReport }"
+                >
+                  <!-- Report Header -->
+                  <div class="report-header">
+                    <div class="report-period">
+                      <h4 class="week-label">{{ formatWeekPeriod(report.weekStartDate, report.weekEndDate) }}</h4>
+                      <span class="generated-date">Generated: {{ formatDateTime(report.generatedAt) }}</span>
+                      <span v-if="report === latestReport" class="latest-badge">Latest</span>
+                    </div>
+                    <div class="utilization-indicator">
+                      <div class="utilization-circle" :class="getUtilizationClass(report.summary.avgUtilization)">
+                        <span class="utilization-percentage">{{ report.summary.avgUtilization }}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Report Stats -->
+                  <div class="report-stats">
+                    <div class="stat-row">
+                      <div class="stat-group">
+                        <div class="stat-item-mini">
+                          <span class="mini-label">Peak</span>
+                          <span class="mini-value">{{ report.summary.peakUtilization }}%</span>
+                        </div>
+                        <div class="stat-item-mini">
+                          <span class="mini-label">Reservations</span>
+                          <span class="mini-value">{{ report.summary.totalReservations }}</span>
+                        </div>
+                      </div>
+                      <div class="stat-group">
+                        <div class="stat-item-mini">
+                          <span class="mini-label">Users</span>
+                          <span class="mini-value">{{ report.summary.uniqueUsers }}</span>
+                        </div>
+                        <div class="stat-item-mini">
+                          <span class="mini-label">Errors</span>
+                          <span class="mini-value error-count" :class="{ 'has-errors': report.summary.errorIncidents > 0 }">
+                            {{ report.summary.errorIncidents }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Utilization Bar -->
+                  <div class="utilization-bar-container">
+                    <div class="utilization-bar">
+                      <div 
+                        class="utilization-fill" 
+                        :style="{ width: report.summary.avgUtilization + '%' }"
+                        :class="getUtilizationClass(report.summary.avgUtilization)"
+                      ></div>
+                    </div>
+                    <div class="utilization-range">
+                      <span class="range-min">{{ report.summary.lowestUtilization }}%</span>
+                      <span class="range-label">Range</span>
+                      <span class="range-max">{{ report.summary.peakUtilization }}%</span>
+                    </div>
+                  </div>
+
+                  <!-- Action Buttons -->
+                  <div class="report-actions">
                     <cv-button 
-                      @click="viewReport(row)" 
+                      @click="viewReport(report)" 
                       kind="ghost" 
                       size="sm"
-                      class="action-btn"
+                      class="report-action-btn"
                     >
-                      View
+                      <template #icon>
+                        <View16 />
+                      </template>
+                      View Details
                     </cv-button>
                     <cv-button 
-                      @click="exportReport(row)" 
-                      kind="tertiary" 
+                      @click="exportReport(report)" 
+                      kind="ghost" 
                       size="sm"
-                      :disabled="loading.export === row._id"
-                      class="action-btn"
+                      :disabled="loading.export === report._id"
+                      class="report-action-btn"
                     >
-                      <span v-if="loading.export === row._id">Exporting...</span>
+                      <template #icon>
+                        <Download16 />
+                      </template>
+                      <span v-if="loading.export === report._id">Exporting...</span>
                       <span v-else>Export</span>
                     </cv-button>
                     <cv-button 
                       v-if="isAdminUser"
-                      @click="deleteReport(row)" 
+                      @click="deleteReport(report)" 
                       kind="danger--ghost" 
                       size="sm"
-                      :disabled="loading.delete === row._id"
-                      class="action-btn"
+                      :disabled="loading.delete === report._id"
+                      class="report-action-btn delete-btn"
                     >
-                      <span v-if="loading.delete === row._id">Deleting...</span>
+                      <template #icon>
+                        <TrashCan16 />
+                      </template>
+                      <span v-if="loading.delete === report._id">Deleting...</span>
                       <span v-else>Delete</span>
                     </cv-button>
                   </div>
-                </template>
-              </cv-data-table>
+                </div>
+              </div>
               
               <div v-else-if="loading.reports" class="table-loading">
                 <cv-skeleton-text :paragraph="true" :line-count="5" />
               </div>
               
               <div v-else class="no-reports">
-                <p>No utilization reports found. Generate your first report using the controls above.</p>
+                <div class="no-reports-content">
+                  <h3>No Reports Available</h3>
+                  <p>No utilization reports found. Generate your first report using the controls above.</p>
+                </div>
               </div>
             </div>
           </cv-tile>
@@ -334,9 +404,17 @@
 import axios from 'axios';
 import useAuth from '../composables/useAuth';
 import { computed } from 'vue';
+import Download16 from '@carbon/icons-vue/lib/download/16';
+import View16 from '@carbon/icons-vue/lib/view/16';
+import TrashCan16 from '@carbon/icons-vue/lib/trash-can/16';
 
 export default {
   name: 'UtilizationView',
+  components: {
+    Download16,
+    View16,
+    TrashCan16
+  },
   setup() {
     const { currentUser, isAdmin } = useAuth();
     const isAdminUser = computed(() => {
@@ -555,7 +633,7 @@ export default {
         // Format the date as ISO string for the API
         const formattedDate = date.toISOString().split('T')[0];
         
-        await axios.post('/api/utilization-reports/generate', {}, {
+        await axios.post('/api.utilization-reports/generate', {}, {
           headers: { Authorization: `Bearer ${idToken}` },
           params: { weekStart: formattedDate }
         });
@@ -728,6 +806,21 @@ export default {
       return 'error';
     },
     
+    getUtilizationClass(percent) {
+      if (percent >= 80) return 'high-utilization';
+      if (percent >= 60) return 'medium-utilization';
+      if (percent >= 30) return 'low-utilization';
+      return 'very-low-utilization';
+    },
+    
+    formatWeekPeriod(startDate, endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      return `${startStr} - ${endStr}`;
+    },
+    
     showNotification(kind, title, subtitle) {
       this.notification = {
         show: true,
@@ -889,9 +982,65 @@ export default {
 .control-button {
   min-width: 200px;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
 }
 
-/* Ensure date picker matches button styling */
+/* Force center alignment for Carbon button content */
+.control-button :deep(.bx--btn__icon),
+.control-button :deep(.cv-button__content) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Additional Carbon button centering */
+.control-button :deep(.bx--btn) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.control-button :deep(.bx--btn__icon) {
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
+.report-action-btn {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Force center alignment for report action buttons */
+.report-action-btn :deep(.bx--btn__icon),
+.report-action-btn :deep(.cv-button__content) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Additional Carbon button centering for report actions */
+.report-action-btn :deep(.bx--btn) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.report-action-btn :deep(.bx--btn__icon) {
+  margin-right: 0.5rem;
+  flex-shrink: 0;
+}
+
 :deep(.week-picker-full .bx--date-picker-input__wrapper) {
   width: 100%;
   min-width: 200px;
@@ -936,12 +1085,10 @@ export default {
   padding-top: 1rem;
   border-top: 1px solid #e0e0e0;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
 }
 
-.quick-export-btn {
-  min-width: 200px;
-}
+
 
 .stat-item {
   display: flex;
@@ -965,22 +1112,287 @@ export default {
   color: #161616;
 }
 
-/* Reports Table */
-.pagination-controls {
-  margin-bottom: 1rem;
-}
-
-.reports-table-container {
+/* Reports Cards */
+.reports-container {
   min-height: 400px;
 }
 
-.action-buttons {
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.report-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.report-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-color: #0f62fe;
+  transform: translateY(-2px);
+}
+
+.report-card.latest-report {
+  border-color: #198038;
+  background: linear-gradient(135deg, #ffffff 0%, #f6f9f6 100%);
+}
+
+.report-card.latest-report::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #198038, #24a148);
+}
+
+/* Report Header */
+.report-header {
   display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.report-period {
+  flex: 1;
+}
+
+.week-label {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+}
+
+.generated-date {
+  font-size: 0.8rem;
+  color: #6f6f6f;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.latest-badge {
+  display: inline-block;
+  background: #198038;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Utilization Circle */
+.utilization-indicator {
+  flex-shrink: 0;
+}
+
+.utilization-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  border: 3px solid;
+  background: #ffffff;
+}
+
+.utilization-circle.high-utilization {
+  border-color: #198038;
+  background: linear-gradient(135deg, #d9f0dd, #ffffff);
+}
+
+.utilization-circle.medium-utilization {
+  border-color: #f1c21b;
+  background: linear-gradient(135deg, #fdf6d2, #ffffff);
+}
+
+.utilization-circle.low-utilization {
+  border-color: #ff832b;
+  background: linear-gradient(135deg, #fff0e6, #ffffff);
+}
+
+.utilization-circle.very-low-utilization {
+  border-color: #da1e28;
+  background: linear-gradient(135deg, #fdebed, #ffffff);
+}
+
+.utilization-percentage {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #161616;
+}
+
+/* Report Stats */
+.report-stats {
+  margin-bottom: 1.5rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.stat-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.stat-item-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: #f4f4f4;
+  border-radius: 6px;
+  border-left: 3px solid #e0e0e0;
+  transition: border-color 0.2s ease;
+}
+
+.stat-item-mini:hover {
+  border-left-color: #0f62fe;
+}
+
+.mini-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6f6f6f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mini-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #161616;
+}
+
+.mini-value.error-count.has-errors {
+  color: #da1e28;
+  font-weight: 800;
+}
+
+/* Utilization Bar */
+.utilization-bar-container {
+  margin-bottom: 1.5rem;
+}
+
+.utilization-bar {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.utilization-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.utilization-fill.high-utilization {
+  background: linear-gradient(90deg, #198038, #24a148);
+}
+
+.utilization-fill.medium-utilization {
+  background: linear-gradient(90deg, #f1c21b, #fdd13a);
+}
+
+.utilization-fill.low-utilization {
+  background: linear-gradient(90deg, #ff832b, #ff9f4a);
+}
+
+.utilization-fill.very-low-utilization {
+  background: linear-gradient(90deg, #da1e28, #e65761);
+}
+
+.utilization-range {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #6f6f6f;
+}
+
+.range-label {
+  font-weight: 500;
+  color: #525252;
+}
+
+.range-min,
+.range-max {
+  font-weight: 600;
+  color: #161616;
+}
+
+/* Report Actions */
+.report-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.report-action-btn {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
 }
 
-.action-btn {
-  min-width: 80px;
+.report-action-btn.delete-btn {
+  flex: 0 0 auto;
+  min-width: 100px;
+}
+
+/* Enhanced No Reports */
+.no-reports-content {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.no-reports-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.7;
+}
+
+.no-reports-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+}
+
+.no-reports-content p {
+  color: #6f6f6f;
+  margin: 0;
+}
+
+/* Pagination Controls */
+.pagination-controls {
+  margin-bottom: 1rem;
 }
 
 .table-loading,
@@ -1108,7 +1520,6 @@ export default {
   padding: 1.5rem;
   text-align: center;
   color: #6f6f6f;
-  font-style: italic;
 }
 
 /* Notifications */
@@ -1150,6 +1561,40 @@ export default {
     grid-template-columns: 1fr;
   }
   
+  /* Card Layout Responsive */
+  .reports-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .report-card {
+    padding: 1rem;
+  }
+  
+  .report-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .utilization-indicator {
+    align-self: center;
+  }
+  
+  .stat-row {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .report-actions {
+    flex-direction: column;
+  }
+  
+  .report-action-btn {
+    min-width: auto;
+    width: 100%;
+  }
+  
   .action-buttons {
     flex-direction: column;
   }
@@ -1171,6 +1616,48 @@ export default {
     min-width: auto;
     max-width: none;
     width: 100%;
+  }
+}
+
+/* Tablet Layout */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .reports-grid {
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.25rem;
+  }
+  
+  .report-card {
+    padding: 1.25rem;
+  }
+  
+  .utilization-circle {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .utilization-percentage {
+    font-size: 0.8rem;
+  }
+}
+
+/* Large Desktop Layout */
+@media (min-width: 1400px) {
+  .reports-grid {
+    grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
+    gap: 2rem;
+  }
+  
+  .report-card {
+    padding: 2rem;
+  }
+  
+  .utilization-circle {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .utilization-percentage {
+    font-size: 1rem;
   }
 }
 

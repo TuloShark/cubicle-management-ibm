@@ -16,6 +16,100 @@ const { validarUsuario, validarAdmin } = require('../middleware/auth');
  */
 
 /**
+ * Generate cubicle cod    ]);
+    const usersSheet = XLSX.utils.aoa_to_sheet(usersData);
+    XLSX.utils.book_append_sheet(workbook, usersSheet, 'Users');
+
+    // Peak Hours Sheet - REMOVED as requesteduences for a user's reservations
+ * @param {Array} reservations - User's reservations with populated cubicle data
+ * @returns {String} Formatted cubicle codes
+ */
+function generateCubicleCodeSequence(reservations) {
+  if (!reservations || reservations.length === 0) return '';
+  
+  // Sort reservations by date and cubicle serial
+  const sortedReservations = reservations
+    .filter(r => r.cubicle && r.cubicle.serial)
+    .sort((a, b) => {
+      const dateComparison = new Date(a.date) - new Date(b.date);
+      if (dateComparison !== 0) return dateComparison;
+      return a.cubicle.serial.localeCompare(b.cubicle.serial);
+    });
+
+  if (sortedReservations.length === 0) return '';
+  
+  // Group by date first, then process sequences
+  const dateGroups = {};
+  sortedReservations.forEach(r => {
+    const dateStr = r.date.toDateString();
+    if (!dateGroups[dateStr]) {
+      dateGroups[dateStr] = [];
+    }
+    dateGroups[dateStr].push(r.cubicle.serial);
+  });
+  
+  const allCodes = [];
+  
+  // Process each date group for sequences
+  Object.keys(dateGroups).sort().forEach(dateStr => {
+    const codes = dateGroups[dateStr].sort();
+    const sequences = [];
+    
+    let sequenceStart = codes[0];
+    let sequenceEnd = sequenceStart;
+    
+    for (let i = 1; i < codes.length; i++) {
+      if (isSequentialCode(sequenceEnd, codes[i])) {
+        sequenceEnd = codes[i];
+      } else {
+        // End current sequence and start a new one
+        if (sequenceStart === sequenceEnd) {
+          sequences.push(sequenceStart);
+        } else {
+          sequences.push(`${sequenceStart}-${sequenceEnd}`);
+        }
+        sequenceStart = codes[i];
+        sequenceEnd = codes[i];
+      }
+    }
+    
+    // Add the last sequence
+    if (sequenceStart === sequenceEnd) {
+      sequences.push(sequenceStart);
+    } else {
+      sequences.push(`${sequenceStart}-${sequenceEnd}`);
+    }
+    
+    allCodes.push(...sequences);
+  });
+  
+  return allCodes.join(', ');
+}
+
+/**
+ * Check if two cubicle codes are sequential
+ * @param {String} code1 - First cubicle code
+ * @param {String} code2 - Second cubicle code
+ * @returns {Boolean} True if codes are sequential
+ */
+function isSequentialCode(code1, code2) {
+  // Extract section and number from codes like "A1", "B12", etc.
+  const regex = /^([A-Z])(\d+)$/;
+  const match1 = code1.match(regex);
+  const match2 = code2.match(regex);
+  
+  if (!match1 || !match2) return false;
+  
+  const section1 = match1[1];
+  const number1 = parseInt(match1[2]);
+  const section2 = match2[1];
+  const number2 = parseInt(match2[2]);
+  
+  // Same section and consecutive numbers
+  return section1 === section2 && Math.abs(number1 - number2) === 1;
+}
+
+/**
  * Generate utilization report data for a given week
  * @param {Date} startDate - Start of the week
  * @param {Date} endDate - End of the week
@@ -26,7 +120,7 @@ async function generateReportData(startDate, endDate) {
     const cubicles = await Cubicle.find();
     const reservations = await Reservation.find({
       date: { $gte: startDate, $lte: endDate }
-    });
+    }).populate('cubicle');
 
     const totalCubicles = cubicles.length;
     
@@ -47,6 +141,9 @@ async function generateReportData(startDate, endDate) {
       const available = totalCubicles - reserved;
       const utilizationPercent = totalCubicles > 0 ? Math.round((reserved / totalCubicles) * 100) : 0;
       
+      // Calculate error cubicles for this day
+      const errorCubicles = cubicles.filter(c => c.status === 'error').length;
+      
       // Get unique users for this day
       const activeUsers = new Set(
         dayReservations
@@ -59,7 +156,7 @@ async function generateReportData(startDate, endDate) {
         dayOfWeek: currentDate.toLocaleDateString('en-US', { weekday: 'long' }),
         reserved,
         available,
-        error: 0, // We'll calculate this from cubicle status if needed
+        error: errorCubicles,
         utilizationPercent,
         reservations: reserved,
         activeUsers
@@ -80,25 +177,30 @@ async function generateReportData(startDate, endDate) {
         .map(r => r.user.email)
     ).size;
 
+    // Calculate error incidents from cubicle status
+    const errorIncidents = cubicles.filter(c => c.status === 'error').length;
+
     // Section analysis
     const sections = ['A', 'B', 'C'].map(section => {
       const sectionCubicles = cubicles.filter(c => c.section === section);
       const sectionReservations = reservations.filter(r => {
-        const cubicle = cubicles.find(c => c._id.equals(r.cubicle));
-        return cubicle && cubicle.section === section;
+        return r.cubicle && r.cubicle.section === section;
       });
       
       const sectionTotal = sectionCubicles.length;
       const avgUtilization = sectionTotal > 0 ? 
         Math.round((sectionReservations.length / (sectionTotal * daily.length)) * 100) : 0;
       
+      // Calculate error incidents for this section
+      const errorIncidents = sectionCubicles.filter(c => c.status === 'error').length;
+      
       return {
         section,
         totalCubicles: sectionTotal,
         avgUtilization,
-        peakUtilization: avgUtilization, // Simplified for now
+        peakUtilization: avgUtilization, // Using same as avg for now
         totalReservations: sectionReservations.length,
-        errorIncidents: 0
+        errorIncidents
       };
     });
 
@@ -116,10 +218,9 @@ async function generateReportData(startDate, endDate) {
         }
         userMap[r.user.email].reservations.push(r);
         
-        // Track section usage
-        const cubicle = cubicles.find(c => c._id.equals(r.cubicle));
-        if (cubicle) {
-          const section = cubicle.section;
+        // Track section usage - r.cubicle is now populated
+        if (r.cubicle && r.cubicle.section) {
+          const section = r.cubicle.section;
           userMap[r.user.email].sections[section] = (userMap[r.user.email].sections[section] || 0) + 1;
         }
       }
@@ -141,13 +242,20 @@ async function generateReportData(startDate, endDate) {
         }
       });
       
+      // Generate cubicle code sequence for this user
+      const cubicleSequence = generateCubicleCodeSequence(userData.reservations);
+      
+      console.log(`User ${userData.email} - Reservations:`, userData.reservations.length, 
+                  'Cubicle sequence:', cubicleSequence);
+      
       return {
         email: userData.email,
         displayName: userData.displayName,
         totalReservations,
         daysActive,
         favoriteSection,
-        avgDailyReservations: daysActive > 0 ? +(totalReservations / daysActive).toFixed(2) : 0
+        avgDailyReservations: daysActive > 0 ? +(totalReservations / daysActive).toFixed(2) : 0,
+        cubicleSequence
       };
     }).sort((a, b) => b.totalReservations - a.totalReservations);
 
@@ -181,7 +289,7 @@ async function generateReportData(startDate, endDate) {
         lowestUtilization,
         totalReservations,
         uniqueUsers,
-        errorIncidents: 0
+        errorIncidents
       },
       daily,
       sections,
@@ -295,29 +403,46 @@ router.post('/generate', validarUsuario, validarAdmin, [
     weekEnd.setDate(weekEnd.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    // Check if report already exists for this week
+    // Generate report data
+    const reportData = await generateReportData(weekStart, weekEnd);
+    
+    console.log('Generated report data for Excel export:', {
+      usersCount: reportData.users.length,
+      sampleUser: reportData.users[0],
+      hasAdvanced: !!reportData.advanced,
+      advancedKeys: reportData.advanced ? Object.keys(reportData.advanced) : []
+    });
+
+    // Check if report already exists for this week and update it, or create new one
     const existingReport = await UtilizationReport.findOne({
       weekStartDate: weekStart,
       weekEndDate: weekEnd
     });
 
+    let report;
     if (existingReport) {
-      return res.status(400).json({ error: 'Report already exists for this week' });
+      // Update existing report with new data
+      report = await UtilizationReport.findByIdAndUpdate(
+        existingReport._id,
+        {
+          ...reportData,
+          generatedAt: new Date() // Update generation timestamp
+        },
+        { new: true }
+      );
+      console.log('Updated existing report for week:', weekStart.toISOString().split('T')[0]);
+    } else {
+      // Create new report
+      report = new UtilizationReport({
+        weekStartDate: weekStart,
+        weekEndDate: weekEnd,
+        ...reportData
+      });
+      await report.save();
+      console.log('Created new report for week:', weekStart.toISOString().split('T')[0]);
     }
 
-    // Generate report data
-    const reportData = await generateReportData(weekStart, weekEnd);
-
-    // Create new report
-    const report = new UtilizationReport({
-      weekStartDate: weekStart,
-      weekEndDate: weekEnd,
-      ...reportData
-    });
-
-    await report.save();
-
-    res.status(201).json(report);
+    res.status(200).json(report);
   } catch (err) {
     res.status(500).json({ error: 'Error generating utilization report', details: err.message });
   }
@@ -343,32 +468,39 @@ router.post('/generate-current', validarUsuario, validarAdmin, async (req, res) 
     weekEnd.setDate(weekEnd.getDate() + 6);
     weekEnd.setHours(23, 59, 59, 999);
 
-    // Check if report already exists
+    // Generate report data
+    const reportData = await generateReportData(weekStart, weekEnd);
+
+    // Check if report already exists and update it, or create new one
     const existingReport = await UtilizationReport.findOne({
       weekStartDate: weekStart,
       weekEndDate: weekEnd
     });
 
+    let report;
     if (existingReport) {
-      return res.status(400).json({ 
-        error: 'Report already exists for current week',
-        existingReport 
+      // Update existing report with new data
+      report = await UtilizationReport.findByIdAndUpdate(
+        existingReport._id,
+        {
+          ...reportData,
+          generatedAt: new Date() // Update generation timestamp
+        },
+        { new: true }
+      );
+      console.log('Updated existing current week report');
+    } else {
+      // Create new report
+      report = new UtilizationReport({
+        weekStartDate: weekStart,
+        weekEndDate: weekEnd,
+        ...reportData
       });
+      await report.save();
+      console.log('Created new current week report');
     }
 
-    // Generate report data
-    const reportData = await generateReportData(weekStart, weekEnd);
-
-    // Create new report
-    const report = new UtilizationReport({
-      weekStartDate: weekStart,
-      weekEndDate: weekEnd,
-      ...reportData
-    });
-
-    await report.save();
-
-    res.status(201).json(report);
+    res.status(200).json(report);
   } catch (err) {
     res.status(500).json({ error: 'Error generating current week report', details: err.message });
   }
@@ -420,6 +552,14 @@ router.get('/:id/export', validarUsuario, [
       return res.status(404).json({ error: 'Report not found' });
     }
 
+    console.log('Exporting report with data:', {
+      reportId: report._id,
+      usersCount: report.users.length,
+      hasAdvanced: !!report.advanced,
+      sampleUser: report.users[0],
+      sampleUserCubicleSequence: report.users[0]?.cubicleSequence
+    });
+
     // Create workbook
     const workbook = XLSX.utils.book_new();
 
@@ -442,24 +582,7 @@ router.get('/:id/export', validarUsuario, [
     const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
     XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
 
-    // Daily Sheet
-    const dailyData = [
-      ['Date', 'Day of Week', 'Reserved', 'Available', 'Error', 'Utilization %', 'Reservations', 'Active Users']
-    ];
-    report.daily.forEach(day => {
-      dailyData.push([
-        day.date.toLocaleDateString(),
-        day.dayOfWeek,
-        day.reserved,
-        day.available,
-        day.error,
-        day.utilizationPercent,
-        day.reservations,
-        day.activeUsers
-      ]);
-    });
-    const dailySheet = XLSX.utils.aoa_to_sheet(dailyData);
-    XLSX.utils.book_append_sheet(workbook, dailySheet, 'Daily Breakdown');
+    // Daily Sheet - REMOVED as requested
 
     // Sections Sheet
     const sectionsData = [
@@ -478,35 +601,36 @@ router.get('/:id/export', validarUsuario, [
     const sectionsSheet = XLSX.utils.aoa_to_sheet(sectionsData);
     XLSX.utils.book_append_sheet(workbook, sectionsSheet, 'Section Analysis');
 
-    // Users Sheet
+    // Users Sheet - Enhanced with cubicle sequences
     const usersData = [
-      ['Email', 'Display Name', 'Total Reservations', 'Days Active', 'Favorite Section', 'Avg Daily Reservations']
+      ['Email', 'Display Name', 'Total Reservations', 'Days Active', 'Favorite Section', 'Avg Daily Reservations', 'Cubicle Sequence']
     ];
     report.users.forEach(user => {
+      console.log(`User ${user.email} cubicle sequence:`, user.cubicleSequence || 'MISSING');
       usersData.push([
         user.email,
         user.displayName || '',
         user.totalReservations,
         user.daysActive,
         user.favoriteSection,
-        user.avgDailyReservations
+        user.avgDailyReservations,
+        user.cubicleSequence || ''
       ]);
     });
     const usersSheet = XLSX.utils.aoa_to_sheet(usersData);
-    XLSX.utils.book_append_sheet(workbook, usersSheet, 'User Activity');
+    XLSX.utils.book_append_sheet(workbook, usersSheet, 'Users');
 
-    // Peak Hours Sheet
-    const peakHoursData = [
-      ['Hour', 'Utilization %']
+    // Peak Hours Sheet - REMOVED as requested
+
+    // Advanced Analytics Sheet - Simplified to only show Trend Analysis
+    const advancedData = [
+      ['Trend Analysis'],
+      ['Week-over-Week Change', `${report.advanced.trendAnalysis.weekOverWeekChange}%`],
+      ['Utilization Trend', report.advanced.trendAnalysis.utilizationTrend],
+      ['Predicted Next Week', `${report.advanced.trendAnalysis.predictedNextWeek}%`]
     ];
-    report.advanced.peakHours.forEach(hour => {
-      peakHoursData.push([
-        `${hour.hour}:00`,
-        hour.utilizationPercent
-      ]);
-    });
-    const peakHoursSheet = XLSX.utils.aoa_to_sheet(peakHoursData);
-    XLSX.utils.book_append_sheet(workbook, peakHoursSheet, 'Peak Hours');
+    const advancedSheet = XLSX.utils.aoa_to_sheet(advancedData);
+    XLSX.utils.book_append_sheet(workbook, advancedSheet, 'Advanced Analytics');
 
     // Generate Excel buffer
     const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });

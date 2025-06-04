@@ -11,6 +11,7 @@ const { validarUsuario, validarAdmin } = require('./middleware/auth');
 const usersController = require('./controllers/usersController');
 const cubicleController = require('./controllers/cubicleController');
 const utilizationController = require('./controllers/utilizationController');
+const notificationController = require('./controllers/notificationController');
 const rateLimit = require('express-rate-limit');
 const { body, param, validationResult } = require('express-validator');
 const http = require('http');
@@ -237,6 +238,7 @@ async function start() {
 
   app.use('/api/users', usersController);
   app.use('/api/utilization-reports', utilizationController);
+  app.use('/api/notifications', notificationController);
 
   // Real-time cubicle statistics endpoint
   app.get('/api/cubicle-stats', async (req, res) => {
