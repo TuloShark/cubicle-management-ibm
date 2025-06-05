@@ -206,7 +206,7 @@ export default {
     "left middle right"
     "left empty right";
   padding: 10px;
-  margin-top: 50px;
+  margin-top: 10px;
   align-items: start; /* Ensure all sections align to the top */
 }
 
@@ -286,7 +286,7 @@ export default {
 .modal-content {
   background-color: #ffffff;
   padding: 20px;
-  border-radius: 0px;
+  border-radius: 0; /* Sharp edges */
   width: 400px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
   position: relative;
@@ -323,3 +323,4 @@ export default {
   margin-left: 10px;
 }
 </style>
+

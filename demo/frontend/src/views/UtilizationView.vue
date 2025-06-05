@@ -7,135 +7,113 @@
     
     <!-- Main Reports Dashboard -->
     <cv-grid class="utilization-grid">
-      <!-- Reports Controls Row -->
-      <cv-row class="controls-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+      <!-- Reports Controls and Quick Stats Row - Side by Side -->
+      <cv-row class="top-row">
+        <!-- Report Controls - Left Half -->
+        <cv-column :sm="4" :md="8" :lg="8">
           <cv-tile class="controls-tile">
             <div class="tile-header">
               <h3 class="tile-title">Report Controls</h3>
               <p class="tile-subtitle">Generate and manage utilization reports</p>
             </div>
             <div class="controls-content">
-              <div class="controls-layout">
-                <!-- Left side - Action buttons -->
-                <div class="controls-left">
-                  <div class="control-item" v-if="isAdminUser">
+              <div class="horizontal-controls">
+                <div class="control-item" v-if="isAdminUser">
+                  <div class="button-wrapper">
                     <cv-button 
                       @click="generateCurrentWeekReport" 
                       kind="primary" 
                       size="md"
                       :disabled="loading.generateCurrent"
-                      class="control-button"
+                      class="control-button-tall"
                     >
                       <span v-if="loading.generateCurrent">Generating...</span>
                       <span v-else>Generate Current Week Report</span>
                     </cv-button>
                   </div>
-                  
-                  <div class="control-item" v-if="isAdminUser">
-                    <cv-button 
-                      @click="generateCustomWeekReport" 
-                      kind="secondary" 
-                      size="md"
-                      :disabled="loading.generateCustom || !customWeekStart"
-                      class="control-button"
-                    >
-                      <span v-if="loading.generateCustom">Generating...</span>
-                      <span v-else>Generate Custom Week</span>
-                    </cv-button>
-                  </div>
-                  
-                  <div class="control-item">
-                    <cv-button 
-                      @click="refreshReports" 
-                      kind="tertiary" 
-                      size="md"
-                      :disabled="loading.refresh"
-                      class="control-button"
-                    >
-                      <span v-if="loading.refresh">Refreshing...</span>
-                      <span v-else>Refresh Reports</span>
-                    </cv-button>
-                  </div>
-                  
-                  <div class="control-item" v-if="!isAdminUser">
-                    <p class="admin-notice">Report generation is restricted to administrators.</p>
-                  </div>
                 </div>
                 
-                <!-- Right side - Date picker -->
-                <div class="controls-right" v-if="isAdminUser">
-                  <div class="control-item">
-                    <cv-date-picker
-                      v-model="customWeekStart"
-                      kind="single"
-                      :date-format="dateFormat"
-                      placeholder="Select week start date"
-                      :light="false"
-                      class="week-picker-right"
-                    >
-                      <cv-date-picker-input
-                        label="Week Start Date"
-                        placeholder="mm/dd/yyyy"
-                        :invalid="datePickerInvalid"
-                        invalid-message="Please select a valid Monday"
-                      />
-                    </cv-date-picker>
-                  </div>
+                <div class="control-item" v-if="isAdminUser">
+                  <cv-button 
+                    @click="openCustomWeekModal" 
+                    kind="secondary" 
+                    size="md"
+                    :disabled="loading.generateCustom"
+                    class="control-button-tall"
+                  >
+                    <span v-if="loading.generateCustom">Generating...</span>
+                    <span v-else>Generate Custom Week</span>
+                  </cv-button>
+                </div>
+                
+                <div class="control-item">
+                  <cv-button 
+                    @click="refreshReports" 
+                    kind="tertiary" 
+                    size="md"
+                    :disabled="loading.refresh"
+                    class="control-button-tall"
+                  >
+                    <span v-if="loading.refresh">Refreshing...</span>
+                    <span v-else>Refresh Reports</span>
+                  </cv-button>
                 </div>
               </div>
             </div>
           </cv-tile>
         </cv-column>
-      </cv-row>
-      
-      <!-- Quick Stats Row -->
-      <cv-row class="stats-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+        
+        <!-- Quick Stats - Right Half -->
+        <cv-column :sm="4" :md="4" :lg="4">
           <cv-tile class="quick-stats-tile">
             <div class="tile-header">
               <h3 class="tile-title">Quick Statistics</h3>
               <p class="tile-subtitle">Latest report insights</p>
             </div>
-            <div class="quick-stats-content" v-if="latestReport">
-              <div class="stat-item">
-                <span class="stat-label">Average Utilization</span>
-                <span class="stat-value">{{ latestReport.summary.avgUtilization }}%</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Peak Utilization</span>
-                <span class="stat-value">{{ latestReport.summary.peakUtilization }}%</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Total Reservations</span>
-                <span class="stat-value">{{ latestReport.summary.totalReservations }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">Unique Users</span>
-                <span class="stat-value">{{ latestReport.summary.uniqueUsers }}</span>
+            <div class="quick-stats-content">
+              <!-- Statistics Carousel Section -->
+              <div v-if="latestReport" class="stats-carousel">
+                <div class="carousel-container">
+                  <transition name="slide" mode="out-in">
+                    <div 
+                      :key="currentStatIndex" 
+                      class="stat-card-single"
+                    >
+                      <div :class="['stat-indicator', currentStat.indicatorClass]"></div>
+                      <div class="stat-details">
+                        <span class="stat-label">{{ currentStat.label }}</span>
+                        <span class="stat-value">{{ currentStat.value }}</span>
+                      </div>
+                    </div>
+                  </transition>
+                </div>
+                <!-- Carousel indicators completely hidden -->
               </div>
               
-              <!-- Quick Export Button -->
-              <div class="quick-export-section">
+              <!-- No Data State for Statistics -->
+              <div v-else class="no-data-state">
+                <div class="empty-state-content">
+                  <h4 class="empty-state-title">No Statistics Available</h4>
+                  <p class="empty-state-description">Statistics will appear here once you generate your first report.</p>
+                </div>
+              </div>
+              
+              <!-- Download Button - Always Present -->
+              <div class="quick-stats-download">
                 <cv-button 
                   @click="exportLatestReport" 
                   kind="primary" 
                   size="md"
                   :disabled="loading.exportLatest"
-                  class="control-button"
+                  class="control-button-tall download-button-centered"
                 >
                   <template #icon>
                     <Download16 />
                   </template>
                   <span v-if="loading.exportLatest">Downloading...</span>
-                  <span v-else>Download Excel Report</span>
+                  <span v-else>Download Latest Report</span>
                 </cv-button>
               </div>
-            </div>
-            <div v-else class="no-data">
-              <p>No reports available yet.</p>
-              <p v-if="isAdminUser">Generate your first report using the controls above.</p>
-              <p v-else>Please contact an administrator to generate reports.</p>
             </div>
           </cv-tile>
         </cv-column>
@@ -276,10 +254,10 @@
                 <cv-skeleton-text :paragraph="true" :line-count="5" />
               </div>
               
-              <div v-else class="no-reports">
-                <div class="no-reports-content">
-                  <h3>No Reports Available</h3>
-                  <p>No utilization reports found. Generate your first report using the controls above.</p>
+              <div v-else class="no-data-state">
+                <div class="empty-state-content">
+                  <h4 class="empty-state-title">No Reports Available</h4>
+                  <p class="empty-state-description">Generated reports will appear here for viewing and downloading.</p>
                 </div>
               </div>
             </div>
@@ -386,6 +364,45 @@
         <template v-slot:primary-button>Close</template>
       </cv-modal>
       
+      <!-- Custom Week Modal -->
+      <cv-modal
+        :visible="showCustomWeekModal"
+        kind="default"
+        size="md"
+        :auto-hide-off="true"
+        @modal-hide-request="closeCustomWeekModal"
+        @primary-click="generateCustomWeekFromModal"
+        @secondary-click="closeCustomWeekModal"
+      >
+        <template v-slot:label>Generate Custom Report</template>
+        <template v-slot:title>Select Week Start Date</template>
+        <template v-slot:content>
+          <div class="custom-week-form">
+            <p class="form-description">Select a Monday to generate a utilization report for that week.</p>
+            <cv-date-picker
+              v-model="customWeekStart"
+              :date-format="dateFormat"
+              :invalid="datePickerInvalid"
+              placeholder="Select Monday date (YYYY-MM-DD)"
+            >
+              <cv-date-picker-input
+                label="Week Start Date (Monday)"
+                placeholder="YYYY-MM-DD"
+                :invalid-message="datePickerInvalid ? 'Please select a Monday' : ''"
+              />
+            </cv-date-picker>
+            <div class="form-help-text">
+              <p>Note: Only Mondays can be selected as week start dates. The report will cover Monday through Sunday of that week.</p>
+            </div>
+          </div>
+        </template>
+        <template v-slot:primary-button>
+          <span v-if="loading.generateCustom">Generating...</span>
+          <span v-else>Generate Report</span>
+        </template>
+        <template v-slot:secondary-button>Cancel</template>
+      </cv-modal>
+      
       <!-- Error/Success Messages -->
       <cv-toast-notification
         v-if="notification.show"
@@ -435,8 +452,11 @@ export default {
       selectedReport: null,
       latestReport: null,
       showReportModal: false,
+      showCustomWeekModal: false,
       currentPage: 1,
       pageSize: 10,
+      currentStatIndex: 0,
+      carouselInterval: null,
       pagination: {
         totalReports: 0,
         totalPages: 1,
@@ -506,6 +526,34 @@ export default {
     };
   },
   computed: {
+    statsData() {
+      if (!this.latestReport) return [];
+      return [
+        {
+          label: 'Average Utilization',
+          value: `${this.latestReport.summary.avgUtilization}%`,
+          indicatorClass: 'utilization-avg'
+        },
+        {
+          label: 'Peak Utilization',
+          value: `${this.latestReport.summary.peakUtilization}%`,
+          indicatorClass: 'utilization-peak'
+        },
+        {
+          label: 'Total Reservations',
+          value: this.latestReport.summary.totalReservations,
+          indicatorClass: 'reservations'
+        },
+        {
+          label: 'Unique Users',
+          value: this.latestReport.summary.uniqueUsers,
+          indicatorClass: 'users'
+        }
+      ];
+    },
+    currentStat() {
+      return this.statsData[this.currentStatIndex] || {};
+    },
     tableData() {
       return this.reports.map(report => ({
         _id: report._id,
@@ -521,8 +569,33 @@ export default {
   },
   async mounted() {
     await this.fetchReports();
+    this.startCarousel();
+  },
+  beforeUnmount() {
+    this.stopCarousel();
   },
   methods: {
+    startCarousel() {
+      this.stopCarousel(); // Clear any existing interval
+      this.carouselInterval = setInterval(() => {
+        this.nextStat();
+      }, 3000); // Change every 3 seconds
+    },
+    stopCarousel() {
+      if (this.carouselInterval) {
+        clearInterval(this.carouselInterval);
+        this.carouselInterval = null;
+      }
+    },
+    nextStat() {
+      if (this.statsData.length > 0) {
+        this.currentStatIndex = (this.currentStatIndex + 1) % this.statsData.length;
+      }
+    },
+    setCurrentStat(index) {
+      this.currentStatIndex = index;
+      this.startCarousel(); // Restart the auto-advance timer
+    },
     async fetchReports() {
       this.loading.reports = true;
       try {
@@ -601,6 +674,75 @@ export default {
       }
     },
     
+    
+    openCustomWeekModal() {
+      this.showCustomWeekModal = true;
+      this.customWeekStart = '';
+      this.datePickerInvalid = false;
+    },
+    
+    closeCustomWeekModal() {
+      this.showCustomWeekModal = false;
+      this.customWeekStart = '';
+      this.datePickerInvalid = false;
+    },
+    
+    async generateCustomWeekFromModal() {
+      if (!this.customWeekStart) {
+        this.showNotification('error', 'Missing Date', 'Please select a week start date');
+        return;
+      }
+      
+      // Parse the date and validate that it's a Monday
+      const date = new Date(this.customWeekStart);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        this.datePickerInvalid = true;
+        this.showNotification('error', 'Invalid Date', 'Please select a valid date');
+        return;
+      }
+      
+      // Check if it's a Monday (getDay() returns 1 for Monday)
+      if (date.getDay() !== 1) {
+        this.datePickerInvalid = true;
+        this.showNotification('error', 'Invalid Date', 'Please select a Monday as the week start date');
+        return;
+      }
+      
+      this.datePickerInvalid = false;
+      this.loading.generateCustom = true;
+      
+      try {
+        const idToken = localStorage.getItem('auth_token');
+        
+        // Format the date as ISO string for the API
+        const formattedDate = date.toISOString().split('T')[0];
+        
+        await axios.post('/api/utilization-reports/generate', {}, {
+          headers: { Authorization: `Bearer ${idToken}` },
+          params: { weekStart: formattedDate }
+        });
+        
+        this.showNotification('success', 'Success', 'Custom week report generated successfully');
+        this.closeCustomWeekModal();
+        await this.fetchReports();
+      } catch (error) {
+        console.error('Error generating custom week report:', error);
+        if (error.response && error.response.status === 401) {
+          this.showNotification('error', 'Authentication Required', 'You must be an admin to generate reports.');
+        } else if (error.response && error.response.status === 400) {
+          const message = error.response?.data?.error || 'Report already exists for this week';
+          this.showNotification('error', 'Unable to Generate', message);
+        } else {
+          const message = error.response?.data?.error || 'Failed to generate custom week report';
+          this.showNotification('error', 'Error', message);
+        }
+      } finally {
+        this.loading.generateCustom = false;
+      }
+    },
+    
     async generateCustomWeekReport() {
       if (!this.customWeekStart) {
         this.showNotification('error', 'Missing Date', 'Please select a week start date');
@@ -633,7 +775,7 @@ export default {
         // Format the date as ISO string for the API
         const formattedDate = date.toISOString().split('T')[0];
         
-        await axios.post('/api.utilization-reports/generate', {}, {
+        await axios.post('/api/utilization-reports/generate', {}, {
           headers: { Authorization: `Bearer ${idToken}` },
           params: { weekStart: formattedDate }
         });
@@ -746,6 +888,9 @@ export default {
         console.error('Error downloading current report:', error);
         if (error.response && error.response.status === 401) {
           this.showNotification('error', 'Authentication Required', 'Please log in to download reports');
+        } else if (error.response && error.response.status === 429) {
+          const message = error.response?.data?.error || 'Too many download requests. Please wait a few minutes before trying again.';
+          this.showNotification('error', 'Rate Limit Exceeded', message);
         } else {
           this.showNotification('error', 'Download Failed', 'Failed to download current week report');
         }
@@ -843,15 +988,39 @@ export default {
 .utilization-container {
   padding: 0;
   margin-top: 64px;
-  background-color: #f4f4f4;
+  background: linear-gradient(135deg, #f4f4f4 0%, #f8f9fa 100%);
   min-height: calc(100vh - 64px);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .page-header {
-  background-color: #ffffff;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   padding: 2rem 2rem 1.5rem 2rem;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 2px solid #e0e0e0;
   margin-bottom: 0;
+  position: relative;
+}
+
+.page-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 2rem;
+  width: 60px;
+  height: 2px;
+  background: linear-gradient(90deg, #0f62fe, #0043ce);
+  border-radius: 1px;
 }
 
 .page-title {
@@ -862,11 +1031,14 @@ export default {
   line-height: 1.25;
 }
 
+
+
 .page-subtitle {
   font-size: 1rem;
   color: #525252;
   margin: 0;
   font-weight: 400;
+  line-height: 1.4;
 }
 
 .utilization-grid {
@@ -874,12 +1046,24 @@ export default {
   width: 100%;
   max-width: none;
   margin: 0;
+  animation: slideInUp 0.4s ease-out 0.1s both;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .controls-row,
 .stats-row,
 .reports-row {
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 /* Tile Styling */
@@ -890,20 +1074,34 @@ export default {
   border: 1px solid #e0e0e0;
   padding: 1.5rem;
   height: 100%;
-  border-radius: 4px;
-  transition: box-shadow 0.15s ease;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .controls-tile:hover,
 .quick-stats-tile:hover,
 .reports-tile:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
 }
 
 .tile-header {
   margin-bottom: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 2px solid #e0e0e0;
   padding-bottom: 1rem;
+  position: relative;
+}
+
+.tile-header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 40px;
+  height: 2px;
+  background: linear-gradient(90deg, #0f62fe, #0043ce);
+  border-radius: 1px;
 }
 
 .tile-title {
@@ -912,6 +1110,9 @@ export default {
   color: #161616;
   margin: 0 0 0.25rem 0;
   line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .tile-subtitle {
@@ -919,6 +1120,7 @@ export default {
   color: #6f6f6f;
   margin: 0;
   font-weight: 400;
+  line-height: 1.4;
 }
 
 /* Controls Content */
@@ -1074,42 +1276,155 @@ export default {
 
 /* Quick Stats */
 .quick-stats-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 300px; /* Fixed minimum height for the entire content container */
+}
+
+.stats-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
 }
 
-.quick-export-section {
-  grid-column: 1 / -1;
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e0e0e0;
+.stat-card {
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
 }
 
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #0f62fe;
+}
 
+.stat-icon-container {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+}
 
-.stat-item {
+.stat-icon-container.utilization-avg {
+  background: linear-gradient(135deg, #d9f0dd, #e8f5e8);
+  border: 2px solid #198038;
+}
+
+.stat-icon-container.utilization-peak {
+  background: linear-gradient(135deg, #fef7cd, #fefbde);
+  border: 2px solid #f1c21b;
+}
+
+.stat-icon-container.reservations {
+  background: linear-gradient(135deg, #d0e2ff, #e0efff);
+  border: 2px solid #0f62fe;
+}
+
+.stat-icon-container.users {
+  background: linear-gradient(135deg, #f0e6ff, #f7f0ff);
+  border: 2px solid #8a3ffc;
+}
+
+.stat-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.stat-details {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  padding: 1rem;
-  background-color: #f4f4f4;
-  border-radius: 4px;
-  border: 1px solid #e0e0e0;
+  flex: 1;
 }
 
 .stat-label {
   font-size: 0.875rem;
   font-weight: 500;
   color: #6f6f6f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .stat-value {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 700;
   color: #161616;
+  line-height: 1.2;
+}
+
+.quick-export-section {
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: center;
+}
+
+.export-button {
+  min-width: 200px;
+}
+
+/* Empty State Styling */
+.no-data-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px; /* Fixed exact height to match carousel section */
+  padding: 1rem 2rem;
+  text-align: center;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 2px dashed #c6c6c6;
+  border-radius: 12px;
+  margin: 1rem 0;
+  transition: height 0.3s ease; /* Smooth height transition */
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.6;
+  line-height: 1;
+}
+
+.empty-state-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.75rem 0;
+  line-height: 1.3;
+}
+
+.empty-state-description {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.4;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.empty-state-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.generate-hint-button {
+  min-width: 180px;
 }
 
 /* Reports Cards */
@@ -1118,20 +1433,46 @@ export default {
 }
 
 .reports-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  display: flex;
+  flex-direction: row;
   gap: 1.5rem;
+  margin-top: 2rem;
   margin-bottom: 2rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.5rem;
+  scroll-behavior: smooth;
+}
+
+.reports-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.reports-grid::-webkit-scrollbar-track {
+  background: #f4f4f4;
+  border-radius: 4px;
+}
+
+.reports-grid::-webkit-scrollbar-thumb {
+  background: #0f62fe;
+  border-radius: 4px;
+}
+
+.reports-grid::-webkit-scrollbar-thumb:hover {
+  background: #0043ce;
 }
 
 .report-card {
   background: #ffffff;
   border: 1px solid #e0e0e0;
-  border-radius: 8px;
+  border-radius: 0; /* Sharp edges */
   padding: 1.5rem;
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  flex: 0 0 400px; /* Fixed width, no grow/shrink */
+  min-width: 400px;
+  margin-top: 1.5rem;
 }
 
 .report-card:hover {
@@ -1550,7 +1891,44 @@ export default {
   }
   
   .quick-stats-content {
+    gap: 1rem;
+  }
+  
+  .stats-grid {
     grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+  
+  .stat-card {
+    padding: 1rem;
+    gap: 0.75rem;
+  }
+  
+  .stat-icon-container {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .stat-icon {
+    font-size: 1.25rem;
+  }
+  
+  .stat-value {
+    font-size: 1.5rem;
+  }
+  
+  .export-button,
+  .generate-hint-button {
+    min-width: auto;
+    width: 100%;
+  }
+  
+  .no-data-state {
+    padding: 2rem 1rem;
+  }
+  
+  .empty-state-icon {
+    font-size: 2.5rem;
   }
   
   .summary-grid {
@@ -1563,12 +1941,13 @@ export default {
   
   /* Card Layout Responsive */
   .reports-grid {
-    grid-template-columns: 1fr;
     gap: 1rem;
   }
   
   .report-card {
     padding: 1rem;
+    flex: 0 0 300px; /* Smaller width for mobile */
+    min-width: 300px;
   }
   
   .report-header {
@@ -1621,13 +2000,23 @@ export default {
 
 /* Tablet Layout */
 @media (min-width: 769px) and (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+  
+  .stat-card {
+    padding: 1.125rem;
+  }
+  
   .reports-grid {
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 1.25rem;
   }
   
   .report-card {
     padding: 1.25rem;
+    flex: 0 0 350px; /* Medium width for tablet */
+    min-width: 350px;
   }
   
   .utilization-circle {
@@ -1642,13 +2031,36 @@ export default {
 
 /* Large Desktop Layout */
 @media (min-width: 1400px) {
+  .stats-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+  
+  .stat-card {
+    padding: 1.5rem;
+  }
+  
+  .stat-icon-container {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .stat-icon {
+    font-size: 1.75rem;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+  }
+  
   .reports-grid {
-    grid-template-columns: repeat(auto-fill, minmax(450px, 1fr));
     gap: 2rem;
   }
   
   .report-card {
     padding: 2rem;
+    flex: 0 0 450px; /* Larger width for large desktop */
+    min-width: 450px;
   }
   
   .utilization-circle {
@@ -1663,15 +2075,17 @@ export default {
 
 /* Carbon component overrides */
 :deep(.bx--tile) {
-  border-radius: 4px;
+  border-radius: 0 !important; /* Sharp edges for all tiles */
 }
 
 :deep(.bx--data-table-container) {
   background-color: #ffffff;
+  border-radius: 0 !important;
 }
 
 :deep(.bx--modal-container) {
   max-height: 80vh;
+  border-radius: 0 !important;
 }
 
 :deep(.bx--progress-bar) {
@@ -1686,15 +2100,526 @@ export default {
   margin-bottom: 0.5rem;
 }
 
-/* Admin notice styling */
-.admin-notice {
-  font-size: 0.875rem;
-  color: #6f6f6f;
-  font-style: italic;
-  margin: 0;
-  padding: 0.75rem;
-  background-color: #f4f4f4;
+/* Stat Indicators - Clean Geometric Shapes */
+.stat-indicator {
+  width: 48px;
+  height: 48px;
+  border-radius: 0; /* Sharp edges */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  border: 2px solid;
+}
+
+.stat-indicator.utilization-avg {
+  background: linear-gradient(135deg, #d9f0dd, #e8f5e8);
+  border-color: #198038;
+}
+
+.stat-indicator.utilization-avg::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  background: #198038;
   border-radius: 4px;
-  border-left: 3px solid #0f62fe;
+  transform: rotate(45deg);
+}
+
+.stat-indicator.utilization-peak {
+  background: linear-gradient(135deg, #fef7cd, #fefbde);
+  border-color: #f1c21b;
+}
+
+.stat-indicator.utilization-peak::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 16px solid #f1c21b;
+}
+
+.stat-indicator.reservations {
+  background: linear-gradient(135deg, #d0e2ff, #e0efff);
+  border-color: #0f62fe;
+}
+
+.stat-indicator.reservations::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  background: #0f62fe;
+  border-radius: 50%;
+}
+
+.stat-indicator.users {
+  background: linear-gradient(135deg, #f0e6ff, #f7f0ff);
+  border-color: #8a3ffc;
+}
+
+.stat-indicator.users::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 18px solid #8a3ffc;
+}
+
+/* Carousel Styles */
+.stats-carousel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  height: 200px; /* Fixed exact height instead of min-height for consistency */
+  justify-content: center;
+  transition: height 0.3s ease; /* Smooth height transition */
+}
+
+.carousel-container {
+  width: 100%;
+  max-width: 400px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card-single {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 2px solid #e0e0e0;
+  border-radius: 0; /* Sharp edges */
+  width: 100%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card-single::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0f62fe, #0043ce);
+}
+
+.stat-card-single:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  border-color: #0f62fe;
+}
+
+.stat-card-single .stat-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.stat-card-single .stat-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #6f6f6f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-card-single .stat-value {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #161616;
+  line-height: 1.1;
+}
+
+/* Carousel Indicators */
+.carousel-indicators {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.indicator-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #c6c6c6;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.indicator-dot:hover {
+  border-color: #0f62fe;
+  transform: scale(1.1);
+}
+
+.indicator-dot.active {
+  border-color: #0f62fe;
+  background: #0f62fe;
+  transform: scale(1.2);
+}
+
+.indicator-dot.active::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #0f62fe;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0.3;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
+}
+
+/* Slide Transitions */
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.slide-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+/* Content State Transitions */
+.quick-stats-content > div {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Download Button Tall Styling */
+.download-button-tall {
+  min-height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 240px;
+}
+
+.download-button-tall :deep(.bx--btn) {
+  min-height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center;
+  padding: 1rem 1.5rem !important;
+}
+
+.download-button-tall :deep(.bx--btn__icon) {
+  margin-right: 0.75rem !important;
+  flex-shrink: 0;
+}
+
+.download-button-tall :deep(.cv-button__content) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.75rem;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+/* Compact Carousel Styles */
+.stats-carousel-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.carousel-container-compact {
+  position: relative;
+  width: 100%;
+  max-width: 280px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 0; /* Sharp edges */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.stat-card-single-compact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
+
+.stat-indicator-compact {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stat-details-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.stat-label-compact {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.stat-value-compact {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  line-height: 1;
+}
+
+/* Hide carousel indicators completely */
+.carousel-indicators {
+  display: none !important;
+}
+
+/* Button Wrapper to prevent layout shifts */
+.button-wrapper {
+  min-height: 48px;
+  display: flex;
+  transition: all 0.3s ease;
+}
+
+/* Control Button Tall Styling */
+.control-button-tall {
+  min-height: 48px !important;
+}
+
+.control-button-tall :deep(.bx--btn) {
+  min-height: 48px !important;
+}
+
+/* Horizontal Controls Layout */
+.horizontal-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-item {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  justify-content: center;
+}
+
+/* Quick Stats Download Button */
+.quick-stats-download {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+  height: 80px; /* Fixed exact height to prevent displacement */
+  align-items: center;
+  transition: opacity 0.3s ease; /* Smooth opacity transition */
+}
+
+.download-button-centered {
+  min-width: 220px;
+}
+
+/* Custom Week Modal Styles */
+.custom-week-form {
+  padding: 1rem 0;
+}
+
+.form-description {
+  margin-bottom: 1.5rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.form-help-text {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  border-left: 3px solid #3b82f6;
+}
+
+.form-help-text p {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: #4b5563;
+  line-height: 1.4;
+}
+
+/* Top Row Layout - Side by Side */
+.top-row {
+  margin-bottom: 2rem;
+}
+
+.top-row .cv-column:first-child {
+  padding-right: 1rem;
+}
+
+.top-row .cv-column:last-child {
+  padding-left: 1rem;
+}
+
+/* Responsive Carousel */
+@media (max-width: 768px) {
+  .carousel-container {
+    max-width: 100%;
+    height: 100px;
+  }
+  
+  .carousel-container-compact {
+    max-width: 100%;
+    height: 70px;
+  }
+  
+  .stat-card-single {
+    padding: 1.25rem 1.5rem;
+    gap: 1rem;
+  }
+  
+  .stat-card-single-compact {
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+  }
+  
+  .stat-card-single .stat-value {
+    font-size: 1.875rem;
+  }
+  
+  .stat-value-compact {
+    font-size: 1.25rem !important;
+  }
+  
+  .stat-card-single .stat-label {
+    font-size: 0.875rem;
+  }
+  
+  .stat-label-compact {
+    font-size: 0.6875rem !important;
+  }
+  
+  .download-button-tall {
+    min-width: 100%;
+  }
+  
+  .indicator-dot {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .carousel-indicators {
+    gap: 0.5rem;
+  }
+  
+  .horizontal-controls {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .control-item {
+    min-width: 100%;
+    justify-content: center;
+  }
+  
+  .download-button-centered {
+    min-width: 100%;
+  }
+  
+  .top-row .cv-column:first-child,
+  .top-row .cv-column:last-child {
+    padding-left: 0;
+    padding-right: 0;
+    margin-bottom: 1rem;
+  }
+}
+
+@media (min-width: 1400px) {
+  .carousel-container {
+    max-width: 500px;
+    height: 140px;
+  }
+  
+  .carousel-container-compact {
+    max-width: 320px;
+    height: 90px;
+  }
+  
+  .stat-card-single {
+    padding: 2rem 2.5rem;
+    gap: 2rem;
+  }
+  
+  .stat-card-single-compact {
+    padding: 1.25rem 1.75rem;
+    gap: 1.25rem;
+  }
+  
+  .stat-card-single .stat-value {
+    font-size: 2.5rem;
+  }
+  
+  .stat-value-compact {
+    font-size: 1.75rem !important;
+  }
+  
+  .stat-card-single .stat-label {
+    font-size: 1.125rem;
+  }
+  
+  .stat-label-compact {
+    font-size: 0.8125rem !important;
+  }
 }
 </style>

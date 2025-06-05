@@ -7,15 +7,7 @@
     
     <!-- Main Content Area -->
     <cv-grid class="reservations-grid">
-      <cv-row class="content-row">
-        <cv-column :sm="4" :md="16" :lg="16">
-          <div class="grid-container">
-            <CubicleGrid :cubicles="cubicles" @update-cubicle-state="updateCubicleState" />
-          </div>
-        </cv-column>
-      </cv-row>
-      
-      <!-- Quick Actions Panel -->
+      <!-- Quick Actions Panel - First -->
       <cv-row class="actions-row">
         <cv-column :sm="4" :md="16" :lg="16">
           <cv-tile class="actions-tile">
@@ -24,31 +16,31 @@
               <p class="tile-subtitle">Common cubicle management operations</p>
             </div>
             <div class="actions-content">
-              <div class="action-item">
-                <div class="action-info">
+              <div class="action-container">
+                <div class="action-info-card">
                   <span class="action-label">Refresh Cubicles</span>
                   <span class="action-description">Update all cubicle statuses from server</span>
                 </div>
                 <cv-button 
                   @click="fetchCubicles" 
-                  kind="tertiary" 
-                  size="md"
-                  class="action-button"
+                  kind="primary" 
+                  size="lg"
+                  class="action-button refresh-button"
                 >
                   Refresh
                 </cv-button>
               </div>
               
-              <div class="action-item">
-                <div class="action-info">
+              <div class="action-container">
+                <div class="action-info-card">
                   <span class="action-label">View Statistics</span>
                   <span class="action-description">Check usage analytics and metrics</span>
                 </div>
                 <cv-button 
                   @click="goToStatistics" 
-                  kind="tertiary" 
-                  size="md"
-                  class="action-button"
+                  kind="secondary" 
+                  size="lg"
+                  class="action-button statistics-button"
                 >
                   Statistics
                 </cv-button>
@@ -73,6 +65,15 @@
               </div>
             </div>
           </cv-tile>
+        </cv-column>
+      </cv-row>
+      
+      <!-- Cubicle Grid - Second -->
+      <cv-row class="content-row">
+        <cv-column :sm="4" :md="16" :lg="16">
+          <div class="grid-container">
+            <CubicleGrid :cubicles="cubicles" @update-cubicle-state="updateCubicleState" />
+          </div>
         </cv-column>
       </cv-row>
     </cv-grid>
@@ -189,11 +190,15 @@ export default {
 .reservations-grid {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.5rem;
+}
+
+.actions-row {
+  margin-bottom: 1.5rem;
 }
 
 .content-row {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 /* Global styles to prevent horizontal overflow */
@@ -214,11 +219,11 @@ export default {
 
 .grid-container {
   background: white;
-  border-radius: 8px;
-  padding: 2rem;
+  border-radius: 0; /* Sharp edges */
+  padding: 1.5rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid #e0e0e0;
-  min-height: 600px;
+  min-height: 500px;
   width: 100%;
   overflow: visible;
 }
@@ -230,7 +235,7 @@ export default {
 .actions-tile {
   background: white !important;
   border: 1px solid #e0e0e0 !important;
-  border-radius: 8px !important;
+  border-radius: 0 !important; /* Sharp edges */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
   padding: 1.5rem !important;
 }
@@ -257,8 +262,35 @@ export default {
 
 .actions-content {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 1.5rem;
+  align-items: stretch;
+}
+
+.action-container {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  border: 1px solid #e0e0e0;
+  border-radius: 0; /* Sharp edges */
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+}
+
+.action-container:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.action-info-card {
+  padding: 1.25rem;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  border-right: 1px solid #e0e0e0;
 }
 
 .action-item {
@@ -267,7 +299,7 @@ export default {
   align-items: center;
   padding: 1.25rem;
   background: #f4f4f4;
-  border-radius: 6px;
+  border-radius: 0; /* Sharp edges */
   border: 1px solid #e0e0e0;
   transition: background-color 0.15s ease;
 }
@@ -294,28 +326,46 @@ export default {
 }
 
 .action-button {
-  flex-shrink: 0;
-  margin-left: 1rem;
-  min-width: 140px;
-  width: 140px;
-  height: 40px;
+  width: auto;
+  min-width: 120px;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  font-weight: 500;
-  border-radius: 4px;
-  transition: all 0.15s ease;
+  font-weight: 600;
+  font-size: 1rem;
+  border-radius: 0; /* Sharp edges */
+  border-left: none; /* Remove left border to attach to content */
+  transition: all 0.2s ease;
+  letter-spacing: 0.5px;
+  margin: 0;
+  padding: 1.25rem;
 }
 
-.action-button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+.action-button.refresh-button {
+  background: linear-gradient(135deg, #0f62fe, #0043ce);
+  border-color: #0f62fe;
+}
+
+.action-button.refresh-button:hover {
+  background: linear-gradient(135deg, #0353e9, #002d9c);
+  box-shadow: inset 0 0 0 1px #0043ce;
+}
+
+.action-button.statistics-button {
+  background: linear-gradient(135deg, #393939, #262626);
+  border-color: #393939;
+}
+
+.action-button.statistics-button:hover {
+  background: linear-gradient(135deg, #4c4c4c, #393939);
+  box-shadow: inset 0 0 0 1px #262626;
 }
 
 .status-legend {
   background: #f4f4f4;
-  border-radius: 6px;
+  border-radius: 0; /* Sharp edges */
   padding: 1rem;
   border: 1px solid #e0e0e0;
 }
@@ -343,23 +393,23 @@ export default {
 .legend-indicator {
   width: 12px;
   height: 12px;
-  border-radius: 50%;
+  border-radius: 0; /* Sharp edges for indicators */
   border: 2px solid transparent;
 }
 
 .legend-indicator.available {
-  background-color: #24a148;
-  border-color: #1e8e3e;
+  background-color: #3c3c3c;
+  border-color: #3c3c3c;
 }
 
 .legend-indicator.reserved {
-  background-color: #0f62fe;
-  border-color: #0043ce;
+  background-color: #2962ff;
+  border-color: #2962ff;
 }
 
 .legend-indicator.error {
-  background-color: #da1e28;
-  border-color: #ba1b23;
+  background-color: #d32f2f;
+  border-color: #d32f2f;
 }
 
 .legend-label {
@@ -396,24 +446,34 @@ export default {
   .grid-container {
     padding: 1rem;
     min-height: 400px;
+    border-radius: 0; /* Maintain sharp edges on mobile */
   }
   
   .actions-tile {
     padding: 1rem !important;
   }
   
-  .action-item {
+  .actions-content {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .action-container {
+    flex-direction: column;
+  }
+  
+  .action-info-card {
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
   }
   
   .action-button {
-    margin-left: 0;
-    align-self: stretch;
-    min-width: 140px;
     width: 100%;
+    height: 44px;
+    font-size: 0.95rem;
+    padding: 0;
+    border-left: none;
+    border-top: none;
   }
   
   .legend-items {
@@ -426,5 +486,44 @@ export default {
     flex-direction: column;
     gap: 0.75rem;
   }
+}
+
+/* Carbon component overrides for sharp edges */
+:deep(.bx--tile) {
+  border-radius: 0 !important; /* Sharp edges for all tiles */
+}
+
+:deep(.bx--btn) {
+  border-radius: 0 !important; /* Sharp edges for all buttons */
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+:deep(.bx--btn--primary) {
+  background: linear-gradient(135deg, #0f62fe, #0043ce) !important;
+  border-color: #0f62fe !important;
+}
+
+:deep(.bx--btn--primary:hover) {
+  background: linear-gradient(135deg, #0353e9, #002d9c) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.3) !important;
+}
+
+:deep(.bx--btn--secondary) {
+  background: linear-gradient(135deg, #393939, #262626) !important;
+  border-color: #393939 !important;
+  color: #ffffff !important;
+}
+
+:deep(.bx--btn--secondary:hover) {
+  background: linear-gradient(135deg, #4c4c4c, #393939) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(57, 57, 57, 0.3) !important;
+}
+
+:deep(.bx--form-item) {
+  border-radius: 0 !important;
 }
 </style>

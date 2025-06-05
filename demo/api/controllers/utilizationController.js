@@ -9,6 +9,7 @@ const UtilizationReport = require('../models/UtilizationReport');
 const Cubicle = require('../models/Cubicle');
 const Reservation = require('../models/Reservation');
 const { validarUsuario, validarAdmin } = require('../middleware/auth');
+const { exportLimiter } = require('../middleware/rateLimiter');
 
 /**
  * @file utilizationController.js
@@ -413,33 +414,43 @@ router.post('/generate', validarUsuario, validarAdmin, [
       advancedKeys: reportData.advanced ? Object.keys(reportData.advanced) : []
     });
 
-    // Check if report already exists for this week and update it, or create new one
+    // Check if report already exists for this week to detect changes
     const existingReport = await UtilizationReport.findOne({
       weekStartDate: weekStart,
       weekEndDate: weekEnd
     });
 
     let report;
+    let hasChanges = true;
+
     if (existingReport) {
-      // Update existing report with new data
-      report = await UtilizationReport.findByIdAndUpdate(
-        existingReport._id,
-        {
-          ...reportData,
-          generatedAt: new Date() // Update generation timestamp
-        },
-        { new: true }
+      // Check if there are significant changes in the data
+      hasChanges = (
+        existingReport.summary.totalReservations !== reportData.summary.totalReservations ||
+        existingReport.summary.uniqueUsers !== reportData.summary.uniqueUsers ||
+        existingReport.summary.avgUtilization !== reportData.summary.avgUtilization ||
+        existingReport.summary.errorIncidents !== reportData.summary.errorIncidents
       );
-      console.log('Updated existing report for week:', weekStart.toISOString().split('T')[0]);
-    } else {
-      // Create new report
+    }
+
+    if (!existingReport || hasChanges) {
+      // Always create new report if no existing report or if there are changes
       report = new UtilizationReport({
         weekStartDate: weekStart,
         weekEndDate: weekEnd,
         ...reportData
       });
       await report.save();
-      console.log('Created new report for week:', weekStart.toISOString().split('T')[0]);
+      
+      if (existingReport && hasChanges) {
+        console.log('Created new report for week due to changes:', weekStart.toISOString().split('T')[0]);
+      } else {
+        console.log('Created new report for week:', weekStart.toISOString().split('T')[0]);
+      }
+    } else {
+      // No changes detected, return existing report
+      report = existingReport;
+      console.log('No changes detected, returning existing report for week:', weekStart.toISOString().split('T')[0]);
     }
 
     res.status(200).json(report);
@@ -471,33 +482,43 @@ router.post('/generate-current', validarUsuario, validarAdmin, async (req, res) 
     // Generate report data
     const reportData = await generateReportData(weekStart, weekEnd);
 
-    // Check if report already exists and update it, or create new one
+    // Check if report already exists for this week to detect changes
     const existingReport = await UtilizationReport.findOne({
       weekStartDate: weekStart,
       weekEndDate: weekEnd
     });
 
     let report;
+    let hasChanges = true;
+
     if (existingReport) {
-      // Update existing report with new data
-      report = await UtilizationReport.findByIdAndUpdate(
-        existingReport._id,
-        {
-          ...reportData,
-          generatedAt: new Date() // Update generation timestamp
-        },
-        { new: true }
+      // Check if there are significant changes in the data
+      hasChanges = (
+        existingReport.summary.totalReservations !== reportData.summary.totalReservations ||
+        existingReport.summary.uniqueUsers !== reportData.summary.uniqueUsers ||
+        existingReport.summary.avgUtilization !== reportData.summary.avgUtilization ||
+        existingReport.summary.errorIncidents !== reportData.summary.errorIncidents
       );
-      console.log('Updated existing current week report');
-    } else {
-      // Create new report
+    }
+
+    if (!existingReport || hasChanges) {
+      // Always create new report if no existing report or if there are changes
       report = new UtilizationReport({
         weekStartDate: weekStart,
         weekEndDate: weekEnd,
         ...reportData
       });
       await report.save();
-      console.log('Created new current week report');
+      
+      if (existingReport && hasChanges) {
+        console.log('Created new current week report due to changes');
+      } else {
+        console.log('Created new current week report');
+      }
+    } else {
+      // No changes detected, return existing report
+      report = existingReport;
+      console.log('No changes detected, returning existing current week report');
     }
 
     res.status(200).json(report);
@@ -538,7 +559,7 @@ router.delete('/:id', validarUsuario, validarAdmin, [
  * @route GET /utilization-reports/:id/export
  * @access Protected (user)
  */
-router.get('/:id/export', validarUsuario, [
+router.get('/:id/export', exportLimiter, validarUsuario, [
   param('id').isMongoId()
 ], async (req, res) => {
   try {

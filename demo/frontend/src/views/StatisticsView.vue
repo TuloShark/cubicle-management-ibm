@@ -7,9 +7,10 @@
     
     <!-- Main Statistics Dashboard -->
     <cv-grid class="statistics-grid">
-      <!-- General Usage Overview -->
-      <cv-row class="stats-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+      <!-- General Usage and Usage Distribution Row - Side by Side -->
+      <cv-row class="top-stats-row">
+        <!-- General Usage - Left Half -->
+        <cv-column :sm="4" :md="6" :lg="6">
           <cv-tile class="overview-tile">
             <div class="tile-header">
               <h3 class="tile-title">General Usage</h3>
@@ -55,17 +56,15 @@
             </div>
           </cv-tile>
         </cv-column>
-      </cv-row>
-      
-      <!-- Usage Distribution Row -->
-      <cv-row class="stats-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+        
+        <!-- Usage Distribution - Right Half -->
+        <cv-column :sm="4" :md="6" :lg="6">
           <cv-tile class="chart-tile">
             <div class="tile-header">
               <h3 class="tile-title">Usage Distribution</h3>
               <p class="tile-subtitle">Visual breakdown of cubicle status</p>
             </div>
-            <div class="chart-container">
+            <div class="chart-container chart-container-compact">
               <Doughnut 
                 v-if="chartData.doughnut"
                 :data="chartData.doughnut" 
@@ -82,7 +81,7 @@
 
       <!-- Charts and Visualizations Row -->
       <cv-row class="stats-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+        <cv-column :sm="4" :md="12" :lg="12">
           <cv-tile class="chart-tile">
             <div class="tile-header">
               <h3 class="tile-title">User Activity</h3>
@@ -105,7 +104,7 @@
       
       <!-- Section Analysis Row -->
       <cv-row class="stats-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+        <cv-column :sm="4" :md="12" :lg="12">
           <cv-tile class="chart-tile">
             <div class="tile-header">
               <h3 class="tile-title">Section Analysis</h3>
@@ -126,9 +125,10 @@
         </cv-column>
       </cv-row>
 
-      <!-- User Statistics Row -->
-      <cv-row class="stats-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+      <!-- User Statistics and Key Metrics Row - Side by Side -->
+      <cv-row class="user-metrics-row">
+        <!-- Per User Usage - Left Half -->
+        <cv-column :sm="4" :md="6" :lg="6">
           <cv-tile class="data-tile">
             <div class="tile-header">
               <h3 class="tile-title">Per User Usage</h3>
@@ -161,11 +161,9 @@
             </div>
           </cv-tile>
         </cv-column>
-      </cv-row>
-      
-      <!-- Key Metrics Row -->
-      <cv-row class="stats-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+        
+        <!-- Key Metrics - Right Half -->
+        <cv-column :sm="4" :md="6" :lg="6">
           <cv-tile class="data-tile">
             <div class="tile-header">
               <h3 class="tile-title">Key Metrics</h3>
@@ -188,65 +186,50 @@
         </cv-column>
       </cv-row>
       
-      <!-- Advanced Analytics Row -->
-      <cv-row class="stats-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+      <!-- Advanced Analytics and Usage Trend Analysis Row - Side by Side -->
+      <cv-row class="analytics-trend-row">
+        <!-- Advanced Analytics - Left Half -->
+        <cv-column :sm="4" :md="4" :lg="4">
           <cv-tile class="analytics-tile">
             <div class="tile-header">
               <h3 class="tile-title">Advanced Analytics</h3>
               <p class="tile-subtitle">Comprehensive usage insights and trends</p>
             </div>
-            <div class="analytics-grid">
-              <div class="analytics-card">
-                <div class="analytics-icon">📊</div>
-                <div class="analytics-content">
-                  <span class="analytics-label">Total Reservations</span>
-                  <span class="analytics-value">{{ advancedMetrics.totalReservations }}</span>
-                </div>
+            <div class="analytics-carousel">
+              <div class="analytics-carousel-container-vertical">
+                <transition name="slide" mode="out-in">
+                  <div 
+                    :key="currentAnalyticsIndex" 
+                    class="analytics-cards-stack"
+                  >
+                    <!-- First Card -->
+                    <div class="analytics-card-stacked">
+                      <div :class="['analytics-indicator-medium', currentAnalyticsTop.indicatorClass]"></div>
+                      <div class="analytics-details">
+                        <span class="analytics-label-medium">{{ currentAnalyticsTop.label }}</span>
+                        <span class="analytics-value-medium">{{ currentAnalyticsTop.value }}</span>
+                      </div>
+                    </div>
+                    
+                    <!-- Second Card -->
+                    <div class="analytics-card-stacked">
+                      <div :class="['analytics-indicator-medium', currentAnalyticsBottom.indicatorClass]"></div>
+                      <div class="analytics-details">
+                        <span class="analytics-label-medium">{{ currentAnalyticsBottom.label }}</span>
+                        <span class="analytics-value-medium">{{ currentAnalyticsBottom.value }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </transition>
               </div>
-              <div class="analytics-card">
-                <div class="analytics-icon">👥</div>
-                <div class="analytics-content">
-                  <span class="analytics-label">Active Users</span>
-                  <span class="analytics-value">{{ advancedMetrics.activeUsers }}</span>
-                </div>
-              </div>
-              <div class="analytics-card">
-                <div class="analytics-icon">⚡</div>
-                <div class="analytics-content">
-                  <span class="analytics-label">Peak Usage</span>
-                  <span class="analytics-value">{{ advancedMetrics.peakUsage }}%</span>
-                </div>
-              </div>
-              <div class="analytics-card">
-                <div class="analytics-icon">📈</div>
-                <div class="analytics-content">
-                  <span class="analytics-label">Avg. User Reservations</span>
-                  <span class="analytics-value">{{ advancedMetrics.avgReservations }}</span>
-                </div>
-              </div>
-              <div class="analytics-card">
-                <div class="analytics-icon">🎯</div>
-                <div class="analytics-content">
-                  <span class="analytics-label">Utilization Rate</span>
-                  <span class="analytics-value">{{ advancedMetrics.utilizationRate }}%</span>
-                </div>
-              </div>
-              <div class="analytics-card">
-                <div class="analytics-icon">⚠️</div>
-                <div class="analytics-content">
-                  <span class="analytics-label">Error Rate</span>
-                  <span class="analytics-value">{{ advancedMetrics.errorRate }}%</span>
-                </div>
-              </div>
+              
+              <!-- Carousel indicators hidden -->
             </div>
           </cv-tile>
         </cv-column>
-      </cv-row>
-      
-      <!-- Time-based Analysis Row -->
-      <cv-row class="stats-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+        
+        <!-- Usage Trend Analysis - Right Half -->
+        <cv-column :sm="4" :md="8" :lg="8">
           <cv-tile class="chart-tile">
             <div class="tile-header">
               <h3 class="tile-title">Usage Trend Analysis</h3>
@@ -312,6 +295,8 @@ export default {
     const userStats = ref([]);
     const comparisonStats = ref([]);
     const sectionStats = ref([]); // Add section stats
+    const currentAnalyticsIndex = ref(0);
+    const analyticsInterval = ref(null);
     const chartData = ref({
       doughnut: null,
       userActivity: null,
@@ -436,6 +421,81 @@ export default {
         errorRate: generalStats.value.percentError
       };
     });
+
+    // Analytics carousel data with geometric indicators
+    const analyticsData = computed(() => [
+      {
+        indicatorClass: 'reservations',
+        label: 'Total Reservations',
+        value: advancedMetrics.value.totalReservations
+      },
+      {
+        indicatorClass: 'users',
+        label: 'Active Users',
+        value: advancedMetrics.value.activeUsers
+      },
+      {
+        indicatorClass: 'utilization-peak',
+        label: 'Peak Usage',
+        value: `${advancedMetrics.value.peakUsage}%`
+      },
+      {
+        indicatorClass: 'utilization-avg',
+        label: 'Avg. User Reservations',
+        value: advancedMetrics.value.avgReservations
+      },
+      {
+        indicatorClass: 'utilization-avg',
+        label: 'Utilization Rate',
+        value: `${advancedMetrics.value.utilizationRate}%`
+      },
+      {
+        indicatorClass: 'error-rate',
+        label: 'Error Rate',
+        value: `${advancedMetrics.value.errorRate}%`
+      }
+    ]);
+
+    const currentAnalytics = computed(() => {
+      return analyticsData.value[currentAnalyticsIndex.value] || {};
+    });
+
+    // Get two cards for vertical stacking
+    const currentAnalyticsTop = computed(() => {
+      return analyticsData.value[currentAnalyticsIndex.value * 2] || {};
+    });
+
+    const currentAnalyticsBottom = computed(() => {
+      return analyticsData.value[currentAnalyticsIndex.value * 2 + 1] || {};
+    });
+
+    // Analytics carousel methods
+    function startAnalyticsCarousel() {
+      stopAnalyticsCarousel(); // Clear any existing interval
+      analyticsInterval.value = setInterval(() => {
+        nextAnalytics();
+      }, 4000); // Change every 4 seconds
+    }
+
+    function stopAnalyticsCarousel() {
+      if (analyticsInterval.value) {
+        clearInterval(analyticsInterval.value);
+        analyticsInterval.value = null;
+      }
+    }
+
+    function nextAnalytics() {
+      if (analyticsData.value.length > 0) {
+        // Show 2 cards at a time, so we need to cycle through pairs
+        const maxIndex = Math.floor(analyticsData.value.length / 2) - 1;
+        currentAnalyticsIndex.value = (currentAnalyticsIndex.value + 1) % (maxIndex + 1);
+      }
+    }
+
+    function setCurrentAnalytics(index) {
+      currentAnalyticsIndex.value = index;
+      startAnalyticsCarousel(); // Restart the auto-advance timer
+    }
 
     // Generate chart data
     function generateChartData() {
@@ -573,6 +633,7 @@ export default {
     
     onMounted(() => {
       fetchStats();
+      startAnalyticsCarousel(); // Start analytics carousel
       
       // Connect to backend websocket
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
@@ -625,6 +686,7 @@ export default {
     
     onUnmounted(() => {
       if (socket) socket.disconnect();
+      stopAnalyticsCarousel(); // Stop analytics carousel
     });
 
     return { 
@@ -634,7 +696,13 @@ export default {
       sectionStats,
       chartData,
       chartOptions,
-      advancedMetrics
+      advancedMetrics,
+      analyticsData,
+      currentAnalytics,
+      currentAnalyticsTop,
+      currentAnalyticsBottom,
+      currentAnalyticsIndex,
+      setCurrentAnalytics
     };
   },
 };
@@ -678,7 +746,7 @@ export default {
 }
 
 .stats-row {
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
 }
 
 /* Tile Styling */
@@ -726,6 +794,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  min-height: 180px; /* Ensures stable height even if data is missing or loading */
 }
 
 .metric-item {
@@ -764,6 +833,11 @@ export default {
   margin-top: 1rem;
 }
 
+.chart-container-compact {
+  height: 250px; /* Smaller height for side-by-side layout */
+  min-height: 250px;
+}
+
 .chart-container-large {
   height: 400px;
 }
@@ -782,69 +856,401 @@ export default {
   font-style: italic;
 }
 
-/* Analytics Grid and Cards */
-.analytics-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-  margin-top: 1rem;
+/* Analytics Carousel Styles */
+.analytics-carousel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem 0;
 }
 
-.analytics-card {
+.analytics-carousel-container {
+  position: relative;
+  width: 100%;
+  max-width: 450px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 0; /* Sharp edges */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.analytics-carousel-container-vertical {
+  position: relative;
+  width: 100%;
+  max-width: 450px;
+  height: 260px;
+  min-height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.analytics-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  padding: 1rem;
+}
+
+.analytics-card-stacked {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 1.25rem;
-  background-color: #f4f4f4;
-  border-radius: 8px;
-  border: 1px solid #e0e0e0;
-  transition: all 0.15s ease;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 2px solid #e0e0e0;
+  border-radius: 0; /* Sharp edges */
+  width: 100%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+  height: 100px;
 }
 
-.analytics-card:hover {
-  background-color: #e8e8e8;
+.analytics-card-stacked::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0f62fe, #0043ce);
+}
+
+.analytics-card-stacked:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  border-color: #0f62fe;
 }
 
-.analytics-icon {
-  font-size: 2rem;
-  min-width: 48px;
-  text-align: center;
-  background: linear-gradient(135deg, #0f62fe, #8a3ffc);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
+.analytics-card-single {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem 2rem;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border: 2px solid #e0e0e0;
+  border-radius: 0; /* Sharp edges */
+  width: 100%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
 }
 
-.analytics-content {
+.analytics-card-single::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0f62fe, #0043ce);
+}
+
+.analytics-card-single:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  border-color: #0f62fe;
+}
+
+.analytics-indicator-large {
+  width: 48px;
+  height: 48px;
+  border-radius: 0; /* Sharp edges */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  border: 2px solid;
+}
+
+.analytics-indicator-medium {
+  width: 36px;
+  height: 36px;
+  border-radius: 0; /* Sharp edges */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  border: 2px solid;
+}
+
+.analytics-indicator-large.utilization-avg {
+  background: linear-gradient(135deg, #d9f0dd, #e8f5e8);
+  border-color: #198038;
+}
+
+.analytics-indicator-large.utilization-avg::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  background: #198038;
+  border-radius: 4px;
+  transform: rotate(45deg);
+}
+
+.analytics-indicator-medium.utilization-avg {
+  background: linear-gradient(135deg, #d9f0dd, #e8f5e8);
+  border-color: #198038;
+}
+
+.analytics-indicator-medium.utilization-avg::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background: #198038;
+  border-radius: 3px;
+  transform: rotate(45deg);
+}
+
+.analytics-indicator-large.utilization-peak {
+  background: linear-gradient(135deg, #fef7cd, #fefbde);
+  border-color: #f1c21b;
+}
+
+.analytics-indicator-large.utilization-peak::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 16px solid #f1c21b;
+}
+
+.analytics-indicator-medium.utilization-peak {
+  background: linear-gradient(135deg, #fef7cd, #fefbde);
+  border-color: #f1c21b;
+}
+
+.analytics-indicator-medium.utilization-peak::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 12px solid #f1c21b;
+}
+
+.analytics-indicator-large.reservations {
+  background: linear-gradient(135deg, #d0e2ff, #e0efff);
+  border-color: #0f62fe;
+}
+
+.analytics-indicator-large.reservations::before {
+  content: '';
+  width: 20px;
+  height: 20px;
+  background: #0f62fe;
+  border-radius: 50%;
+}
+
+.analytics-indicator-medium.reservations {
+  background: linear-gradient(135deg, #d0e2ff, #e0efff);
+  border-color: #0f62fe;
+}
+
+.analytics-indicator-medium.reservations::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background: #0f62fe;
+  border-radius: 50%;
+}
+
+.analytics-indicator-large.users {
+  background: linear-gradient(135deg, #f0e6ff, #f7f0ff);
+  border-color: #8a3ffc;
+}
+
+.analytics-indicator-large.users::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-bottom: 20px solid #8a3ffc;
+  border-radius: 2px;
+}
+
+.analytics-indicator-medium.users {
+  background: linear-gradient(135deg, #f0e6ff, #f7f0ff);
+  border-color: #8a3ffc;
+}
+
+.analytics-indicator-medium.users::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 16px solid #8a3ffc;
+  border-radius: 2px;
+}
+
+.analytics-indicator-large.error-rate {
+  background: linear-gradient(135deg, #fdebed, #ffffff);
+  border-color: #da1e28;
+}
+
+.analytics-indicator-large.error-rate::before {
+  content: '';
+  width: 16px;
+  height: 16px;
+  background: #da1e28;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.analytics-indicator-medium.error-rate {
+  background: linear-gradient(135deg, #fdebed, #ffffff);
+  border-color: #da1e28;
+}
+
+.analytics-indicator-medium.error-rate::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  background: #da1e28;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+
+.analytics-details {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
   flex: 1;
-  min-width: 0;
 }
 
-.analytics-label {
+.analytics-label-large {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #6f6f6f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.analytics-value-large {
+  font-size: 2.25rem;
+  font-weight: 700;
+  color: #161616;
+  line-height: 1.1;
+}
+
+.analytics-label-medium {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #393939;
-  margin-bottom: 0.25rem;
+  color: #6f6f6f;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.analytics-value {
+.analytics-value-medium {
   font-size: 1.5rem;
   font-weight: 700;
   color: #161616;
-  line-height: 1.2;
+  line-height: 1.1;
+}
+
+
+
+/* Slide Transitions */
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-enter-from {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.slide-leave-to {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+/* Analytics and Usage Trend Side-by-Side Layout */
+.stats-row .cv-column:first-child {
+  padding-right: 0.5rem;
+}
+
+.stats-row .cv-column:last-child {
+  padding-left: 0.5rem;
+}
+
+/* Enhanced Responsive Design for Analytics Carousel */
+@media (max-width: 768px) {
+  .analytics-carousel-container {
+    max-width: 100%;
+    height: 100px;
+  }
+  
+  .analytics-card-single {
+    padding: 1.25rem 1.5rem;
+    gap: 1rem;
+  }
+  
+  .analytics-indicator-large {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .stats-row .cv-column:first-child,
+  .stats-row .cv-column:last-child {
+    padding-left: 0;
+    padding-right: 0;
+    margin-bottom: 1rem;
+  }
+  
+  .analytics-value-large {
+    font-size: 1.875rem;
+  }
+  
+  .analytics-label-large {
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 1400px) {
+  .analytics-carousel-container {
+    max-width: 500px;
+    height: 140px;
+  }
+  
+  .analytics-card-single {
+    padding: 2rem 2.5rem;
+    gap: 2rem;
+  }
+  
+  .analytics-indicator-large {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .analytics-value-large {
+    font-size: 2.5rem;
+  }
+  
+  .analytics-label-large {
+    font-size: 1.125rem;
+  }
 }
 
 /* Enhanced Responsive Design */
 @media (max-width: 1200px) {
-  .analytics-grid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  }
-  
   .chart-container {
     height: 250px;
   }
@@ -855,23 +1261,6 @@ export default {
 }
 
 @media (max-width: 768px) {
-  .analytics-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .analytics-card {
-    padding: 1rem;
-  }
-  
-  .analytics-icon {
-    font-size: 1.5rem;
-    min-width: 36px;
-  }
-  
-  .analytics-value {
-    font-size: 1.25rem;
-  }
-  
   .chart-container,
   .chart-container-large {
     height: 200px;
@@ -893,55 +1282,6 @@ export default {
   50% { opacity: 1; }
 }
 
-/* Enhanced Analytics Card Variants */
-.analytics-card:nth-child(1) .analytics-icon { 
-  background: linear-gradient(135deg, #0f62fe, #0043ce);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-.analytics-card:nth-child(2) .analytics-icon { 
-  background: linear-gradient(135deg, #24a148, #198038);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-.analytics-card:nth-child(3) .analytics-icon { 
-  background: linear-gradient(135deg, #ff832b, #eb6200);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-.analytics-card:nth-child(4) .analytics-icon { 
-  background: linear-gradient(135deg, #8a3ffc, #6929c4);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-.analytics-card:nth-child(5) .analytics-icon { 
-  background: linear-gradient(135deg, #fa4d56, #da1e28);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-.analytics-card:nth-child(6) .analytics-icon { 
-  background: linear-gradient(135deg, #42be65, #24a148);
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
 /* User Statistics List */
 .data-table-container {
   max-height: 400px;
@@ -960,7 +1300,7 @@ export default {
   justify-content: space-between;
   padding: 0.75rem;
   background-color: #f4f4f4;
-  border-radius: 4px;
+  border-radius: 0; /* Sharp edges */
   border: 1px solid #e0e0e0;
   transition: background-color 0.15s ease;
 }
@@ -1002,6 +1342,7 @@ export default {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.75rem;
+  min-height: 120px;
 }
 
 .metric-card {
@@ -1010,7 +1351,7 @@ export default {
   align-items: center;
   padding: 0.75rem 1rem;
   background-color: #f4f4f4;
-  border-radius: 4px;
+  border-radius: 0; /* Sharp edges */
   border: 1px solid #e0e0e0;
   transition: background-color 0.15s ease;
 }
@@ -1037,6 +1378,34 @@ export default {
   text-align: center;
   color: #6f6f6f;
   font-style: italic;
+  min-height: 120px;
+}
+
+/* Top Stats Row Layout - Side by Side */
+.top-stats-row {
+  margin-bottom: 2rem;
+}
+
+.top-stats-row .cv-column:first-child {
+  padding-right: 1rem;
+}
+
+.top-stats-row .cv-column:last-child {
+  padding-left: 1rem;
+}
+
+/* Analytics and Trend Row Layout - Side by Side */
+.analytics-trend-row {
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+}
+
+.analytics-trend-row .cv-column:first-child {
+  padding-right: 1rem;
+}
+
+.analytics-trend-row .cv-column:last-child {
+  padding-left: 1rem;
 }
 
 /* Responsive Design */
@@ -1060,6 +1429,17 @@ export default {
   .overview-tile,
   .data-tile {
     padding: 1rem;
+  }
+  
+  .top-stats-row .cv-column:first-child,
+  .top-stats-row .cv-column:last-child {
+    padding-left: 0;
+    padding-right: 0;
+    margin-bottom: 1rem;
+  }
+  
+  .stats-metrics {
+    gap: 2rem;
   }
   
   .metric-item {
@@ -1098,7 +1478,7 @@ export default {
 }
 
 :deep(.bx--tile) {
-  border-radius: 4px;
+  border-radius: 0 !important; /* Sharp edges for all tiles */
 }
 
 :deep(.bx--skeleton-text) {

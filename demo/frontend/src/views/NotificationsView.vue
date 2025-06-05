@@ -2,218 +2,128 @@
   <div class="notifications-container">
     <div class="page-header">
       <h1 class="page-title">Notifications</h1>
-      <p class="page-subtitle">Manage cubicle sequence notifications and integrations</p>
+      <p class="page-subtitle">Send cubicle sequence notifications to users via email and Slack</p>
     </div>
     
     <!-- Main Content Area -->
     <cv-grid class="notifications-grid">
-      <!-- Settings and Actions Row -->
-      <cv-row class="settings-row">
-        <!-- Settings Column -->
-        <cv-column :sm="4" :md="8" :lg="8">
-          <cv-tile class="settings-tile">
+      <!-- Main Notification Card -->
+      <cv-row class="main-row">
+        <cv-column :sm="4" :md="12" :lg="12">
+          <cv-tile class="notification-tile">
             <div class="tile-header">
-              <h3 class="tile-title">Notification Settings</h3>
-              <p class="tile-subtitle">Configure your notification preferences</p>
+              <div class="header-content">
+                <div class="header-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                  </svg>
+                </div>
+                <div class="header-text">
+                  <h3 class="tile-title">Send Notification Update</h3>
+                  <p class="tile-subtitle">Get your current cubicle sequence assignment via email and Slack</p>
+                </div>
+              </div>
             </div>
             
-            <cv-form class="settings-form">
-              <div class="settings-group">
-                <cv-toggle 
-                  v-model="notificationSettings.emailEnabled"
-                  label="Email Notifications"
-                  @change="updateSettings"
+            <div class="notification-content">
+              <!-- Email Input Section -->
+              <div class="input-section">
+                <cv-text-input
+                  v-model="notificationSettings.email"
+                  label="Your Email Address"
+                  placeholder="Enter your email address"
+                  helper-text="This email will be used as the sender for notifications"
+                  readonly
+                  class="email-input"
                 />
-                <div class="integration-toggle">
-                <cv-toggle 
-                  v-model="notificationSettings.slackEnabled"
-                  label="Slack Notifications"
-                  @change="updateSettings"
-                />
+              </div>
+              
+              <!-- Status Indicator -->
+              <div class="status-section">
+                <div class="status-indicator" :class="{ 'status-ready': accountSetupComplete, 'status-pending': !accountSetupComplete }">
+                  <div class="status-icon">
+                    <svg v-if="accountSetupComplete" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm3.5 6.1L7.1 10.5c-.2.2-.4.2-.6 0L4.5 8.5c-.2-.2-.2-.4 0-.6s.4-.2.6 0l1.6 1.6 3.8-3.8c.2-.2.4-.2.6 0s.2.4 0 .6z"/>
+                    </svg>
+                    <svg v-else width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm4 9H4V7h8v2z"/>
+                    </svg>
+                  </div>
+                  <span class="status-text">
+                    {{ accountSetupComplete ? 'Ready to send notifications' : 'Email validation required' }}
+                  </span>
+                </div>
+              </div>
+              
+              <!-- Action Section -->
+              <div class="action-section">
                 <cv-button 
-                  kind="ghost" 
-                  size="sm"
-                  @click="setupSlackIntegration"
-                  class="setup-button"
+                  kind="primary" 
+                  size="lg"
+                  @click="sendCubicleSequenceNotification"
+                  :disabled="sendingNotification || !accountSetupComplete"
+                  class="send-button"
                 >
-                  Setup Slack
+                  <template v-if="sendingNotification">
+                    <cv-loading class="loading-spinner" size="sm" />
+                    <span>Sending Notification...</span>
+                  </template>
+                  <template v-else>
+                    Send My Notification Update
+                  </template>
                 </cv-button>
               </div>
-              
-              <div class="integration-toggle">
-                <cv-toggle 
-                  v-model="notificationSettings.mondayEnabled"
-                  label="Monday.com Notifications"
-                  @change="updateSettings"
-                />
-                <cv-button 
-                  kind="ghost" 
-                  size="sm"
-                  @click="setupMondayIntegration"
-                  class="setup-button"
-                >
-                  Setup Monday.com
-                </cv-button>
-              </div>
-              </div>
-              
-              <cv-text-input
-                v-model="notificationSettings.email"
-                label="Email Address"
-                placeholder="Enter your email"
-                @input="updateSettings"
-              />
-              
-              <cv-dropdown
-                v-model="notificationSettings.frequency"
-                label="Frequency"
-                :options="frequencyOptions"
-                @change="updateSettings"
-              />
-            </cv-form>
-          </cv-tile>
-        </cv-column>
-        
-        <!-- Actions Column -->
-        <cv-column :sm="4" :md="8" :lg="8">
-          <cv-tile class="actions-tile">
-            <div class="tile-header">
-              <h3 class="tile-title">Quick Actions</h3>
-              <p class="tile-subtitle">Send notifications and manage cubicle data</p>
-            </div>
-            <div class="actions-group">
-              <cv-button 
-                kind="primary" 
-                @click="sendCubicleSequenceNotification"
-                :disabled="sendingNotification || !isValidEmail(notificationSettings.email) || !accountSetupComplete"
-              >
-                <template v-if="sendingNotification">Sending...</template>
-                <template v-else>Email Update</template>
-              </cv-button>
-              <cv-button 
-                kind="secondary" 
-                @click="sendSlackNotification"
-                :disabled="sendingSlack || !accountSetupComplete"
-              >
-                <template v-if="sendingSlack">Sending...</template>
-                <template v-else>Send Slack Update</template>
-              </cv-button>
-              <cv-button 
-                kind="tertiary" 
-                @click="createMondayTask"
-                :disabled="sendingMonday || !accountSetupComplete"
-              >
-                <template v-if="sendingMonday">Creating...</template>
-                <template v-else>Create Monday Task</template>
-              </cv-button>
-              <cv-button 
-                kind="ghost" 
-                @click="refreshUserData"
-                :disabled="refreshingData || !accountSetupComplete"
-              >
-                <template v-if="refreshingData">Refreshing...</template>
-                <template v-else>Refresh Data</template>
-              </cv-button>
             </div>
           </cv-tile>
         </cv-column>
       </cv-row>
       
-      <!-- User Data Table -->
-      <cv-row>
-        <cv-column :sm="4" :md="16" :lg="16">
-          <cv-tile>
-            <div class="tile-header">
-              <h3 class="tile-title">User Data</h3>
-              <p class="tile-subtitle">Users with cubicle reservations</p>
+      <!-- Information Card -->
+      <cv-row class="info-row">
+        <cv-column :sm="4" :md="12" :lg="12">
+          <cv-tile class="info-tile">
+            <div class="info-header">
+              <h4 class="info-title">How Notifications Work</h4>
             </div>
-            
-            <div v-if="loading" class="loading-container">
-              <cv-loading />
-            </div>
-            
-            <div v-else-if="userTableData.length === 0" class="empty-state">
-              <p>No user data available</p>
-            </div>
-            
-            <div v-else class="table-container">
-              <cv-data-table
-                :rows="userTableData"
-                :headers="userTableHeaders"
-              >
-                <template slot="cell" slot-scope="props">
-                  <!-- Custom cell rendering for Cubicle Sequence -->
-                  <span v-if="props.column === 'cubicleSequence'">
-                    <cv-tag :kind="props.value ? 'green' : 'gray'" type="outline">
-                      {{ props.value || 'No reservations' }}
-                    </cv-tag>
-                  </span>
-                  
-                  <!-- Custom cell rendering for Actions -->
-                  <span v-else-if="props.column === 'actions'">
-                    <cv-button 
-                      kind="ghost" 
-                      size="small"
-                      @click="sendIndividualNotification(props.row)"
-                      :disabled="sendingIndividual[props.row.uid]"
-                    >
-                      {{ sendingIndividual[props.row.uid] ? 'Sending...' : 'Send' }}
-                    </cv-button>
-                  </span>
-                  
-                  <!-- Default rendering for other columns -->
-                  <span v-else>
-                    {{ props.value }}
-                  </span>
-                </template>
-              </cv-data-table>
-            </div>
-          </cv-tile>
-        </cv-column>
-      </cv-row>
-      
-      <!-- Notification History -->
-      <cv-row>
-        <cv-column :sm="4" :md="16" :lg="16">
-          <cv-tile>
-            <div class="tile-header">
-              <h3 class="tile-title">Notification History</h3>
-              <p class="tile-subtitle">Recent notifications activity</p>
-            </div>
-            
-            <div v-if="notificationHistory.length === 0" class="empty-state">
-              <p>No notifications have been sent yet</p>
-            </div>
-            
-            <div v-else class="history-list">
-              <cv-data-table
-                :rows="notificationHistoryData"
-                :headers="notificationHistoryHeaders"
-              >
-                <template slot="cell" slot-scope="props">
-                  <!-- Status cell with tag -->
-                  <span v-if="props.column === 'status'">
-                    <cv-tag :kind="props.value === 'sent' ? 'green' : 'red'">
-                      {{ props.value }}
-                    </cv-tag>
-                  </span>
-                  <span v-else>{{ props.value }}</span>
-                </template>
-              </cv-data-table>
+            <div class="info-content">
+              <div class="info-grid single-item">
+                <div 
+                  class="info-item centered draggable"
+                  :class="{ 'dragging': isDragging }"
+                  :style="dragStyle"
+                  @mousedown="startDrag"
+                  @touchstart="startDrag"
+                >
+                  <div class="drag-handle">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M2.5 3.5a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zM2.5 8a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5zM3 12.5a.5.5 0 0 0 0 1h10a.5.5 0 0 0 0-1H3z"/>
+                    </svg>
+                  </div>
+                  <div class="info-icon email-icon">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M18 3H2C1.45 3 1 3.45 1 4v12c0 .55.45 1 1 1h16c.55 0 1-.45 1-1V4c0-.55-.45-1-1-1zm-1 13H3V6l7 4 7-4v10zm-7-6L3 6h14l-7 4z"/>
+                    </svg>
+                  </div>
+                  <div class="info-text">
+                    <h5>Email Notifications</h5>
+                    <p>Email for the Manager, and distribution with Slack</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </cv-tile>
         </cv-column>
       </cv-row>
     </cv-grid>
     
-    <!-- Notification Banner -->
+    <!-- Toast Notification -->
     <cv-toast-notification
       v-if="showNotification"
       :kind="notificationKind"
       :title="notificationTitle"
       :subtitle="notificationMessage"
       @close="clearNotification"
-      style="position: fixed; top: 80px; right: 1rem; z-index: 9999;"
+      class="toast-notification"
     />
   </div>
 </template>
@@ -229,11 +139,7 @@ export default {
     const { currentUser, isAdmin } = useAuth();
     const isAdminUser = computed(() => {
       if (!currentUser.value) return false;
-      
-      // First check Firebase custom claims (preferred method)
       if (isAdmin.value) return true;
-      
-      // Fallback to environment variable UIDs
       const adminUids = (import.meta.env.VITE_ADMIN_UIDS || '').split(',').map(u => u.trim());
       return adminUids.includes(currentUser.value.uid);
     });
@@ -241,7 +147,6 @@ export default {
   },
   data() {
     return {
-      // Notification settings
       notificationSettings: {
         emailEnabled: true,
         slackEnabled: false,
@@ -249,78 +154,53 @@ export default {
         email: '',
         frequency: 'daily'
       },
-      
-      // Loading states
-      loading: false,
       sendingNotification: false,
-      sendingSlack: false,
-      sendingMonday: false,
-      refreshingData: false,
-      sendingIndividual: {},
-      
-      // User data
-      userTableData: [],
-      userTableHeaders: [
-        { key: 'email', header: 'Email' },
-        { key: 'displayName', header: 'Name' },
-        { key: 'totalReservations', header: 'Reservations' },
-        { key: 'cubicleSequence', header: 'Sequence' },
-        { key: 'lastActivity', header: 'Last Activity' },
-        { key: 'actions', header: 'Actions' }
-      ],
-      
-      // Notification history
-      notificationHistory: [],
-      notificationHistoryHeaders: [
-        { key: 'type', header: 'Type' },
-        { key: 'timestamp', header: 'Time' },
-        { key: 'status', header: 'Status' },
-        { key: 'recipients', header: 'Recipients' }
-      ],
-      
-      // Notification banner
       showNotification: false,
       notificationKind: 'success',
       notificationTitle: '',
       notificationMessage: '',
-      
-      // Options
-      frequencyOptions: [
-        { value: 'realtime', label: 'Real-time' },
-        { value: 'hourly', label: 'Hourly' },
-        { value: 'daily', label: 'Daily' },
-        { value: 'weekly', label: 'Weekly' }
-      ],
       accountSetupComplete: false,
+      emailTouched: false,
+      isDragging: false,
+      dragData: {
+        startX: 0,
+        startY: 0,
+        currentX: 0,
+        currentY: 0,
+        initialTransform: { x: 0, y: 0 }
+      },
     };
   },
-  
   computed: {
-    notificationHistoryData() {
-      return this.notificationHistory.map(item => ({
-        type: item.type,
-        timestamp: this.formatTimestamp(item.timestamp),
-        status: item.status,
-        recipients: item.recipients ? item.recipients.join(', ') : 'None'
-      }));
+    dragStyle() {
+      if (!this.isDragging) {
+        return {
+          transform: `translate(${this.dragData.initialTransform.x}px, ${this.dragData.initialTransform.y}px)`
+        };
+      }
+      return {
+        transform: `translate(${this.dragData.currentX}px, ${this.dragData.currentY}px)`,
+        zIndex: 1000
+      };
     }
   },
-  
+  watch: {
+    'notificationSettings.email': {
+      handler() {
+        // Update account setup status when email changes
+        this.accountSetupComplete = this.checkAccountSetup();
+      }
+    }
+  },
   async created() {
     await this.loadUserSettings();
-    await this.loadUserData();
-    await this.loadNotificationHistory();
     this.accountSetupComplete = this.checkAccountSetup();
   },
-  
   methods: {
     async loadUserSettings() {
       try {
         const idToken = localStorage.getItem('auth_token');
-        
         if (!idToken) {
-          console.warn('No authentication token found');
-          // Use default settings if no token is available, but don't redirect
           this.notificationSettings = {
             emailEnabled: true,
             slackEnabled: false,
@@ -330,12 +210,9 @@ export default {
           };
           return;
         }
-        
-        // Get settings from API
         const response = await axios.get('/api/notifications/settings', {
           headers: { Authorization: `Bearer ${idToken}` }
         });
-        
         if (response.data && response.data.data) {
           this.notificationSettings = {
             emailEnabled: response.data.data.emailNotifications || true,
@@ -347,184 +224,17 @@ export default {
         }
       } catch (error) {
         console.error('Error loading user settings:', error);
-        // Don't show any error notifications on initial load for better UX
-        if (error.response && error.response.status === 401) {
-          console.warn('User not authenticated, using default settings');
-        } else {
-          console.warn('Failed to load settings, using default settings');
-        }
       }
     },
-    
-    async loadUserData() {
-      this.loading = true;
-      try {
-        const idToken = localStorage.getItem('auth_token');
-        
-        if (!idToken) {
-          console.warn('No authentication token found, using sample data');
-          // Use sample data for development/demo purposes
-          this.userTableData = [
-            {
-              uid: '123',
-              email: 'john.doe@example.com',
-              displayName: 'John Doe',
-              totalReservations: 5,
-              cubicleSequence: 'A1-A3, B5',
-              lastActivity: '2025-06-01'
-            },
-            {
-              uid: '456',
-              email: 'jane.smith@example.com',
-              displayName: 'Jane Smith',
-              totalReservations: 3,
-              cubicleSequence: 'C2-C4',
-              lastActivity: '2025-06-02'
-            }
-          ];
-          this.loading = false;
-          return;
-        }
-        
-        // Get real user data from API
-        const response = await axios.get('/api/notifications/users-with-cubicles', {
-          headers: { Authorization: `Bearer ${idToken}` }
-        });
-        
-        if (response.data && response.data.data) {
-          this.userTableData = response.data.data.map(user => ({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName || user.email.split('@')[0],
-            totalReservations: user.totalReservations || 0,
-            cubicleSequence: user.cubicleSequence || 'No sequence',
-            lastActivity: user.lastActivity ? new Date(user.lastActivity).toLocaleDateString() : 'Never'
-          }));
-        } else {
-          this.userTableData = [];
-        }
-      } catch (error) {
-        console.error('Error loading user data:', error);
-        // Don't redirect to login on 401
-        if (error.response && error.response.status === 401) {
-          console.warn('User not authenticated, using sample data');
-          this.userTableData = [
-            {
-              uid: '123',
-              email: 'john.doe@example.com',
-              displayName: 'John Doe',
-              totalReservations: 5,
-              cubicleSequence: 'A1-A3, B5',
-              lastActivity: '2025-06-01'
-            },
-            {
-              uid: '456',
-              email: 'jane.smith@example.com',
-              displayName: 'Jane Smith',
-              totalReservations: 3,
-              cubicleSequence: 'C2-C4',
-              lastActivity: '2025-06-02'
-            }
-          ];
-        } else {
-          console.warn('Failed to load user data');
-        }
-      } finally {
-        this.loading = false;
-      }
-    },
-    
-    async loadNotificationHistory() {
-      try {
-        const idToken = localStorage.getItem('auth_token');
-        
-        if (!idToken) {
-          console.warn('No authentication token found, using sample data for notification history');
-          // Keep any existing notification history we might have added
-          if (this.notificationHistory.length === 0) {
-            this.notificationHistory = [
-              {
-                id: '1',
-                type: 'email',
-                timestamp: new Date(),
-                status: 'sent',
-                recipients: ['john.doe@example.com']
-              },
-              {
-                id: '2',
-                type: 'slack',
-                timestamp: new Date(Date.now() - 3600000),
-                status: 'sent',
-                recipients: ['#general']
-              }
-            ];
-          }
-          return;
-        }
-        
-        // Get history from API
-        const response = await axios.get('/api/notifications/history', {
-          headers: { Authorization: `Bearer ${idToken}` },
-          params: {
-            page: 1,
-            limit: 20
-          }
-        });
-        
-        if (response.data && response.data.data && response.data.data.history) {
-          this.notificationHistory = response.data.data.history.map(item => ({
-            id: item._id,
-            type: item.type,
-            timestamp: new Date(item.createdAt),
-            status: item.status,
-            recipients: item.recipients || []
-          }));
-        } else {
-          this.notificationHistory = [];
-        }
-      } catch (error) {
-        console.error('Error loading notification history:', error);
-        // For demo mode
-        if (error.response && error.response.status === 401) {
-          console.warn('User not authenticated, using sample data');
-          // Keep any existing notification history we might have added
-          if (this.notificationHistory.length === 0) {
-            this.notificationHistory = [
-              {
-                id: '1',
-                type: 'email',
-                timestamp: new Date(),
-                status: 'sent',
-                recipients: ['john.doe@example.com']
-              },
-              {
-                id: '2',
-                type: 'slack',
-                timestamp: new Date(Date.now() - 3600000),
-                status: 'sent',
-                recipients: ['#general']
-              }
-            ];
-          }
-        } else {
-          console.warn('Failed to load notification history');
-        }
-      }
-    },
-    
     async updateSettings() {
       try {
         const idToken = localStorage.getItem('auth_token');
-        
-        // Allow users to update settings without authentication for demo purposes
         if (!idToken) {
-          console.log('No authentication token, but settings will be updated in local state');
-          this.showSuccessNotification('Settings updated in local view');
+          // In demo mode, just validate locally without showing notification
+          this.accountSetupComplete = this.checkAccountSetup();
           return;
         }
-        
-        // Send settings to the API
-        const response = await axios.put('/api/notifications/settings', {
+        await axios.put('/api/notifications/settings', {
           emailNotifications: this.notificationSettings.emailEnabled,
           slackNotifications: this.notificationSettings.slackEnabled,
           mondayComNotifications: this.notificationSettings.mondayEnabled,
@@ -533,411 +243,139 @@ export default {
         }, {
           headers: { Authorization: `Bearer ${idToken}` }
         });
-        
-        if (response.data && response.data.success) {
-          this.showSuccessNotification('Settings updated successfully');
-        } else {
-          throw new Error('Failed to update settings');
-        }
+        this.showSuccessNotification('Settings updated successfully');
       } catch (error) {
         console.error('Error updating settings:', error);
-        // If it's an auth error, don't show an error, just use the demo mode
-        if (error.response && error.response.status === 401) {
-          console.warn('User not authenticated, settings saved locally only');
-          this.showSuccessNotification('Settings saved locally (demo mode)');
-        } else {
-          this.showErrorNotification('Failed to update settings: ' + (error.response?.data?.message || error.message));
-        }
+        this.showErrorNotification('Failed to update settings: ' + (error.response?.data?.message || error.message));
       }
-      await this.loadUserSettings();
+      // Only update account setup status, don't reload settings to avoid conflicts
       this.accountSetupComplete = this.checkAccountSetup();
     },
-    
     async sendCubicleSequenceNotification() {
       this.sendingNotification = true;
       try {
         const idToken = localStorage.getItem('auth_token');
-        
-        // Demo mode if not authenticated
         if (!idToken) {
-          // Simulate API call
           await new Promise(resolve => setTimeout(resolve, 1500));
-          this.showSuccessNotification('Notifications sent successfully (demo mode)');
-          
-          // Add to local notification history in demo mode
-          this.notificationHistory.unshift({
-            id: Date.now().toString(),
-            type: 'email',
-            timestamp: new Date(),
-            status: 'sent',
-            recipients: [this.notificationSettings.email || 'user@example.com']
-          });
-          
+          this.showSuccessNotification('Notification sent successfully (demo mode)');
           return;
         }
-        
-        // Send actual API request
-        const response = await axios.post('/api/notifications/send-bulk', {
-          type: 'cubicle_sequence',
-          message: 'Here is your cubicle sequence information'
-        }, {
+        const response = await axios.post('/api/notifications/send-individual', {}, {
           headers: { Authorization: `Bearer ${idToken}` }
         });
-        
         if (response.data && response.data.success) {
-          this.showSuccessNotification('Notifications sent successfully');
-          await this.loadNotificationHistory();
+          this.showSuccessNotification('Notification sent successfully to your account');
         } else {
-          throw new Error('Failed to send notifications');
+          throw new Error('Failed to send notification');
         }
       } catch (error) {
-        console.error('Error sending notifications:', error);
-        // If authentication error, use demo mode
-        if (error.response && error.response.status === 401) {
-          console.warn('User not authenticated, using demo mode');
-          this.showSuccessNotification('Notifications sent (demo mode)');
-          
-          // Add to local notification history in demo mode
-          this.notificationHistory.unshift({
-            id: Date.now().toString(),
-            type: 'email',
-            timestamp: new Date(),
-            status: 'sent',
-            recipients: [this.notificationSettings.email || 'user@example.com']
-          });
-        } else {
-          this.showErrorNotification('Failed to send notifications: ' + (error.response?.data?.message || error.message));
-        }
+        console.error('Error sending notification:', error);
+        this.showErrorNotification('Failed to send notification: ' + (error.response?.data?.message || error.message));
       } finally {
         this.sendingNotification = false;
       }
     },
-    
-    async sendSlackNotification() {
-      this.sendingSlack = true;
-      try {
-        // Check if Slack is enabled in settings
-        if (!this.notificationSettings.slackEnabled) {
-          this.showErrorNotification('Slack notifications are disabled. Enable them in Settings first.');
-          return;
-        }
-        
-        const idToken = localStorage.getItem('auth_token');
-        
-        // Demo mode if not authenticated
-        if (!idToken) {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          this.showSuccessNotification('Slack notification sent (demo mode)');
-          
-          // Add to local notification history in demo mode
-          this.notificationHistory.unshift({
-            id: Date.now().toString(),
-            type: 'slack',
-            timestamp: new Date(),
-            status: 'sent',
-            recipients: ['#general']
-          });
-          
-          return;
-        }
-        
-        // Send actual API request
-        const response = await axios.post('/api/notifications/send-bulk', {
-          type: 'slack',
-          message: 'Cubicle utilization update is now available.'
-        }, {
-          headers: { Authorization: `Bearer ${idToken}` }
-        });
-        
-        if (response.data && response.data.success) {
-          this.showSuccessNotification('Slack notification sent successfully');
-          await this.loadNotificationHistory();
-        } else {
-          throw new Error('Failed to send Slack notification');
-        }
-      } catch (error) {
-        console.error('Error sending Slack notification:', error);
-        // If authentication error, use demo mode
-        if (error.response && error.response.status === 401) {
-          console.warn('User not authenticated, using demo mode');
-          this.showSuccessNotification('Slack notification sent (demo mode)');
-          
-          // Add to local notification history in demo mode
-          this.notificationHistory.unshift({
-            id: Date.now().toString(),
-            type: 'slack',
-            timestamp: new Date(),
-            status: 'sent',
-            recipients: ['#general']
-          });
-        } else {
-          this.showErrorNotification('Failed to send Slack notification: ' + (error.response?.data?.message || error.message));
-        }
-      } finally {
-        this.sendingSlack = false;
-      }
+    isValidEmail(email) {
+      if (!email || email.trim() === '') return false;
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
     },
-    
-    async createMondayTask() {
-      this.sendingMonday = true;
-      try {
-        // Check if Monday.com is enabled in settings
-        if (!this.notificationSettings.mondayEnabled) {
-          this.showErrorNotification('Monday.com integration is disabled. Enable it in Settings first.');
-          return;
-        }
-        
-        const idToken = localStorage.getItem('auth_token');
-        
-        // Demo mode if not authenticated
-        if (!idToken) {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          this.showSuccessNotification('Monday.com task created successfully (demo mode)');
-          
-          // Add to local notification history in demo mode
-          this.notificationHistory.unshift({
-            id: Date.now().toString(),
-            type: 'monday',
-            timestamp: new Date(),
-            status: 'sent',
-            recipients: ['Cubicle Management Board']
-          });
-          
-          return;
-        }
-        
-        // Send actual API request
-        const response = await axios.post('/api/notifications/send-bulk', {
-          type: 'monday',
-          message: 'New cubicle assignment task created'
-        }, {
-          headers: { Authorization: `Bearer ${idToken}` }
-        });
-        
-        if (response.data && response.data.success) {
-          this.showSuccessNotification('Monday.com task created successfully');
-          await this.loadNotificationHistory();
-        } else {
-          throw new Error('Failed to create Monday.com task');
-        }
-      } catch (error) {
-        console.error('Error creating Monday.com task:', error);
-        // If authentication error, use demo mode
-        if (error.response && error.response.status === 401) {
-          console.warn('User not authenticated, using demo mode');
-          this.showSuccessNotification('Monday.com task created (demo mode)');
-          
-          // Add to local notification history in demo mode
-          this.notificationHistory.unshift({
-            id: Date.now().toString(),
-            type: 'monday',
-            timestamp: new Date(),
-            status: 'sent',
-            recipients: ['Cubicle Management Board']
-          });
-        } else {
-          this.showErrorNotification('Failed to create Monday.com task: ' + (error.response?.data?.message || error.message));
-        }
-      } finally {
-        this.sendingMonday = false;
-      }
+    checkAccountSetup() {
+      return this.notificationSettings.email && this.notificationSettings.email.trim() !== '';
     },
-    
-    async refreshUserData() {
-      this.refreshingData = true;
-      try {
-        await this.loadUserData();
-        this.showSuccessNotification('User data refreshed');
-      } catch (error) {
-        console.error('Error refreshing user data:', error);
-        this.showErrorNotification('Failed to refresh user data');
-      } finally {
-        this.refreshingData = false;
-      }
-    },
-    
-    async sendIndividualNotification(user) {
-      this.$set(this.sendingIndividual, user.uid, true);
-      try {
-        const idToken = localStorage.getItem('auth_token');
-        
-        // Demo mode if not authenticated
-        if (!idToken) {
-          // Simulate API call
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          this.showSuccessNotification(`Notification sent to ${user.email} (demo mode)`);
-          
-          // Add to local notification history in demo mode
-          this.notificationHistory.unshift({
-            id: Date.now().toString(),
-            type: 'email',
-            timestamp: new Date(),
-            status: 'sent',
-            recipients: [user.email]
-          });
-          
-          return;
-        }
-        
-        // Send actual API request
-        const response = await axios.post('/api/notifications/send', {
-          targetUserId: user.uid,
-          type: 'cubicle_sequence',
-          message: 'Here is your cubicle sequence information'
-        }, {
-          headers: { Authorization: `Bearer ${idToken}` }
-        });
-        
-        if (response.data && response.data.success) {
-          this.showSuccessNotification(`Notification sent to ${user.email}`);
-          await this.loadNotificationHistory();
-        } else {
-          throw new Error(`Failed to send notification to ${user.email}`);
-        }
-      } catch (error) {
-        console.error('Error sending individual notification:', error);
-        // If authentication error, use demo mode
-        if (error.response && error.response.status === 401) {
-          console.warn('User not authenticated, using demo mode');
-          this.showSuccessNotification(`Notification sent to ${user.email} (demo mode)`);
-          
-          // Add to local notification history in demo mode
-          this.notificationHistory.unshift({
-            id: Date.now().toString(),
-            type: 'email',
-            timestamp: new Date(),
-            status: 'sent',
-            recipients: [user.email]
-          });
-        } else {
-          this.showErrorNotification(`Failed to send notification to ${user.email}: ${error.response?.data?.message || error.message}`);
-        }
-      } finally {
-        this.$set(this.sendingIndividual, user.uid, false);
-      }
-    },
-    
-    formatTimestamp(timestamp) {
-      return new Date(timestamp).toLocaleString();
-    },
-    
     showSuccessNotification(message) {
       this.notificationKind = 'success';
       this.notificationTitle = 'Success';
       this.notificationMessage = message;
       this.showNotification = true;
-      
-      setTimeout(() => {
-        this.clearNotification();
-      }, 5000);
+      setTimeout(() => { this.clearNotification(); }, 5000);
     },
-    
     showErrorNotification(message) {
       this.notificationKind = 'error';
       this.notificationTitle = 'Error';
       this.notificationMessage = message;
       this.showNotification = true;
-      
-      setTimeout(() => {
-        this.clearNotification();
-      }, 8000);
+      setTimeout(() => { this.clearNotification(); }, 8000);
     },
-    
     clearNotification() {
       this.showNotification = false;
     },
-    
-    setupSlackIntegration() {
-      // Prevent event propagation to avoid any redirect issues
-      event?.preventDefault?.();
-      event?.stopPropagation?.();
-      
-      // Show modal or form for Slack setup
-      const slackEmail = prompt('Enter your Slack workspace email:', this.notificationSettings.email);
-      
-      if (!slackEmail) return;
-      
-      if (!slackEmail.includes('@')) {
-        this.showErrorNotification('Please enter a valid email address');
-        return;
-      }
-      
-      try {
-        this.showSuccessNotification('Slack integration setup initiated. A verification email will be sent to ' + slackEmail);
-        
-        // In a real implementation, this would connect to Slack API
-        // For demo purposes, we just enable the toggle
-        this.notificationSettings.slackEnabled = true;
-        // Don't await updateSettings to avoid potential auth errors
-        this.updateSettings().catch(err => console.warn('Settings update error:', err));
-        
-        // Add to notification history
-        this.notificationHistory.unshift({
-          id: Date.now().toString(),
-          type: 'system',
-          timestamp: new Date(),
-          status: 'sent',
-          recipients: [slackEmail]
-        });
-      } catch (error) {
-        console.error('Error setting up Slack:', error);
-        this.showErrorNotification('Failed to setup Slack integration');
-      }
+    handleEmailBlur() {
+      this.emailTouched = true;
+      // Update settings when user finishes editing email
+      this.updateSettings();
     },
-    
-    setupMondayIntegration() {
-      // Prevent event propagation to avoid any redirect issues
-      event?.preventDefault?.();
-      event?.stopPropagation?.();
+    startDrag(event) {
+      this.isDragging = true;
+      const clientX = event.type === 'touchstart' ? event.touches[0].clientX : event.clientX;
+      const clientY = event.type === 'touchstart' ? event.touches[0].clientY : event.clientY;
       
-      // Show modal or form for Monday.com setup
-      const mondayEmail = prompt('Enter your Monday.com account email:', this.notificationSettings.email);
+      this.dragData.startX = clientX - this.dragData.currentX;
+      this.dragData.startY = clientY - this.dragData.currentY;
       
-      if (!mondayEmail) return;
+      document.addEventListener('mousemove', this.onDrag);
+      document.addEventListener('mouseup', this.stopDrag);
+      document.addEventListener('touchmove', this.onDrag);
+      document.addEventListener('touchend', this.stopDrag);
       
-      if (!mondayEmail.includes('@')) {
-        this.showErrorNotification('Please enter a valid email address');
-        return;
-      }
-      
-      try {
-        this.showSuccessNotification('Monday.com integration setup initiated. A verification email will be sent to ' + mondayEmail);
-        
-        // In a real implementation, this would connect to Monday.com API
-        // For demo purposes, we just enable the toggle
-        this.notificationSettings.mondayEnabled = true;
-        // Don't await updateSettings to avoid potential auth errors
-        this.updateSettings().catch(err => console.warn('Settings update error:', err));
-        
-        // Add to notification history
-        this.notificationHistory.unshift({
-          id: Date.now().toString(),
-          type: 'system',
-          timestamp: new Date(),
-          status: 'sent',
-          recipients: [mondayEmail]
-        });
-      } catch (error) {
-        console.error('Error setting up Monday.com:', error);
-        this.showErrorNotification('Failed to setup Monday.com integration');
-      }
+      event.preventDefault();
     },
-    isValidEmail(email) {
-      // Simple email validation regex
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    onDrag(event) {
+      if (!this.isDragging) return;
+      
+      const clientX = event.type === 'touchmove' ? event.touches[0].clientX : event.clientX;
+      const clientY = event.type === 'touchmove' ? event.touches[0].clientY : event.clientY;
+      
+      this.dragData.currentX = clientX - this.dragData.startX;
+      this.dragData.currentY = clientY - this.dragData.startY;
     },
-    checkAccountSetup() {
-      // Require a valid email and at least one integration enabled
-      return this.isValidEmail(this.notificationSettings.email) &&
-        (this.notificationSettings.emailEnabled || this.notificationSettings.slackEnabled || this.notificationSettings.mondayEnabled);
+    stopDrag() {
+      if (!this.isDragging) return;
+      
+      this.isDragging = false;
+      
+      // Smooth return to center with animation
+      this.animateToCenter();
+      
+      document.removeEventListener('mousemove', this.onDrag);
+      document.removeEventListener('mouseup', this.stopDrag);
+      document.removeEventListener('touchmove', this.onDrag);
+      document.removeEventListener('touchend', this.stopDrag);
+    },
+    animateToCenter() {
+      const startX = this.dragData.currentX;
+      const startY = this.dragData.currentY;
+      const targetX = this.dragData.initialTransform.x;
+      const targetY = this.dragData.initialTransform.y;
+      
+      const duration = 300; // ms
+      const startTime = performance.now();
+      
+      const animate = (currentTime) => {
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Easing function for smooth animation
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        
+        this.dragData.currentX = startX + (targetX - startX) * easeOut;
+        this.dragData.currentY = startY + (targetY - startY) * easeOut;
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          this.dragData.currentX = targetX;
+          this.dragData.currentY = targetY;
+        }
+      };
+      
+      requestAnimationFrame(animate);
     },
   }
 };
 </script>
 
 <style scoped>
+/* IBM Carbon Design System styling */
 .notifications-container {
   padding: 0;
   margin-top: 64px;
@@ -970,69 +408,409 @@ export default {
 .notifications-grid {
   padding: 1.5rem;
   width: 100%;
-  max-width: none;
-  margin: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Main notification tile */
+.notification-tile {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 0;
+  transition: box-shadow 0.15s ease;
+  margin-bottom: 1.5rem;
+}
+
+.notification-tile:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .tile-header {
-  margin-bottom: 1.5rem;
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
   border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 1rem;
+  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
 }
 
-.tile-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #161616;
-  margin: 0 0 0.25rem 0;
-  line-height: 1.4;
-}
-
-.tile-subtitle {
-  font-size: 0.875rem;
-  color: #6f6f6f;
-  margin: 0;
-  font-weight: 400;
-}
-
-.settings-group {
-  margin-bottom: 2rem;
-}
-
-.integration-toggle {
+.header-content {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.setup-button {
-  min-width: 120px;
-}
-
-.actions-group {
-  display: flex;
-  flex-direction: column;
+  align-items: flex-start;
   gap: 1rem;
 }
 
-.table-container {
-  margin-top: 1rem;
+.header-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #0f62fe, #4589ff);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
 }
 
-.history-list {
-  margin-top: 1rem;
+.header-text {
+  flex: 1;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 2rem;
+.tile-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.3;
+}
+
+.tile-subtitle {
+  font-size: 1rem;
   color: #6f6f6f;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.4;
 }
 
-.loading-container {
+.notification-content {
+  padding: 1.5rem;
+}
+
+/* Input section */
+.input-section {
+  margin-bottom: 1.5rem;
+}
+
+.email-input {
+  max-width: 400px;
+}
+
+/* Status section */
+.status-section {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: #f4f4f4;
+  border-radius: 4px;
+  border-left: 4px solid #e0e0e0;
+  transition: border-color 0.2s ease;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-indicator.status-ready {
+  border-left-color: #198038;
+}
+
+.status-indicator.status-ready .status-icon {
+  color: #198038;
+}
+
+.status-indicator.status-pending .status-icon {
+  color: #f1c21b;
+}
+
+.status-icon {
+  flex-shrink: 0;
+}
+
+.status-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #161616;
+}
+
+/* Action section */
+.action-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.send-button {
+  min-width: 240px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.send-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(15, 98, 254, 0.3);
+}
+
+.loading-spinner {
+  width: 16px !important;
+  height: 16px !important;
+  margin-right: 8px;
+}
+
+.loading-icon {
+  margin-right: 0.5rem;
+}
+
+.action-description {
+  max-width: 500px;
+}
+
+.action-description p {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Information tile */
+.info-tile {
+  background-color: #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 1.5rem;
+  transition: box-shadow 0.15s ease;
+}
+
+.info-tile:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.info-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.info-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.info-grid.single-item {
   display: flex;
   justify-content: center;
-  padding: 2rem;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.info-item.centered {
+  width: 100%;
+  max-width: 350px;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f4f4f4;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.15s ease;
+}
+
+.info-item:hover {
+  background-color: #e8e8e8;
+  transform: translateY(-1px);
+}
+
+.info-item.draggable {
+  cursor: grab;
+  user-select: none;
+  position: relative;
+  transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.15s ease;
+}
+
+.info-item.draggable:active {
+  cursor: grabbing;
+}
+
+.info-item.draggable.dragging {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+  transform: scale(1.05);
+  background-color: #ffffff;
+  border-color: #0f62fe;
+  transition: none;
+}
+
+.drag-handle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  color: #8d8d8d;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  cursor: grab;
+  padding: 4px;
+  border-radius: 2px;
+}
+
+.info-item.draggable:hover .drag-handle {
+  opacity: 1;
+}
+
+.info-item.draggable.dragging .drag-handle {
+  opacity: 1;
+  color: #0f62fe;
+}
+
+.info-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.email-icon {
+  background: linear-gradient(135deg, #0f62fe, #4589ff);
+  color: white;
+}
+
+.slack-icon {
+  background: linear-gradient(135deg, #4285f4, #7b68ee);
+  color: white;
+}
+
+.sync-icon {
+  background: linear-gradient(135deg, #198038, #24a148);
+  color: white;
+}
+
+.info-text h5 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+}
+
+.info-text p {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Toast notification */
+.toast-notification {
+  position: fixed;
+  top: 80px;
+  right: 1rem;
+  z-index: 9999;
+  max-width: 400px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .notifications-container {
+    margin-top: 48px;
+  }
+  
+  .page-header {
+    padding: 1.5rem 1rem 1rem 1rem;
+  }
+  
+  .page-title {
+    font-size: 1.75rem;
+  }
+  
+  .notifications-grid {
+    padding: 1rem;
+  }
+  
+  .tile-header {
+    padding: 1rem;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  
+  .notification-content {
+    padding: 1rem;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .info-item {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  
+  .send-button {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .action-section {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .tile-title {
+    font-size: 1.25rem;
+  }
+  
+  .tile-subtitle {
+    font-size: 0.875rem;
+  }
+}
+
+/* Carbon component overrides */
+:deep(.bx--tile) {
+  border-radius: 4px;
+}
+
+:deep(.bx--text-input) {
+  margin-bottom: 0;
+}
+
+:deep(.bx--form-item) {
+  margin-bottom: 0;
+}
+
+:deep(.bx--btn--primary) {
+  background-color: #0f62fe;
+  border-color: #0f62fe;
+}
+
+:deep(.bx--btn--primary:hover) {
+  background-color: #0353e9;
+  border-color: #0353e9;
+}
+
+:deep(.bx--btn--primary:disabled) {
+  background-color: #c6c6c6;
+  border-color: #c6c6c6;
+  color: #8d8d8d;
+}
+
+:deep(.bx--toast-notification) {
+  min-width: 320px;
+  max-width: 400px;
 }
 </style>

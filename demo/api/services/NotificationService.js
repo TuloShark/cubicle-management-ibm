@@ -1032,6 +1032,287 @@ ${user.cubicleSequence || 'No reservations found'}` }
     // Optionally, send a Slack notification about the Monday.com task
     await this.sendSlackTaskNotification(createdTask, needsAction);
   }
+
+  /**
+   * Send bulk notifications based on type
+   * @param {string} type - Type of notification: 'slack', 'monday', 'email', 'cubicle_sequence', or 'bulk'
+   * @param {string} message - Custom message for the notification
+   * @param {string} sentBy - User ID who sent the notification
+   * @returns {Object} Result object with success status and details
+   */
+  async sendBulkNotifications(type, message, sentBy = null) {
+    try {
+      logger.info(`Starting bulk notification of type: ${type}`);
+      
+      switch (type) {
+        case 'slack':
+          // Send per-user Slack notifications (no email)
+          return await this.sendCubicleSequenceSlackNotifications(sentBy);
+          
+        case 'monday':
+          return await this.sendMondayBulkNotification(message, sentBy);
+          
+        case 'email':
+        case 'cubicle_sequence':
+          return await this.sendCubicleSequenceNotifications(sentBy);
+          
+        case 'bulk':
+          // Send all types
+          const results = {
+            slack: null,
+            monday: null,
+            email: null,
+            success: true,
+            message: 'Bulk notifications completed'
+          };
+          
+          // Send Slack notification
+          try {
+            results.slack = await this.sendSlackBulkNotification(message, sentBy);
+          } catch (error) {
+            logger.error('Slack bulk notification failed:', error.message);
+            results.slack = { success: false, error: error.message };
+          }
+          
+          // Send Monday.com notification  
+          try {
+            results.monday = await this.sendMondayBulkNotification(message, sentBy);
+          } catch (error) {
+            logger.error('Monday.com bulk notification failed:', error.message);
+            results.monday = { success: false, error: error.message };
+          }
+          
+          // Send email notifications
+          try {
+            results.email = await this.sendCubicleSequenceNotifications(sentBy);
+          } catch (error) {
+            logger.error('Email bulk notification failed:', error.message);
+            results.email = { success: false, error: error.message };
+          }
+          
+          return results;
+          
+        default:
+          throw new Error(`Unknown notification type: ${type}`);
+      }
+    } catch (error) {
+      logger.error(`Bulk notification failed for type ${type}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Send Slack bulk notification
+   * @param {string} message - Custom message for Slack
+   * @param {string} sentBy - User ID who sent the notification
+   * @returns {Object} Result object
+   */
+  async sendSlackBulkNotification(message, sentBy = null) {
+    if (!this.enabled || !this.slackWebhookUrl) {
+      throw new Error('Slack notifications are disabled or webhook URL not configured');
+    }
+
+    try {
+      const slackMessage = {
+        text: message || 'Cubicle utilization update is now available.',
+        channel: '#all-cubicle-managment-testing',
+        username: 'Cubicle Management Bot',
+        icon_emoji: ':office:',
+        attachments: [
+          {
+            color: 'good',
+            fields: [
+              {
+                title: 'System Update',
+                value: 'New cubicle utilization data has been processed and is available for review.',
+                short: false
+              },
+              {
+                title: 'Timestamp',
+                value: new Date().toISOString(),
+                short: true
+              }
+            ]
+          }
+        ]
+      };
+
+      const response = await axios.post(this.slackWebhookUrl, slackMessage);
+      
+      // Log the notification
+      await this.logNotification({
+        type: 'slack',
+        status: 'success',
+        message: message || 'Bulk Slack notification sent',
+        recipients: ['#all-cubicle-managment-testing'],
+        sentBy,
+        data: { webhookResponse: response.status }
+      });
+
+      logger.info('Slack bulk notification sent successfully');
+      return {
+        success: true,
+        message: 'Slack notification sent successfully',
+        channel: '#all-cubicle-managment-testing'
+      };
+    } catch (error) {
+      // Log error
+      await this.logNotification({
+        type: 'slack',
+        status: 'error',
+        message: `Failed to send Slack notification: ${error.message}`,
+        recipients: ['#all-cubicle-managment-testing'],
+        error: error.message,
+        sentBy
+      });
+      
+      throw new Error(`Failed to send Slack notification: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send Monday.com bulk notification/task
+   * @param {string} message - Custom message for Monday.com
+   * @param {string} sentBy - User ID who sent the notification
+   * @returns {Object} Result object
+   */
+  async sendMondayBulkNotification(message, sentBy = null) {
+    if (!this.enabled || !this.mondayApiKey || !this.mondayBoardId) {
+      throw new Error('Monday.com notifications are disabled or API credentials not configured');
+    }
+
+    try {
+      const taskName = message || 'Cubicle Management System Update';
+      const currentDate = new Date().toISOString().split('T')[0];
+      
+      const mutation = `
+        mutation {
+          create_item (
+            board_id: ${this.mondayBoardId},
+            item_name: "${taskName}",
+            column_values: ${JSON.stringify(JSON.stringify({
+              status: { label: "Working on it" },
+              priority: { label: "Medium" },
+              text: "System-generated task for cubicle management updates and maintenance.",
+              date: currentDate
+            }))}
+          ) {
+            id
+            name
+            url
+          }
+        }
+      `;
+
+      const response = await axios.post(this.mondayApiUrl, 
+        { query: mutation },
+        {
+          headers: {
+            'Authorization': this.mondayApiKey,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.errors) {
+        throw new Error(`Monday.com API error: ${JSON.stringify(response.data.errors)}`);
+      }
+
+      const createdTask = response.data.data.create_item;
+      
+      // Log the notification
+      await this.logNotification({
+        type: 'monday',
+        status: 'success',
+        message: `Monday.com task created: ${createdTask.name}`,
+        recipients: [`Board ${this.mondayBoardId}`],
+        sentBy,
+        data: { taskId: createdTask.id, taskUrl: createdTask.url }
+      });
+
+      logger.info('Monday.com bulk task created successfully', { 
+        taskId: createdTask.id, 
+        taskName: createdTask.name 
+      });
+      
+      return {
+        success: true,
+        message: 'Monday.com task created successfully',
+        taskId: createdTask.id,
+        taskName: createdTask.name,
+        taskUrl: createdTask.url
+      };
+    } catch (error) {
+      // Log error
+      await this.logNotification({
+        type: 'monday',
+        status: 'error',
+        message: `Failed to create Monday.com task: ${error.message}`,
+        recipients: [`Board ${this.mondayBoardId}`],
+        error: error.message,
+        sentBy
+      });
+      
+      throw new Error(`Failed to create Monday.com task: ${error.message}`);
+    }
+  }
+
+  /**
+   * Send cubicle sequence Slack notification to all users with reservations (no email)
+   */
+  async sendCubicleSequenceSlackNotifications(sentBy = null) {
+    if (!this.enabled || !this.slackWebhookUrl) {
+      throw new Error('Slack notifications are disabled or webhook URL not configured');
+    }
+    try {
+      const usersWithReservations = await this.getUsersWithCubicleSequences();
+      if (usersWithReservations.length === 0) {
+        logger.info('No users with reservations found for Slack notification');
+        return { sentCount: 0, users: [] };
+      }
+      const results = [];
+      let successCount = 0;
+      for (const user of usersWithReservations) {
+        try {
+          await this.sendSlackCubicleSequenceNotification(user);
+          results.push({ email: user.email, status: 'success' });
+          successCount++;
+          await this.logNotification({
+            type: 'slack',
+            status: 'success',
+            message: `Cubicle sequence Slack notification sent to ${user.email}`,
+            recipients: [user.email],
+            sentBy,
+            data: { cubicleSequence: user.cubicleSequence, reservationCount: user.totalReservations }
+          });
+        } catch (error) {
+          logger.error(`Failed to send Slack notification to ${user.email}:`, error.message);
+          results.push({ email: user.email, status: 'error', error: error.message });
+          await this.logNotification({
+            type: 'slack',
+            status: 'error',
+            message: `Failed to send Slack notification to ${user.email}`,
+            recipients: [user.email],
+            error: error.message,
+            sentBy
+          });
+        }
+      }
+      await this.logNotification({
+        type: 'slack-bulk',
+        status: 'success',
+        message: `Bulk cubicle sequence Slack notifications completed - ${successCount}/${usersWithReservations.length} sent`,
+        recipients: results.filter(r => r.status === 'success').map(r => r.email),
+        sentBy,
+        data: { totalUsers: usersWithReservations.length, successCount }
+      });
+      logger.info(`Cubicle sequence Slack notifications sent to ${successCount}/${usersWithReservations.length} users`);
+      return { sentCount: successCount, users: results };
+    } catch (error) {
+      logger.error('Error sending cubicle sequence Slack notifications:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = NotificationService;

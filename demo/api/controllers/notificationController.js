@@ -18,9 +18,10 @@ class NotificationController {
       if (!settings) {
         settings = new NotificationSettings({
           userId: uid,
-          emailNotifications: true,
-          slackNotifications: false,
-          mondayComNotifications: false
+          email: req.user.email || `${uid}@example.com`, // Use user email from auth token or fallback
+          emailEnabled: true,
+          slackEnabled: false,
+          mondayEnabled: false
         });
         await settings.save();
       }
@@ -116,16 +117,8 @@ class NotificationController {
       const { uid } = req.user;
       const { type = 'bulk', message } = req.body;
       
-      const result = await NotificationService.sendBulkNotifications(type, message);
-      
-      // Log the bulk notification
-      await NotificationService.logNotification(
-        uid,
-        result.userIds || [],
-        type,
-        'bulk',
-        result.success
-      );
+      const notificationService = new NotificationService();
+      const result = await notificationService.sendBulkNotifications(type, message, uid);
       
       res.status(200).json({
         success: true,
@@ -145,7 +138,8 @@ class NotificationController {
   // Get all users with their cubicle sequences
   static async getUsersWithCubicles(req, res) {
     try {
-      const users = await NotificationService.getUsersWithCubicleSequences();
+      const notificationService = new NotificationService();
+      const users = await notificationService.getUsersWithCubicleSequences();
       
       res.status(200).json({
         success: true,
@@ -238,6 +232,29 @@ class NotificationController {
     }
   }
 
+  // Send individual notification to current user
+  static async sendIndividualNotification(req, res) {
+    try {
+      const { uid } = req.user;
+      
+      const notificationService = new NotificationService();
+      const result = await notificationService.sendIndividualCubicleSequenceNotification(uid, uid);
+      
+      res.status(200).json({
+        success: true,
+        data: result,
+        message: 'Individual notification sent successfully'
+      });
+    } catch (error) {
+      console.error('Error sending individual notification:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to send individual notification',
+        error: error.message
+      });
+    }
+  }
+
   // Get notification statistics
   static async getStatistics(req, res) {
     try {
@@ -300,6 +317,7 @@ class NotificationController {
 router.get('/settings', validarUsuario, NotificationController.getSettings);
 router.put('/settings', validarUsuario, NotificationController.updateSettings);
 router.post('/send', validarUsuario, NotificationController.sendNotification);
+router.post('/send-individual', validarUsuario, NotificationController.sendIndividualNotification);
 router.post('/send-bulk', validarUsuario, validarAdmin, NotificationController.sendBulkNotifications);
 router.get('/users-with-cubicles', validarUsuario, NotificationController.getUsersWithCubicles);
 router.get('/history', validarUsuario, NotificationController.getHistory);
