@@ -205,9 +205,54 @@ export default {
   grid-template-areas:
     "left middle right"
     "left empty right";
-  padding: 10px;
-  margin-top: 10px;
-  align-items: start; /* Ensure all sections align to the top */
+  padding: 0;
+  margin: 0;
+  align-items: start;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .cubicle-container {
+    padding: 0;
+    margin: 0;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .cubicle-container {
+    padding: 0;
+    margin: 0;
+    gap: 2px;
+  }
+  
+  /* Only reduce tile size on very small screens */
+  .cubicle-tile {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .cubicle-grid {
+    gap: 1px;
+  }
+}
+
+/* Very small screens - minimal size reduction */
+@media (max-width: 360px) {
+  .cubicle-tile {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .cubicle-container {
+    gap: 1px;
+  }
+  
+  .cubicle-grid {
+    gap: 0.5px;
+  }
 }
 
 .left-grid .cubicle-grid {
@@ -245,9 +290,10 @@ export default {
 
 .cubicle-grid {
   display: grid;
-  background-color: #f4f4f4;
-  padding: 1px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  margin: 0;
+  gap: 2px;
+  box-sizing: border-box;
 }
 
 .cubicle-tile {
@@ -256,13 +302,13 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Explicit size for each cubicle tile */
   width: 70px;
   height: 70px;
-  /* Remove aspect-ratio for explicit sizing */
-  /* aspect-ratio: 1 / 1; */
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 .cubicle-tile:hover {

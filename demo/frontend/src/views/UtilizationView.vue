@@ -19,27 +19,25 @@
             <div class="controls-content">
               <div class="horizontal-controls">
                 <div class="control-item" v-if="isAdminUser">
-                  <div class="button-wrapper">
-                    <cv-button 
-                      @click="generateCurrentWeekReport" 
-                      kind="primary" 
-                      size="md"
-                      :disabled="loading.generateCurrent"
-                      class="control-button-tall"
-                    >
-                      <span v-if="loading.generateCurrent">Generating...</span>
-                      <span v-else>Generate Current Week Report</span>
-                    </cv-button>
-                  </div>
+                  <cv-button 
+                    @click="generateCurrentWeekReport" 
+                    kind="primary" 
+                    size="lg"
+                    :disabled="loading.generateCurrent"
+                    class="control-button-consistent"
+                  >
+                    <span v-if="loading.generateCurrent">Generating...</span>
+                    <span v-else>Generate Current Week Report</span>
+                  </cv-button>
                 </div>
                 
                 <div class="control-item" v-if="isAdminUser">
                   <cv-button 
                     @click="openCustomWeekModal" 
                     kind="secondary" 
-                    size="md"
+                    size="lg"
                     :disabled="loading.generateCustom"
-                    class="control-button-tall"
+                    class="control-button-consistent"
                   >
                     <span v-if="loading.generateCustom">Generating...</span>
                     <span v-else>Generate Custom Week</span>
@@ -50,9 +48,9 @@
                   <cv-button 
                     @click="refreshReports" 
                     kind="tertiary" 
-                    size="md"
+                    size="lg"
                     :disabled="loading.refresh"
-                    class="control-button-tall"
+                    class="control-button-consistent"
                   >
                     <span v-if="loading.refresh">Refreshing...</span>
                     <span v-else>Refresh Reports</span>
@@ -103,9 +101,9 @@
                 <cv-button 
                   @click="exportLatestReport" 
                   kind="primary" 
-                  size="md"
+                  size="lg"
                   :disabled="loading.exportLatest"
-                  class="control-button-tall download-button-centered"
+                  class="control-button-consistent download-button-centered"
                 >
                   <template #icon>
                     <Download16 />
@@ -984,13 +982,142 @@ export default {
 </script>
 
 <style scoped>
-/* IBM Carbon Design System inspired styling */
+/* IBM Carbon Design System - Clean and Consistent */
 .utilization-container {
   padding: 0;
-  margin-top: 64px;
-  background: linear-gradient(135deg, #f4f4f4 0%, #f8f9fa 100%);
-  min-height: calc(100vh - 64px);
-  animation: fadeIn 0.3s ease-out;
+  margin-top: 48px;
+  background: #f4f4f4;
+  min-height: calc(100vh - 48px);
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* Carbon Design System Overrides - Sharp Edges and Clean Cuts */
+:deep(.bx--grid) {
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+:deep(.bx--row) {
+  margin: 0;
+}
+
+:deep(.bx--col) {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+:deep(.bx--tile) {
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.bx--btn) {
+  border-radius: 0 !important;
+  font-weight: 400 !important;
+  text-transform: none !important;
+  letter-spacing: 0.16px !important;
+  transition: all 0.15s ease !important;
+  box-shadow: none !important;
+  font-family: 'IBM Plex Sans', sans-serif !important;
+  min-height: 48px !important;
+  padding: 0.875rem 1rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+:deep(.bx--btn--primary) {
+  background: #0f62fe !important;
+  border-color: #0f62fe !important;
+  color: #ffffff !important;
+}
+
+:deep(.bx--btn--primary:hover) {
+  background: #0353e9 !important;
+  border-color: #0353e9 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.bx--btn--secondary) {
+  background: #393939 !important;
+  border-color: #393939 !important;
+  color: #ffffff !important;
+}
+
+:deep(.bx--btn--secondary:hover) {
+  background: #4c4c4c !important;
+  border-color: #4c4c4c !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.bx--btn--tertiary) {
+  background: transparent !important;
+  border-color: #0f62fe !important;
+  color: #0f62fe !important;
+}
+
+:deep(.bx--btn--tertiary:hover) {
+  background: #0f62fe !important;
+  border-color: #0f62fe !important;
+  color: #ffffff !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.bx--btn--ghost) {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #0f62fe !important;
+  padding: 0.875rem 1rem !important;
+}
+
+:deep(.bx--btn--ghost:hover) {
+  background: #e0efff !important;
+  border-color: transparent !important;
+  color: #0353e9 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.bx--btn--danger--ghost) {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: #da1e28 !important;
+}
+
+:deep(.bx--btn--danger--ghost:hover) {
+  background: #fff1f1 !important;
+  border-color: transparent !important;
+  color: #a2191f !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.bx--btn__icon) {
+  margin-left: 0.5rem !important;
+  margin-right: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+:deep(.bx--modal) {
+  border-radius: 0 !important;
+}
+
+:deep(.bx--pagination) {
+  border-radius: 0 !important;
+}
+
+:deep(.bx--date-picker-input) {
+  border-radius: 0 !important;
+  min-height: 48px !important;
 }
 
 @keyframes fadeIn {
@@ -1004,86 +1131,60 @@ export default {
   }
 }
 
+/* Page Header - IBM Carbon Design */
 .page-header {
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  padding: 2rem 2rem 1.5rem 2rem;
-  border-bottom: 2px solid #e0e0e0;
+  background: #161616;
+  color: #ffffff;
+  padding: 2rem;
   margin-bottom: 0;
-  position: relative;
-}
-
-.page-header::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 2rem;
-  width: 60px;
-  height: 2px;
-  background: linear-gradient(90deg, #0f62fe, #0043ce);
-  border-radius: 1px;
+  border-bottom: 1px solid #393939;
 }
 
 .page-title {
-  font-size: 2rem;
-  font-weight: 400;
-  color: #161616;
+  font-size: 2.5rem;
+  font-weight: 300;
   margin: 0 0 0.5rem 0;
   line-height: 1.25;
+  letter-spacing: -0.02em;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
-
-
 
 .page-subtitle {
   font-size: 1rem;
-  color: #525252;
+  opacity: 0.75;
   margin: 0;
   font-weight: 400;
-  line-height: 1.4;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
+/* Grid Layout */
 .utilization-grid {
-  padding: 1.5rem;
-  width: 100%;
-  max-width: none;
-  margin: 0;
-  animation: slideInUp 0.4s ease-out 0.1s both;
+  max-width: 1584px;
+  margin: 0 auto;
+  padding: 1rem;
 }
 
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.top-row {
+  margin-bottom: 1rem;
 }
 
-.controls-row,
-.stats-row,
 .reports-row {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
-/* Tile Styling */
+/* Tiles - Sharp Edges and Clean Cuts */
 .controls-tile,
 .quick-stats-tile,
 .reports-tile {
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
+  background: transparent !important;
+  border: 1px solid rgba(224, 224, 224, 0.3);
+  border-radius: 0;
   padding: 1.5rem;
   height: 100%;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.controls-tile:hover,
-.quick-stats-tile:hover,
-.reports-tile:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+  transition: all 0.15s ease;
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
 }
 
 .tile-header {
@@ -1190,9 +1291,32 @@ export default {
   gap: 0.5rem;
 }
 
+/* Consistent button styling for main controls */
+.control-button-consistent {
+  min-width: 200px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  height: 48px; /* Fixed height for consistency */
+}
+
+.control-button-consistent :deep(.bx--btn) {
+  height: 48px !important;
+  min-height: 48px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 0 !important;
+}
+
 /* Force center alignment for Carbon button content */
 .control-button :deep(.bx--btn__icon),
-.control-button :deep(.cv-button__content) {
+.control-button :deep(.cv-button__content),
+.control-button-consistent :deep(.bx--btn__icon),
+.control-button-consistent :deep(.cv-button__content) {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1200,14 +1324,16 @@ export default {
 }
 
 /* Additional Carbon button centering */
-.control-button :deep(.bx--btn) {
+.control-button :deep(.bx--btn),
+.control-button-consistent :deep(.bx--btn) {
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
 }
 
-.control-button :deep(.bx--btn__icon) {
+.control-button :deep(.bx--btn__icon),
+.control-button-consistent :deep(.bx--btn__icon) {
   margin-right: 0.5rem;
   flex-shrink: 0;
 }
@@ -1430,6 +1556,9 @@ export default {
 /* Reports Cards */
 .reports-container {
   min-height: 400px;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  padding: 0 0.5rem;
 }
 
 .reports-grid {
@@ -1979,6 +2108,7 @@ export default {
   }
   
   .control-button,
+  .control-button-consistent,
   .week-picker-full,
   .week-picker-right {
     min-width: auto;
@@ -2324,38 +2454,6 @@ export default {
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-/* Download Button Tall Styling */
-.download-button-tall {
-  min-height: 56px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  min-width: 240px;
-}
-
-.download-button-tall :deep(.bx--btn) {
-  min-height: 56px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center;
-  padding: 1rem 1.5rem !important;
-}
-
-.download-button-tall :deep(.bx--btn__icon) {
-  margin-right: 0.75rem !important;
-  flex-shrink: 0;
-}
-
-.download-button-tall :deep(.cv-button__content) {
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 0.75rem;
-  font-weight: 600;
-  font-size: 1rem;
-}
-
 /* Compact Carousel Styles */
 .stats-carousel-compact {
   display: flex;
@@ -2429,15 +2527,6 @@ export default {
   min-height: 48px;
   display: flex;
   transition: all 0.3s ease;
-}
-
-/* Control Button Tall Styling */
-.control-button-tall {
-  min-height: 48px !important;
-}
-
-.control-button-tall :deep(.bx--btn) {
-  min-height: 48px !important;
 }
 
 /* Horizontal Controls Layout */
@@ -2548,10 +2637,6 @@ export default {
   
   .stat-label-compact {
     font-size: 0.6875rem !important;
-  }
-  
-  .download-button-tall {
-    min-width: 100%;
   }
   
   .indicator-dot {

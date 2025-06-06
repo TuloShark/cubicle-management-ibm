@@ -57,6 +57,28 @@ export default {
   text-align: center;
   border: 1px solid #e0e0e0;
   color: #e0e0e0;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Remove Carbon Design margins and padding completely */
+:deep(.bx--tile) {
+  margin: 0 !important;  
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
 }
 
 .cubicle-tile.available {
@@ -79,5 +101,37 @@ export default {
 
 .serial {
   font-weight: bold;
+  font-size: 0.75rem;
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+}
+
+.name {
+  font-size: 0.625rem;
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+}
+
+/* Strategic responsive text sizing - only for very small screens */
+@media (max-width: 480px) {
+  .serial {
+    font-size: 0.6875rem;
+  }
+  
+  .name {
+    font-size: 0.5625rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .serial {
+    font-size: 0.625rem;
+  }
+  
+  .name {
+    font-size: 0.5rem;
+  }
 }
 </style>

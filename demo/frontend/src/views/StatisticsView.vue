@@ -11,7 +11,7 @@
       <cv-row class="top-stats-row">
         <!-- General Usage - Left Half -->
         <cv-column :sm="4" :md="6" :lg="6">
-          <cv-tile class="overview-tile">
+          <cv-tile class="overview-tile formatted-tile">
             <div class="tile-header">
               <h3 class="tile-title">General Usage</h3>
               <p class="tile-subtitle">Overall cubicle utilization metrics</p>
@@ -20,7 +20,7 @@
               <div class="metric-item">
                 <span class="metric-label">Reserved</span>
                 <div class="metric-value-container">
-                  <span class="metric-value">{{ generalStats.percentReserved }}%</span>
+                  <span class="metric-value reserved-value">{{ generalStats.percentReserved }}%</span>
                   <cv-progress-bar 
                     :value="generalStats.percentReserved" 
                     :label="`${generalStats.percentReserved}%`"
@@ -32,7 +32,7 @@
               <div class="metric-item">
                 <span class="metric-label">Available</span>
                 <div class="metric-value-container">
-                  <span class="metric-value">{{ generalStats.percentAvailable }}%</span>
+                  <span class="metric-value available-value">{{ generalStats.percentAvailable }}%</span>
                   <cv-progress-bar 
                     :value="generalStats.percentAvailable" 
                     :label="`${generalStats.percentAvailable}%`"
@@ -44,7 +44,7 @@
               <div class="metric-item">
                 <span class="metric-label">Error</span>
                 <div class="metric-value-container">
-                  <span class="metric-value">{{ generalStats.percentError }}%</span>
+                  <span class="metric-value error-value">{{ generalStats.percentError }}%</span>
                   <cv-progress-bar 
                     :value="generalStats.percentError" 
                     :label="`${generalStats.percentError}%`"
@@ -59,7 +59,7 @@
         
         <!-- Usage Distribution - Right Half -->
         <cv-column :sm="4" :md="6" :lg="6">
-          <cv-tile class="chart-tile">
+          <cv-tile class="chart-tile transparent-tile">
             <div class="tile-header">
               <h3 class="tile-title">Usage Distribution</h3>
               <p class="tile-subtitle">Visual breakdown of cubicle status</p>
@@ -129,7 +129,7 @@
       <cv-row class="user-metrics-row">
         <!-- Per User Usage - Left Half -->
         <cv-column :sm="4" :md="6" :lg="6">
-          <cv-tile class="data-tile">
+          <cv-tile class="data-tile formatted-tile">
             <div class="tile-header">
               <h3 class="tile-title">Per User Usage</h3>
               <p class="tile-subtitle">Individual user reservation statistics</p>
@@ -164,7 +164,7 @@
         
         <!-- Key Metrics - Right Half -->
         <cv-column :sm="4" :md="6" :lg="6">
-          <cv-tile class="data-tile">
+          <cv-tile class="data-tile formatted-tile">
             <div class="tile-header">
               <h3 class="tile-title">Key Metrics</h3>
               <p class="tile-subtitle">System-wide comparison statistics</p>
@@ -190,7 +190,7 @@
       <cv-row class="analytics-trend-row">
         <!-- Advanced Analytics - Left Half -->
         <cv-column :sm="4" :md="4" :lg="4">
-          <cv-tile class="analytics-tile">
+          <cv-tile class="analytics-tile transparent-tile">
             <div class="tile-header">
               <h3 class="tile-title">Advanced Analytics</h3>
               <p class="tile-subtitle">Comprehensive usage insights and trends</p>
@@ -749,29 +749,75 @@ export default {
   margin-bottom: 2rem;
 }
 
-/* Tile Styling */
+/* Tile Styling - IBM Carbon Design Consistent */
 .overview-tile,
 .data-tile,
 .chart-tile,
 .analytics-tile {
-  background-color: #ffffff;
-  border: 1px solid #e0e0e0;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(224, 224, 224, 0.3);
+  border-radius: 0; /* Sharp edges */
   padding: 1.5rem;
   height: 100%;
-  transition: box-shadow 0.15s ease;
+  transition: all 0.15s ease;
+  box-shadow: none;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Completely transparent tiles for Usage Distribution and Advanced Analytics */
+.transparent-tile {
+  background: transparent !important;
+  backdrop-filter: none;
+  border: 1px solid rgba(224, 224, 224, 0.2) !important;
+  box-shadow: none !important;
+}
+
+/* Formatted tile for General Usage */
+.formatted-tile {
+  background: rgba(255, 255, 255, 0.98) !important;
+  border: 2px solid #e0e0e0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.formatted-tile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0f62fe, #0043ce);
+  z-index: 1;
 }
 
 .overview-tile:hover,
 .data-tile:hover,
 .chart-tile:hover,
 .analytics-tile:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+  border-color: rgba(15, 98, 254, 0.3);
+}
+
+.transparent-tile:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border-color: rgba(15, 98, 254, 0.5) !important;
+  box-shadow: 0 1px 4px rgba(15, 98, 254, 0.1) !important;
+}
+
+.formatted-tile:hover {
+  border-color: #0f62fe !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .tile-header {
   margin-bottom: 1.5rem;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid rgba(224, 224, 224, 0.3);
   padding-bottom: 1rem;
+  position: relative;
+  z-index: 2;
 }
 
 .tile-title {
@@ -780,33 +826,66 @@ export default {
   color: #161616;
   margin: 0 0 0.25rem 0;
   line-height: 1.4;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 .tile-subtitle {
   font-size: 0.875rem;
-  color: #6f6f6f;
+  color: #525252;
   margin: 0;
   font-weight: 400;
+  line-height: 1.4;
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 
-/* General Usage Metrics */
+/* Enhanced General Usage Metrics Formatting */
 .stats-metrics {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  min-height: 180px; /* Ensures stable height even if data is missing or loading */
+  gap: 1.5rem;
+  min-height: 200px;
+  position: relative;
+  z-index: 2;
 }
 
 .metric-item {
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(248, 249, 250, 0.8);
+  border: 1px solid rgba(224, 224, 224, 0.4);
+  border-radius: 0; /* Sharp edges */
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transition: all 0.15s ease;
+}
+
+.metric-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(15, 98, 254, 0.3);
+  transform: translateX(2px);
 }
 
 .metric-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #393939;
+  color: #161616;
+  text-transform: uppercase;
+  letter-spacing: 0.16px;
+  font-family: 'IBM Plex Sans', sans-serif;
   min-width: 80px;
 }
 
@@ -815,7 +894,44 @@ export default {
   align-items: center;
   gap: 1rem;
   flex: 1;
-  max-width: 300px;
+  justify-content: flex-end;
+  max-width: 200px;
+}
+
+.metric-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #161616;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.32px;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* Color-coded metric values */
+.reserved-value {
+  color: #0f62fe;
+}
+
+.available-value {
+  color: #198038;
+}
+
+.error-value {
+  color: #da1e28;
+}
+
+/* Color-coded left borders for metric items */
+.metric-item:nth-child(1)::before {
+  background: #0f62fe;
+}
+
+.metric-item:nth-child(2)::before {
+  background: #198038;
+}
+
+.metric-item:nth-child(3)::before {
+  background: #da1e28;
 }
 
 .metric-value {
@@ -1408,55 +1524,150 @@ export default {
   padding-left: 1rem;
 }
 
-/* Responsive Design */
+/* Responsive Design - Enhanced for Better Mobile Experience */
 @media (max-width: 768px) {
   .statistics-container {
     margin-top: 48px;
+    padding: 0;
+    overflow-x: hidden; /* Prevent horizontal scroll */
   }
   
   .page-header {
-    padding: 1.5rem 1rem 1rem 1rem;
+    padding: 1.5rem 1rem;
+    text-align: center;
   }
   
   .page-title {
-    font-size: 1.5rem;
+    font-size: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .page-subtitle {
+    font-size: 0.875rem;
   }
   
   .statistics-grid {
-    padding: 1rem;
+    padding: 0.75rem;
+    gap: 0.75rem;
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
   }
   
-  .overview-tile,
-  .data-tile {
-    padding: 1rem;
+  /* Fix displacement issues - Force single column layout */
+  .top-stats-row,
+  .stats-row,
+  .user-metrics-row,
+  .analytics-trend-row {
+    margin-bottom: 1rem;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100%;
   }
   
+  .top-stats-row .cv-column,
+  .stats-row .cv-column,
+  .user-metrics-row .cv-column,
+  .analytics-trend-row .cv-column {
+    margin-bottom: 1rem;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+  }
+  
+  /* Remove side-by-side padding on mobile */
   .top-stats-row .cv-column:first-child,
-  .top-stats-row .cv-column:last-child {
+  .top-stats-row .cv-column:last-child,
+  .analytics-trend-row .cv-column:first-child,
+  .analytics-trend-row .cv-column:last-child {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  
+  /* Tile adjustments for mobile */
+  .overview-tile,
+  .data-tile,
+  .chart-tile,
+  .analytics-tile {
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .tile-title {
+    font-size: 1.125rem;
+  }
+  
+  .tile-subtitle {
+    font-size: 0.8125rem;
+  }
+  
+  /* Stack columns properly on mobile */
+  .top-stats-row .cv-column,
+  .user-metrics-row .cv-column,
+  .analytics-trend-row .cv-column {
     padding-left: 0;
     padding-right: 0;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
   
+  /* Enhanced metric items for mobile */
   .stats-metrics {
-    gap: 2rem;
+    gap: 1rem;
+    min-height: auto;
   }
   
   .metric-item {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    text-align: center;
+  }
+  
+  .metric-label {
+    min-width: auto;
+    font-size: 0.8125rem;
   }
   
   .metric-value-container {
     width: 100%;
     max-width: none;
+    justify-content: center;
+    gap: 0.75rem;
   }
   
+  .metric-value {
+    font-size: 1.25rem;
+    text-align: center;
+    min-width: auto;
+  }
+  
+  /* Chart containers for mobile */
+  .chart-container {
+    height: 250px;
+    padding: 0.5rem;
+  }
+  
+  .chart-container-compact {
+    height: 200px;
+  }
+  
+  .chart-container-large {
+    height: 300px;
+  }
+  
+  /* User stats mobile optimization */
   .user-stat-item {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+  .user-info {
+    text-align: center;
   }
   
   .user-progress {
@@ -1464,6 +1675,84 @@ export default {
     margin-left: 0;
     min-width: auto;
     max-width: none;
+  }
+  
+  /* Analytics carousel mobile */
+  .analytics-carousel-container-vertical {
+    gap: 0.75rem;
+  }
+  
+  .analytics-card-stacked {
+    height: auto;
+    min-height: 80px;
+    padding: 0.75rem 1rem;
+  }
+  
+  .analytics-indicator-medium {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .analytics-label-medium {
+    font-size: 0.8125rem;
+  }
+  
+  .analytics-value-medium {
+    font-size: 1rem;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .page-header {
+    padding: 1rem 0.75rem;
+  }
+  
+  .page-title {
+    font-size: 1.5rem;
+  }
+  
+  .statistics-grid {
+    padding: 0.5rem;
+  }
+  
+  .overview-tile,
+  .data-tile,
+  .chart-tile,
+  .analytics-tile {
+    padding: 0.75rem;
+  }
+  
+  .tile-title {
+    font-size: 1rem;
+  }
+  
+  .chart-container {
+    height: 200px;
+    padding: 0.25rem;
+  }
+  
+  .chart-container-compact {
+    height: 150px;
+  }
+  
+  .chart-container-large {
+    height: 250px;
+  }
+  
+  .metric-item {
+    padding: 0.5rem;
+  }
+  
+  .metric-value {
+    font-size: 1.125rem;
+  }
+  
+  /* Ensure proper spacing between sections */
+  .stats-row,
+  .user-metrics-row,
+  .analytics-trend-row {
+    margin-bottom: 0.75rem;
   }
 }
 

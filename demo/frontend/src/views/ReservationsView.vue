@@ -10,10 +10,10 @@
       <!-- Quick Actions Panel - First -->
       <cv-row class="actions-row">
         <cv-column :sm="4" :md="16" :lg="16">
-          <cv-tile class="actions-tile">
-            <div class="tile-header">
-              <h3 class="tile-title">Quick Actions</h3>
-              <p class="tile-subtitle">Common cubicle management operations</p>
+          <div class="actions-panel">
+            <div class="panel-header">
+              <h3 class="panel-title">Quick Actions</h3>
+              <p class="panel-subtitle">Common cubicle management operations</p>
             </div>
             <div class="actions-content">
               <div class="action-container">
@@ -45,33 +45,49 @@
                   Statistics
                 </cv-button>
               </div>
-              
-              <div class="status-legend">
+            </div>
+            
+            <!-- Status Legend inside actions panel -->
+            <div class="legend-container">
+              <div 
+                class="status-legend"
+                :class="{ 'show-counts': showCounts }"
+                @click="toggleLegendCounts"
+              >
                 <h4 class="legend-title">Status Legend</h4>
                 <div class="legend-items">
                   <div class="legend-item">
                     <div class="legend-indicator available"></div>
-                    <span class="legend-label">Available</span>
+                    <span class="legend-label">
+                      Available
+                      <span v-if="showCounts" class="legend-count">{{ cubicleStats.available }}</span>
+                    </span>
                   </div>
                   <div class="legend-item">
                     <div class="legend-indicator reserved"></div>
-                    <span class="legend-label">Reserved</span>
+                    <span class="legend-label">
+                      Reserved
+                      <span v-if="showCounts" class="legend-count">{{ cubicleStats.reserved }}</span>
+                    </span>
                   </div>
                   <div class="legend-item">
                     <div class="legend-indicator error"></div>
-                    <span class="legend-label">Error/Maintenance</span>
+                    <span class="legend-label">
+                      Err/Maintenance
+                      <span v-if="showCounts" class="legend-count">{{ cubicleStats.error }}</span>
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
-          </cv-tile>
+          </div>
         </cv-column>
       </cv-row>
       
-      <!-- Cubicle Grid - Second -->
+      <!-- Cubicle Grid - Third -->
       <cv-row class="content-row">
         <cv-column :sm="4" :md="16" :lg="16">
-          <div class="grid-container">
+          <div class="grid-container" ref="gridContainer">
             <CubicleGrid :cubicles="cubicles" @update-cubicle-state="updateCubicleState" />
           </div>
         </cv-column>
@@ -94,11 +110,39 @@ export default {
   name: 'ReservationsView',
   components: { CubicleGrid },
   data() {
-    return { cubicles: [] }
+    return { 
+      cubicles: [],
+      // Status legend state
+      showCounts: false
+    }
   },
   created() {
     // Fetch cubicle data on view creation
     this.fetchCubicles();
+  },
+  beforeUnmount() {
+    // Clean up any remaining event listeners if needed
+  },
+  computed: {
+    cubicleStats() {
+      const stats = {
+        available: 0,
+        reserved: 0,
+        error: 0
+      };
+      
+      this.cubicles.forEach(cubicle => {
+        if (cubicle.status === 'available') {
+          stats.available++;
+        } else if (cubicle.status === 'reserved') {
+          stats.reserved++;
+        } else if (cubicle.status === 'error') {
+          stats.error++;
+        }
+      });
+      
+      return stats;
+    }
   },
   methods: {
     /**
@@ -148,60 +192,66 @@ export default {
      */
     goToStatistics() {
       this.$router.push('/statistics');
+    },
+    
+    /**
+     * Toggle status legend to show/hide counts
+     */
+    toggleLegendCounts() {
+      this.showCounts = !this.showCounts;
     }
   }
 }
 </script>
 
 <style scoped>
+/* Main Layout Styles */
 .reservations-container {
   min-height: 100vh;
-  /* Remove fixed height to prevent scroll context conflicts */
-  background: linear-gradient(135deg, #f4f4f4 0%, #ffffff 100%);
+  background: #f4f4f4;
   padding: 0;
   margin: 0;
-  margin-top: 48px; /* Space for navbar */
-  /* Remove overflow-y to use document scroll */
+  margin-top: 48px;
 }
 
 .page-header {
-  background: linear-gradient(135deg, #0f62fe 0%, #0043ce 100%);
+  background: #161616;
   color: white;
   padding: 2rem;
   margin-bottom: 0;
-  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.15);
+  border-bottom: 1px solid #393939;
 }
 
 .page-title {
   font-size: 2.5rem;
   font-weight: 300;
-  margin: 0;
-  margin-bottom: 0.5rem;
-  line-height: 1.2;
+  margin: 0 0 0.5rem 0;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
 .page-subtitle {
-  font-size: 1.125rem;
-  opacity: 0.9;
+  font-size: 1rem;
+  opacity: 0.75;
   margin: 0;
   font-weight: 400;
 }
 
 .reservations-grid {
-  max-width: 1400px;
+  max-width: 1584px;
   margin: 0 auto;
-  padding: 1.5rem;
+  padding: 0;
 }
 
 .actions-row {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .content-row {
   margin-bottom: 1rem;
 }
 
-/* Global styles to prevent horizontal overflow */
+/* Carbon Design System Overrides - Clean and Consistent */
 :deep(.bx--grid) {
   max-width: 100%;
   overflow-x: hidden;
@@ -217,54 +267,151 @@ export default {
   padding-right: 1rem;
 }
 
+:deep(.bx--tile) {
+  border-radius: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+:deep(.bx--btn) {
+  border-radius: 0 !important;
+  font-weight: 400 !important;
+  text-transform: none !important;
+  letter-spacing: 0.16px !important;
+  transition: all 0.15s ease !important;
+  box-shadow: none !important;
+}
+
+:deep(.bx--btn--primary) {
+  background: #0f62fe !important;
+  border-color: #0f62fe !important;
+}
+
+:deep(.bx--btn--primary:hover) {
+  background: #0353e9 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+:deep(.bx--btn--secondary) {
+  background: #393939 !important;
+  border-color: #393939 !important;
+  color: #ffffff !important;
+}
+
+:deep(.bx--btn--secondary:hover) {
+  background: #4c4c4c !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Cubicle Grid Specific Overrides */
+:deep(.cubicle-container) {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:deep(.section-wrapper) {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:deep(.cubicle-grid) {
+  margin: 0 !important;
+  padding: 0 !important;
+  padding-right: 0;
+  box-sizing: border-box;
+}
+
+:deep(.left-grid), 
+:deep(.middle-grid), 
+:deep(.right-grid) {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Grid Container Styles */
 .grid-container {
-  background: white;
-  border-radius: 0; /* Sharp edges */
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e0e0e0;
-  min-height: 500px;
+  background: transparent;
+  border-radius: 0;
+  padding: 0.75rem;
+  box-shadow: none;
+  border: none;
   width: 100%;
-  overflow: visible;
+  overflow: auto !important; /* Force override any global styles */
+  max-height: 80vh;
+  margin-top: 0.5rem; /* Reduced margin to decrease spacing */
+  box-sizing: border-box;
 }
 
-.actions-row {
+/* Custom scrollbar styling - Consistent with UtilizationView */
+.grid-container::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.grid-container::-webkit-scrollbar-track {
+  background: #f4f4f4;
+  border-radius: 4px;
+}
+
+.grid-container::-webkit-scrollbar-thumb {
+  background: #0f62fe;
+  border-radius: 4px;
+}
+
+.grid-container::-webkit-scrollbar-thumb:hover {
+  background: #0043ce;
+}
+
+/* Actions Panel Styles */
+.actions-panel {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(224, 224, 224, 0.15);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 1rem;
+  position: relative;
+  overflow: visible !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.panel-header {
   margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(224, 224, 224, 0.2);
 }
 
-.actions-tile {
-  background: white !important;
-  border: 1px solid #e0e0e0 !important;
-  border-radius: 0 !important; /* Sharp edges */
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
-  padding: 1.5rem !important;
-}
-
-.tile-header {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.tile-title {
-  font-size: 1.5rem;
+.panel-title {
+  font-size: 1.75rem;
   font-weight: 400;
-  margin: 0;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.5rem 0;
   color: #161616;
+  letter-spacing: 0;
 }
 
-.tile-subtitle {
-  font-size: 1rem;
-  color: #6f6f6f;
+.panel-subtitle {
+  font-size: 0.875rem;
+  color: #525252;
   margin: 0;
+  font-weight: 400;
 }
 
 .actions-content {
   display: flex;
   flex-direction: row;
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: stretch;
+  margin-bottom: 0;
+  width: 100%;
+  overflow: visible !important;
+  box-sizing: border-box;
+  height: 60px;
 }
 
 .action-container {
@@ -272,190 +419,347 @@ export default {
   flex-direction: row;
   flex: 1;
   border: 1px solid #e0e0e0;
-  border-radius: 0; /* Sharp edges */
+  border-radius: 0;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
+  box-shadow: none;
+  background: #ffffff;
+  transition: all 0.15s ease;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .action-container:hover {
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
 .action-info-card {
-  padding: 1.25rem;
+  padding: 1rem 1.5rem;
   background: #ffffff;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
   flex: 1;
   border-right: 1px solid #e0e0e0;
-}
-
-.action-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.25rem;
-  background: #f4f4f4;
-  border-radius: 0; /* Sharp edges */
-  border: 1px solid #e0e0e0;
-  transition: background-color 0.15s ease;
-}
-
-.action-item:hover {
-  background: #e8e8e8;
-}
-
-.action-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  justify-content: center;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .action-label {
   font-weight: 600;
   color: #161616;
   font-size: 1rem;
+  line-height: 1.375;
 }
 
 .action-description {
-  font-size: 0.875rem;
-  color: #6f6f6f;
+  font-size: 0.75rem;
+  color: #525252;
+  line-height: 1.34;
 }
 
 .action-button {
   width: auto;
-  min-width: 120px;
+  min-width: 100px;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  font-weight: 600;
-  font-size: 1rem;
-  border-radius: 0; /* Sharp edges */
-  border-left: none; /* Remove left border to attach to content */
-  transition: all 0.2s ease;
-  letter-spacing: 0.5px;
+  font-weight: 400;
+  font-size: 0.875rem;
+  border-radius: 0;
+  border-left: none;
+  transition: all 0.15s ease;
+  letter-spacing: 0.16px;
   margin: 0;
-  padding: 1.25rem;
+  padding: 1rem;
+  text-transform: none;
 }
 
 .action-button.refresh-button {
-  background: linear-gradient(135deg, #0f62fe, #0043ce);
+  background: #0f62fe;
   border-color: #0f62fe;
+  color: #ffffff;
 }
 
 .action-button.refresh-button:hover {
-  background: linear-gradient(135deg, #0353e9, #002d9c);
-  box-shadow: inset 0 0 0 1px #0043ce;
+  background: #0353e9;
 }
 
 .action-button.statistics-button {
-  background: linear-gradient(135deg, #393939, #262626);
+  background: #393939;
   border-color: #393939;
+  color: #ffffff;
 }
 
 .action-button.statistics-button:hover {
-  background: linear-gradient(135deg, #4c4c4c, #393939);
-  box-shadow: inset 0 0 0 1px #262626;
+  background: #4c4c4c;
 }
 
+/* Legend Container */
+.legend-container {
+  position: relative;
+  width: 100%;
+  margin-top: 0.5rem; /* Reduced margin */
+}
+
+/* Status Legend Styles */
 .status-legend {
-  background: #f4f4f4;
-  border-radius: 0; /* Sharp edges */
-  padding: 1rem;
+  background: rgba(255, 255, 255, 0.95);
   border: 1px solid #e0e0e0;
+  border-radius: 0;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: pointer; /* Changed from grab to pointer */
+  user-select: none;
+  transition: all 0.15s ease; /* Added smooth transitions */
+  width: 100%;
+  max-width: none;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  box-sizing: border-box;
+}
+
+.status-legend:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 1);
+  transform: translateY(-1px); /* Subtle lift effect */
+}
+
+.status-legend.show-counts {
+  background: rgba(15, 98, 254, 0.05); /* Light blue background when showing counts */
+  border-color: #0f62fe;
 }
 
 .legend-title {
   font-size: 1rem;
   font-weight: 600;
   margin: 0;
-  margin-bottom: 0.75rem;
   color: #161616;
+  letter-spacing: 0.16px;
+  text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .legend-items {
   display: flex;
   gap: 1.5rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .legend-item {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .legend-indicator {
   width: 12px;
   height: 12px;
-  border-radius: 0; /* Sharp edges for indicators */
-  border: 2px solid transparent;
+  border-radius: 0;
+  border: none;
+  flex-shrink: 0;
 }
 
 .legend-indicator.available {
-  background-color: #3c3c3c;
-  border-color: #3c3c3c;
+  background-color: #2962ff;
 }
 
 .legend-indicator.reserved {
-  background-color: #2962ff;
-  border-color: #2962ff;
+  background-color: #3c3c3c;
 }
 
 .legend-indicator.error {
   background-color: #d32f2f;
-  border-color: #d32f2f;
 }
 
 .legend-label {
   font-size: 0.875rem;
   color: #161616;
-  font-weight: 500;
+  font-weight: 400;
+  line-height: 1.34;
+  white-space: nowrap;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .reservations-container {
+.legend-count {
+  font-weight: 600;
+  color: #0f62fe;
+  margin-left: 0.5rem;
+  background: rgba(15, 98, 254, 0.1);
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Strategic Responsive Design - Mobile First Approach */
+
+/* Tablet and small desktop adjustments */
+@media (max-width: 1024px) {
+  .reservations-grid {
     padding: 0;
-    margin-top: 48px;
   }
   
-  .page-header {
-    padding: 1.5rem;
-    margin-bottom: 0;
+  .actions-content {
+    gap: 0.75rem;
+  }
+  
+  .action-info-card {
+    padding: 1rem 1.25rem;
+    justify-content: center;
+  }
+}
+
+/* Mobile landscape adjustments */
+@media (max-width: 768px) {
+  .reservations-grid {
+    padding: 0;
   }
   
   .page-title {
     font-size: 2rem;
   }
   
-  .page-subtitle {
-    font-size: 1rem;
+  .panel-title {
+    font-size: 1.5rem;
   }
   
-  .reservations-grid {
-    padding: 1rem;
-    max-width: 100%;
-  }
-  
-  .grid-container {
-    padding: 1rem;
-    min-height: 400px;
-    border-radius: 0; /* Maintain sharp edges on mobile */
-  }
-  
-  .actions-tile {
-    padding: 1rem !important;
-  }
-  
+  /* Stack actions content vertically on mobile */
   .actions-content {
     flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    height: auto;
+  }
+  
+  /* Optimize status legend for mobile */
+  .status-legend {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  
+  .legend-items {
     gap: 1rem;
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .action-container {
+    height: auto;
+    margin-bottom: 0;
+  }
+  
+  .action-info-card {
+    padding: 0.75rem 1rem;
+    justify-content: center;
+  }
+}
+
+/* Mobile portrait optimizations */
+@media (max-width: 480px) {
+  .reservations-grid {
+    padding: 0;
+  }
+  
+  .page-header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  
+  .page-title {
+    font-size: 1.75rem;
+  }
+  
+  .page-subtitle {
+    font-size: 0.875rem;
+  }
+  
+  .panel-title {
+    font-size: 1.25rem;
+  }
+  
+  .panel-subtitle {
+    font-size: 0.8125rem;
+  }
+  
+  /* Further optimize actions panel for small screens */
+  .actions-panel {
+    padding: 0.75rem;
+  }
+  
+  /* Stack legend items vertically on small mobile */
+  .status-legend {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+  
+  .legend-items {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+    width: auto;
+  }
+  
+  .legend-title {
+    font-size: 0.875rem;
+  }
+  
+  .legend-label {
+    font-size: 0.8125rem;
+  }
+  
+  .legend-count {
+    font-size: 0.6875rem;
+    padding: 0.0625rem 0.375rem;
+    margin-left: 0.375rem;
+  }
+  
+  .action-info-card {
+    padding: 0.75rem;
+  }
+  
+  .action-label {
+    font-size: 0.875rem;
+  }
+  
+  .action-description {
+    font-size: 0.6875rem;
+  }
+  
+  .action-button {
+    padding: 0.75rem;
+    font-size: 0.8125rem;
+    min-width: 80px;
+  }
+  
+  /* Optimize grid container for mobile */
+  .grid-container {
+    padding: 0.5rem;
+    max-height: 70vh;
+  }
+}
+
+/* Very small screens - minimal adjustments only */
+@media (max-width: 360px) {
+  .reservations-grid {
+    padding: 0;
   }
   
   .action-container {
@@ -468,62 +772,8 @@ export default {
   }
   
   .action-button {
-    width: 100%;
-    height: 44px;
-    font-size: 0.95rem;
-    padding: 0;
-    border-left: none;
-    border-top: none;
-  }
-  
-  .legend-items {
-    gap: 1rem;
+    min-height: 44px;
   }
 }
 
-@media (max-width: 480px) {
-  .legend-items {
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-}
-
-/* Carbon component overrides for sharp edges */
-:deep(.bx--tile) {
-  border-radius: 0 !important; /* Sharp edges for all tiles */
-}
-
-:deep(.bx--btn) {
-  border-radius: 0 !important; /* Sharp edges for all buttons */
-  font-weight: 600 !important;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-:deep(.bx--btn--primary) {
-  background: linear-gradient(135deg, #0f62fe, #0043ce) !important;
-  border-color: #0f62fe !important;
-}
-
-:deep(.bx--btn--primary:hover) {
-  background: linear-gradient(135deg, #0353e9, #002d9c) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.3) !important;
-}
-
-:deep(.bx--btn--secondary) {
-  background: linear-gradient(135deg, #393939, #262626) !important;
-  border-color: #393939 !important;
-  color: #ffffff !important;
-}
-
-:deep(.bx--btn--secondary:hover) {
-  background: linear-gradient(135deg, #4c4c4c, #393939) !important;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(57, 57, 57, 0.3) !important;
-}
-
-:deep(.bx--form-item) {
-  border-radius: 0 !important;
-}
 </style>
