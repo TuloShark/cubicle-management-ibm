@@ -327,17 +327,18 @@ router.get('/', validarUsuario, [
     let query = {};
     
     if (req.query.startDate || req.query.endDate) {
-      query.weekStartDate = {};
+      // Filter by generatedAt date for date picker functionality
+      query.generatedAt = {};
       if (req.query.startDate) {
-        query.weekStartDate.$gte = new Date(req.query.startDate);
+        query.generatedAt.$gte = new Date(req.query.startDate);
       }
       if (req.query.endDate) {
-        query.weekStartDate.$lte = new Date(req.query.endDate);
+        query.generatedAt.$lte = new Date(req.query.endDate);
       }
     }
 
     const reports = await UtilizationReport.find(query)
-      .sort({ weekStartDate: -1 })
+      .sort({ generatedAt: -1 })
       .skip(skip)
       .limit(limit);
 

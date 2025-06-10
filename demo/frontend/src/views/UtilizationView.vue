@@ -39,8 +39,9 @@
                     :disabled="loading.generateCustom"
                     class="control-button-consistent"
                   >
-                    <span v-if="loading.generateCustom">Generating...</span>
-                    <span v-else>Generate Custom Week</span>
+                    <span v-if="loading.generateCustom">Processing...</span>
+                    <span v-else-if="selectedFilterDate">Manage Date Filter</span>
+                    <span v-else>Search Custom Week</span>
                   </cv-button>
                 </div>
                 
@@ -122,8 +123,19 @@
         <cv-column :sm="4" :md="16" :lg="16">
           <cv-tile class="reports-tile">
             <div class="tile-header">
-              <h3 class="tile-title">Available Reports</h3>
-              <p class="tile-subtitle">Historical utilization reports with export options</p>
+              <div class="tile-title-section">
+                <h3 class="tile-title">Available Reports</h3>
+                <div v-if="selectedFilterDate" class="filter-status-badge">
+                  <span class="filter-indicator"></span>
+                  <span class="filter-text">Filtered by {{ formatDate(selectedFilterDate) }}</span>
+                </div>
+              </div>
+              <p class="tile-subtitle">
+                {{ selectedFilterDate 
+                  ? `Showing reports generated on ${formatDate(selectedFilterDate)}` 
+                  : 'Historical utilization reports with export options' 
+                }}
+              </p>
             </div>
             
             <!-- Pagination Controls -->
@@ -254,8 +266,15 @@
               
               <div v-else class="no-data-state">
                 <div class="empty-state-content">
-                  <h4 class="empty-state-title">No Reports Available</h4>
-                  <p class="empty-state-description">Generated reports will appear here for viewing and downloading.</p>
+                  <h4 class="empty-state-title">
+                    {{ selectedFilterDate ? 'No Reports Found for Selected Date' : 'No Reports Available' }}
+                  </h4>
+                  <p class="empty-state-description">
+                    {{ selectedFilterDate 
+                        ? `No reports were generated on ${formatDate(selectedFilterDate)}. Try selecting a different date or clear the filter to see all reports.` 
+                        : 'Generated reports will appear here for viewing and downloading.' 
+                    }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -369,34 +388,52 @@
         size="md"
         :auto-hide-off="true"
         @modal-hide-request="closeCustomWeekModal"
-        @primary-click="generateCustomWeekFromModal"
+        @primary-click="handleCustomWeekModalAction"
         @secondary-click="closeCustomWeekModal"
       >
-        <template v-slot:label>Generate Custom Report</template>
-        <template v-slot:title>Select Week Start Date</template>
+        <template v-slot:label>
+          {{ selectedFilterDate ? 'Filter Reports' : 'Generate Custom Report' }}
+        </template>
+        <template v-slot:title>
+          {{ selectedFilterDate ? 'Filter Reports by Date' : 'Select Date for Report Generation' }}
+        </template>
         <template v-slot:content>
           <div class="custom-week-form">
-            <p class="form-description">Select a Monday to generate a utilization report for that week.</p>
+            <p class="form-description">
+              {{ selectedFilterDate 
+                ? 'Select a date to filter existing reports, or clear the current filter.' 
+                : 'Select any date to generate a utilization report for that week, or filter existing reports by date.' 
+              }}
+            </p>
+            
+            <!-- Current Filter Display -->
+            <div v-if="selectedFilterDate" class="current-filter-display">
+              <div class="filter-info">
+                <span class="filter-label">Current Filter:</span>
+                <span class="filter-value">{{ formatDate(selectedFilterDate) }}</span>
+              </div>
+            </div>
+            
             <cv-date-picker
               v-model="customWeekStart"
+              kind="single"
               :date-format="dateFormat"
-              :invalid="datePickerInvalid"
-              placeholder="Select Monday date (YYYY-MM-DD)"
+              placeholder="Select date (YYYY-MM-DD)"
+              @change="onModalDateChange"
             >
               <cv-date-picker-input
-                label="Week Start Date (Monday)"
+                :label="selectedFilterDate ? 'Change Filter Date' : 'Select Date'"
                 placeholder="YYYY-MM-DD"
-                :invalid-message="datePickerInvalid ? 'Please select a Monday' : ''"
               />
             </cv-date-picker>
-            <div class="form-help-text">
-              <p>Note: Only Mondays can be selected as week start dates. The report will cover Monday through Sunday of that week.</p>
-            </div>
           </div>
         </template>
         <template v-slot:primary-button>
-          <span v-if="loading.generateCustom">Generating...</span>
-          <span v-else>Generate Report</span>
+          <span v-if="selectedFilterDate && !customWeekStart">Clear Filter</span>
+          <span v-else-if="selectedFilterDate && customWeekStart && customWeekStart !== selectedFilterDate">Select Date</span>
+          <span v-else-if="selectedFilterDate && customWeekStart === selectedFilterDate">Clear Filter</span>
+          <span v-else-if="!selectedFilterDate && customWeekStart">Filter By Date</span>
+          <span v-else>Select Date</span>
         </template>
         <template v-slot:secondary-button>Cancel</template>
       </cv-modal>
@@ -471,8 +508,8 @@ export default {
         exportLatest: false
       },
       customWeekStart: '',
+      selectedFilterDate: '',
       dateFormat: 'Y-m-d',
-      datePickerInvalid: false,
       notification: {
         show: false,
         kind: 'success',
@@ -598,12 +635,29 @@ export default {
       this.loading.reports = true;
       try {
         const idToken = localStorage.getItem('auth_token');
+        
+        // Build query parameters
+        const params = {
+          page: this.currentPage,
+          limit: this.pageSize
+        };
+        
+        // Add date filter if selected
+        if (this.selectedFilterDate) {
+          const filterDate = new Date(this.selectedFilterDate);
+          const startOfDay = new Date(filterDate);
+          startOfDay.setHours(0, 0, 0, 0);
+          
+          const endOfDay = new Date(filterDate);
+          endOfDay.setHours(23, 59, 59, 999);
+          
+          params.startDate = startOfDay.toISOString();
+          params.endDate = endOfDay.toISOString();
+        }
+        
         const response = await axios.get('/api/utilization-reports', {
           headers: { Authorization: `Bearer ${idToken}` },
-          params: {
-            page: this.currentPage,
-            limit: this.pageSize
-          }
+          params
         });
         
         this.reports = response.data.reports || [];
@@ -675,40 +729,30 @@ export default {
     
     openCustomWeekModal() {
       this.showCustomWeekModal = true;
-      this.customWeekStart = '';
-      this.datePickerInvalid = false;
+      // Initialize with current filter date if exists, otherwise empty
+      this.customWeekStart = this.selectedFilterDate || '';
     },
     
     closeCustomWeekModal() {
       this.showCustomWeekModal = false;
       this.customWeekStart = '';
-      this.datePickerInvalid = false;
     },
     
     async generateCustomWeekFromModal() {
       if (!this.customWeekStart) {
-        this.showNotification('error', 'Missing Date', 'Please select a week start date');
+        this.showNotification('error', 'Missing Date', 'Please select a date');
         return;
       }
       
-      // Parse the date and validate that it's a Monday
+      // Parse the date and validate that it's valid
       const date = new Date(this.customWeekStart);
       
       // Check if the date is valid
       if (isNaN(date.getTime())) {
-        this.datePickerInvalid = true;
         this.showNotification('error', 'Invalid Date', 'Please select a valid date');
         return;
       }
       
-      // Check if it's a Monday (getDay() returns 1 for Monday)
-      if (date.getDay() !== 1) {
-        this.datePickerInvalid = true;
-        this.showNotification('error', 'Invalid Date', 'Please select a Monday as the week start date');
-        return;
-      }
-      
-      this.datePickerInvalid = false;
       this.loading.generateCustom = true;
       
       try {
@@ -724,62 +768,6 @@ export default {
         
         this.showNotification('success', 'Success', 'Custom week report generated successfully');
         this.closeCustomWeekModal();
-        await this.fetchReports();
-      } catch (error) {
-        console.error('Error generating custom week report:', error);
-        if (error.response && error.response.status === 401) {
-          this.showNotification('error', 'Authentication Required', 'You must be an admin to generate reports.');
-        } else if (error.response && error.response.status === 400) {
-          const message = error.response?.data?.error || 'Report already exists for this week';
-          this.showNotification('error', 'Unable to Generate', message);
-        } else {
-          const message = error.response?.data?.error || 'Failed to generate custom week report';
-          this.showNotification('error', 'Error', message);
-        }
-      } finally {
-        this.loading.generateCustom = false;
-      }
-    },
-    
-    async generateCustomWeekReport() {
-      if (!this.customWeekStart) {
-        this.showNotification('error', 'Missing Date', 'Please select a week start date');
-        return;
-      }
-      
-      // Parse the date and validate that it's a Monday
-      const date = new Date(this.customWeekStart);
-      
-      // Check if the date is valid
-      if (isNaN(date.getTime())) {
-        this.datePickerInvalid = true;
-        this.showNotification('error', 'Invalid Date', 'Please select a valid date');
-        return;
-      }
-      
-      // Check if it's a Monday (getDay() returns 1 for Monday)
-      if (date.getDay() !== 1) {
-        this.datePickerInvalid = true;
-        this.showNotification('error', 'Invalid Date', 'Please select a Monday as the week start date');
-        return;
-      }
-      
-      this.datePickerInvalid = false;
-      this.loading.generateCustom = true;
-      
-      try {
-        const idToken = localStorage.getItem('auth_token');
-        
-        // Format the date as ISO string for the API
-        const formattedDate = date.toISOString().split('T')[0];
-        
-        await axios.post('/api/utilization-reports/generate', {}, {
-          headers: { Authorization: `Bearer ${idToken}` },
-          params: { weekStart: formattedDate }
-        });
-        
-        this.showNotification('success', 'Success', 'Custom week report generated successfully');
-        this.customWeekStart = '';
         await this.fetchReports();
       } catch (error) {
         console.error('Error generating custom week report:', error);
@@ -976,6 +964,66 @@ export default {
       setTimeout(() => {
         this.notification.show = false;
       }, 5000);
+    },
+    
+    onDateFilterChange() {
+      this.fetchReports();
+    },
+    
+    clearDateFilter() {
+      this.selectedFilterDate = null;
+      this.fetchReports();
+    },
+    
+    // New methods for the updated modal functionality
+    handleCustomWeekModalAction() {
+      if (this.selectedFilterDate && !this.customWeekStart) {
+        // If there's a filter but no date selected in picker, clear the filter
+        this.clearDateFilterFromModal();
+      } else if (this.selectedFilterDate && this.customWeekStart && this.customWeekStart === this.selectedFilterDate) {
+        // If there's a filter and same date is selected, clear the filter
+        this.clearDateFilterFromModal();
+      } else if (this.customWeekStart) {
+        // If date is selected (either new filter or changing existing filter), apply the filter
+        this.applyDateFilterFromModal();
+      } else {
+        // If no date selected, show error
+        this.showNotification('error', 'Missing Date', 'Please select a date');
+      }
+    },
+    
+    applyDateFilterFromModal() {
+      if (!this.customWeekStart) {
+        this.showNotification('error', 'Missing Date', 'Please select a date');
+        return;
+      }
+      
+      // Validate the date
+      const date = new Date(this.customWeekStart);
+      if (isNaN(date.getTime())) {
+        this.showNotification('error', 'Invalid Date', 'Please select a valid date');
+        return;
+      }
+      
+      // Apply the filter
+      this.selectedFilterDate = this.customWeekStart;
+      this.fetchReports();
+      this.closeCustomWeekModal();
+      this.showNotification('success', 'Filter Applied', `Reports filtered by ${this.formatDate(this.customWeekStart)}`);
+    },
+    
+    clearDateFilterFromModal() {
+      this.selectedFilterDate = null;
+      this.customWeekStart = '';
+      this.fetchReports();
+      this.closeCustomWeekModal();
+      this.showNotification('success', 'Filter Cleared', 'Showing all reports');
+    },
+    
+    onModalDateChange() {
+      // This method is called when the date picker value changes
+      // It helps trigger reactivity for the button text updates
+      this.$forceUpdate();
     }
   }
 };
@@ -1205,15 +1253,43 @@ export default {
   border-radius: 1px;
 }
 
+.tile-title-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
 .tile-title {
   font-size: 1.25rem;
   font-weight: 600;
   color: #161616;
-  margin: 0 0 0.25rem 0;
+  margin: 0;
   line-height: 1.4;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.filter-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #d0e2ff 0%, #a6c8ff 100%);
+  border: 1px solid #0f62fe;
+  border-radius: 16px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #0043ce;
+}
+
+.filter-indicator {
+  font-size: 0.875rem;
+}
+
+.filter-text {
+  white-space: nowrap;
 }
 
 .tile-subtitle {
@@ -2707,4 +2783,70 @@ export default {
     font-size: 0.8125rem !important;
   }
 }
+
+/* Custom Week Modal Enhancements */
+.custom-week-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-description {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.current-filter-display {
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0f7ff 0%, #e0efff 100%);
+  border: 1px solid #0f62fe;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.filter-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.filter-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f62fe;
+}
+
+.filter-value {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #161616;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid rgba(15, 98, 254, 0.2);
+}
+
+.modal-actions-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.action-buttons-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modal-action-btn {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Horizontal Controls Layout */
 </style>
