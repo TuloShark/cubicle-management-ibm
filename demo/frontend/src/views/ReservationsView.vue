@@ -160,8 +160,45 @@ export default {
           headers: { Authorization: `Bearer ${idToken}` }
         });
         this.cubicles = r.data;
+        
+        // Fetch reservation user info for reserved cubicles
+        await this.fetchReservationUsers();
       } catch (err) {
         this.cubicles = [];
+      }
+    },
+    
+    /**
+     * Fetch reservation user information for all reserved cubicles
+     */
+    async fetchReservationUsers() {
+      const { token } = useAuth();
+      let idToken = token.value;
+      if (!idToken) {
+        idToken = localStorage.getItem('auth_token');
+      }
+      
+      const reservedCubicles = this.cubicles.filter(c => c.status === 'reserved');
+      
+      for (const cubicle of reservedCubicles) {
+        try {
+          const res = await axios.get(`/cubicles/${cubicle._id}/reservation`, {
+            headers: { Authorization: `Bearer ${idToken}` }
+          });
+          
+          if (res.data && res.data.user && res.data.user.uid) {
+            // Add reservation user info to cubicle object
+            cubicle.reservedByUser = {
+              uid: res.data.user.uid,
+              email: res.data.user.email || '',
+              displayName: res.data.user.displayName || ''
+            };
+          }
+        } catch (err) {
+          console.error(`Error fetching reservation user for cubicle ${cubicle._id}:`, err);
+          // Set to null if there's an error
+          cubicle.reservedByUser = null;
+        }
       }
     },
     /**
@@ -174,18 +211,25 @@ export default {
       if (!idToken) {
         idToken = localStorage.getItem('auth_token');
       }
-      if (cubicle.status === 'reserved') {
-        // Use POST /reserve to persist reservation and user info
-        await axios.post('/reserve', { cubicleId: cubicle._id }, {
-          headers: { Authorization: `Bearer ${idToken}` }
-        });
-      } else {
-        // Use PUT for other status changes (e.g., available, error)
-        await axios.put(`/cubicles/${cubicle._id}`, { status: cubicle.status }, {
-          headers: { Authorization: `Bearer ${idToken}` }
-        });
+      try {
+        if (cubicle.status === 'reserved') {
+          // Use POST /reserve to persist reservation and user info
+          await axios.post('/reserve', { cubicleId: cubicle._id }, {
+            headers: { Authorization: `Bearer ${idToken}` }
+          });
+        } else {
+          // Use PUT for other status changes (e.g., available, error)
+          await axios.put(`/cubicles/${cubicle._id}`, { status: cubicle.status }, {
+            headers: { Authorization: `Bearer ${idToken}` }
+          });
+        }
+        // Refresh cubicles data to get updated state and reservation info
+        await this.fetchCubicles();
+      } catch (err) {
+        console.error('Error updating cubicle state:', err);
+        // Still refresh to ensure UI is in sync
+        await this.fetchCubicles();
       }
-      this.fetchCubicles();
     },
     /**
      * Navigate to statistics view
@@ -371,7 +415,7 @@ export default {
 .actions-panel {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(224, 224, 224, 0.15);
+  border: none !important;
   border-radius: 0;
   box-shadow: none;
   padding: 1rem;

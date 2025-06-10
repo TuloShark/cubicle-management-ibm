@@ -8,13 +8,13 @@
  * UtilizationReport schema
  * @typedef UtilizationReport
  * @type {object}
- * @property {Date} weekStartDate - The start date of the week
- * @property {Date} weekEndDate - The end date of the week
+ * @property {Date} weekStartDate - The start date of the day (kept as weekStartDate for compatibility)
+ * @property {Date} weekEndDate - The end date of the day (kept as weekEndDate for compatibility)
  * @property {Date} generatedAt - When the report was generated
- * @property {object} summary - Summary statistics for the week
+ * @property {object} summary - Summary statistics for the day
  * @property {object} daily - Daily breakdown
  * @property {object} sections - Section analysis
- * @property {Array} users - User activity during the week
+ * @property {Array} users - User activity during the day
  * @property {object} advanced - Advanced analytics
  */
 
@@ -88,7 +88,7 @@ const utilizationReportSchema = new mongoose.Schema({
   }
 });
 
-// Create compound index for week queries (removed unique constraint to allow updates)
+// Create compound index for day queries (removed unique constraint to allow updates)
 utilizationReportSchema.index({ weekStartDate: 1, weekEndDate: 1 });
 
 module.exports = mongoose.model('UtilizationReport', utilizationReportSchema);

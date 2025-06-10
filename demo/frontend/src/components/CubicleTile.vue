@@ -5,8 +5,13 @@
     @mouseover="hoverDetails"
     @mouseleave="clearDetails"
   >
-    <div class="serial">{{ cubicle.serial }}</div>
-    <div v-if="showName" class="name">{{ cubicle.name }}</div>
+    <div class="cubicle-content">
+      <div class="serial">{{ cubicle.serial }}</div>
+      <div v-if="showName" class="name">{{ cubicle.name }}</div>
+      <div v-if="cubicle.status === 'reserved' && reservedByUser" class="reserved-by">
+        {{ getDisplayName(reservedByUser) }}
+      </div>
+    </div>
   </cv-tile>
 </template>
 
@@ -23,6 +28,10 @@ export default {
     showName: {
       type: Boolean,
       default: true
+    },
+    reservedByUser: {
+      type: Object,
+      default: null
     }
   },
   computed: {
@@ -48,6 +57,18 @@ export default {
     clearDetails() {
       this.$emit('hoverCubicle', null); // Clear details on mouse leave
     },
+    /**
+     * Get display name for reserved user
+     */
+    getDisplayName(user) {
+      if (!user) return '';
+      // Extract first name from email if available, otherwise use email
+      if (user.email) {
+        const firstName = user.email.split('@')[0].split('.')[0];
+        return firstName.charAt(0).toUpperCase() + firstName.slice(1);
+      }
+      return user.displayName || user.uid || '';
+    }
   },
 };
 </script>
@@ -66,6 +87,16 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.cubicle-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 1px;
 }
 
 /* Remove Carbon Design margins and padding completely */
@@ -114,6 +145,16 @@ export default {
   padding: 0;
 }
 
+.reserved-by {
+  font-size: 0.5rem;
+  line-height: 1;
+  margin: 0;
+  padding: 0;
+  opacity: 0.8;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
 /* Strategic responsive text sizing - only for very small screens */
 @media (max-width: 480px) {
   .serial {
@@ -122,6 +163,10 @@ export default {
   
   .name {
     font-size: 0.5625rem;
+  }
+  
+  .reserved-by {
+    font-size: 0.4375rem;
   }
 }
 
@@ -132,6 +177,10 @@ export default {
   
   .name {
     font-size: 0.5rem;
+  }
+  
+  .reserved-by {
+    font-size: 0.375rem;
   }
 }
 </style>

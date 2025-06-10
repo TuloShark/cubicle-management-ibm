@@ -14,6 +14,7 @@
           :key="cubicle.serial"
           :cubicle="cubicle"
           :showName="false"
+          :reservedByUser="cubicle.reservedByUser"
           @click="openModal(cubicle)"
         />
       </div>
@@ -26,6 +27,7 @@
           :key="cubicle.serial"
           :cubicle="cubicle"
           :showName="false"
+          :reservedByUser="cubicle.reservedByUser"
           @click="openModal(cubicle)"
         />
       </div>
@@ -38,6 +40,7 @@
           :key="cubicle.serial"
           :cubicle="cubicle"
           :showName="false"
+          :reservedByUser="cubicle.reservedByUser"
           @click="openModal(cubicle)"
         />
       </div>
@@ -48,7 +51,7 @@
       kind="default"
       size="sm"
       :autoHideOff="true"
-      :primaryButtonDisabled="false"
+      :primaryButtonDisabled="!canModifyCubicle"
       :disableTeleport="false"
       @modal-hide-request="closeModal"
       @primary-click="changeState('available')"
@@ -71,10 +74,37 @@
           </span>
           <span v-else>Loading...</span>
         </p>
+        <div v-if="!canModifyCubicle && selectedCubicle?.status === 'reserved'" class="permission-notice">
+          <p><strong>Notice:</strong> This cubicle is reserved by another user and cannot be modified.</p>
+        </div>
+        <div v-if="!isAdminUser && selectedCubicle?.status === 'error'" class="permission-notice">
+          <p><strong>Notice:</strong> Only administrators can modify cubicles in error state.</p>
+        </div>
       </template>
-      <template v-slot:other-button>Error</template>
-      <template v-slot:secondary-button>Reserved</template>
-      <template v-slot:primary-button>Available</template>
+      <template v-slot:other-button v-if="canChangeToError">Error</template>
+      <template v-slot:secondary-button v-if="canModifyCubicle">Reserved</template>
+      <template v-slot:primary-button v-if="canModifyCubicle">Available</template>
+    </cv-modal>
+
+    <!-- Not Your Reservation Modal -->
+    <cv-modal
+      :visible="showNotYourReservationModal"
+      kind="default"
+      size="sm"
+      :autoHideOff="true"
+      :disableTeleport="false"
+      @modal-hide-request="closeNotYourReservationModal"
+      @primary-click="closeNotYourReservationModal"
+    >
+      <template v-slot:label>Access Denied</template>
+      <template v-slot:title>This is not your Reservation</template>
+      <template v-slot:content>
+        <p>This cubicle is reserved by another user and cannot be modified by you.</p>
+        <p v-if="reservationUser">
+          <strong>Reserved by:</strong> {{ reservationUser.email }}
+        </p>
+      </template>
+      <template v-slot:primary-button>OK</template>
     </cv-modal>
   </div>
 </template>
@@ -88,6 +118,7 @@ import CubicleTile from './CubicleTile.vue';
 import { CvDropdown, CvButton, CvToggle } from '@carbon/vue';
 import axios from 'axios';
 import useAuth from '../composables/useAuth';
+import { computed } from 'vue';
 
 export default {
   name: 'CubicleGrid',
@@ -96,6 +127,22 @@ export default {
     CvDropdown,
     CvButton,
     CvToggle,
+  },
+  setup() {
+    const { currentUser, isAdmin } = useAuth();
+    
+    // Check if user is admin using VITE_ADMIN_UIDS
+    const isAdminUser = computed(() => {
+      if (!currentUser.value) return false;
+      const adminUids = (import.meta.env.VITE_ADMIN_UIDS || '').split(',').map(u => u.trim());
+      return adminUids.includes(currentUser.value.uid);
+    });
+    
+    return {
+      currentUser,
+      isAdmin,
+      isAdminUser
+    };
   },
   props: {
     cubicles: {
@@ -107,6 +154,7 @@ export default {
     return {
       selectedCubicle: null, // Cubicle selected for modal
       showModal: false,      // Modal visibility
+      showNotYourReservationModal: false, // Not your reservation modal visibility
       reservationUser: null, // Reservation user info for selected cubicle
     };
   },
@@ -123,19 +171,56 @@ export default {
     rightSection() {
       return this.cubicles.filter(c => c.section === 'C');
     },
+    // Check if current user can modify the selected cubicle
+    canModifyCubicle() {
+      if (!this.selectedCubicle || !this.currentUser) return false;
+      
+      // Admin can modify any cubicle
+      if (this.isAdminUser) return true;
+      
+      // For error state cubicles, only admin can modify
+      if (this.selectedCubicle.status === 'error') return false;
+      
+      // For reserved cubicles, only the user who reserved it can modify
+      if (this.selectedCubicle.status === 'reserved') {
+        return this.reservationUser && this.reservationUser.uid === this.currentUser.uid;
+      }
+      
+      // Available cubicles can be modified by anyone
+      return this.selectedCubicle.status === 'available';
+    },
+    // Check if current user can change cubicle to error state
+    canChangeToError() {
+      return this.isAdminUser && this.canModifyCubicle;
+    }
   },
   methods: {
     /**
      * Opens the modal for a selected cubicle and fetches reservation info if reserved.
+     * Checks if user has permission to access the cubicle.
      */
     openModal(cubicle) {
       this.selectedCubicle = cubicle;
       this.reservationUser = null;
-      this.showModal = true;
-      // Fetch reservation info if reserved
+      
+      // If cubicle is reserved, fetch reservation info first
       if (cubicle.status === 'reserved') {
+        // Check if this is not the user's reservation
+        if (cubicle.reservedByUser && 
+            this.currentUser && 
+            cubicle.reservedByUser.uid !== this.currentUser.uid) {
+          // Set reservation user info for the modal and show "not your reservation" modal
+          this.reservationUser = cubicle.reservedByUser;
+          this.showNotYourReservationModal = true;
+          return;
+        }
+        
+        // For own reservations, fetch full reservation info
         this.fetchReservationUser(cubicle._id);
       }
+      
+      // Show regular modal for available cubicles or own reservations
+      this.showModal = true;
     },
     /**
      * Fetches the user who reserved the cubicle (if any).
@@ -173,14 +258,36 @@ export default {
       this.selectedCubicle = null;
     },
     /**
+     * Closes the "not your reservation" modal and clears selected cubicle.
+     */
+    closeNotYourReservationModal() {
+      this.showNotYourReservationModal = false;
+      this.selectedCubicle = null;
+      this.reservationUser = null;
+    },
+    /**
      * Emits an event to parent to update the cubicle's state in the backend.
      * @param {string} newState - The new state to set (available, reserved, error)
      */
     changeState(newState) {
-      if (this.selectedCubicle) {
-        // Emit event to parent to update backend
-        this.$emit('update-cubicle-state', { ...this.selectedCubicle, status: newState });
+      if (!this.selectedCubicle) return;
+      
+      // Check permissions before allowing state change
+      if (!this.canModifyCubicle) {
+        console.warn('User does not have permission to modify this cubicle');
+        this.closeModal();
+        return;
       }
+      
+      // Only admin can set error state
+      if (newState === 'error' && !this.isAdminUser) {
+        console.warn('Only administrators can set cubicles to error state');
+        this.closeModal();
+        return;
+      }
+      
+      // Emit event to parent to update backend
+      this.$emit('update-cubicle-state', { ...this.selectedCubicle, status: newState });
       this.closeModal();
     },
     // The following methods are stubs for potential future row reservation features.
@@ -367,6 +474,22 @@ export default {
 .left-grid-controls {
   grid-area: left;
   margin-left: 10px;
+}
+
+.permission-notice {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background-color: #fef7cd;
+  border: 1px solid #f1c21b;
+  border-radius: 4px;
+  border-left: 4px solid #f1c21b;
+}
+
+.permission-notice p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #8d6e00;
+  font-weight: 500;
 }
 </style>
 

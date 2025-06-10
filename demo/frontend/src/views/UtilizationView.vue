@@ -2,7 +2,7 @@
   <div class="utilization-container">
     <div class="page-header">
       <h1 class="page-title">Utilization Reports</h1>
-      <p class="page-subtitle">Weekly cubicle usage analytics and historical trends</p>
+      <p class="page-subtitle">Daily cubicle usage analytics and historical trends</p>
     </div>
     
     <!-- Main Reports Dashboard -->
@@ -20,20 +20,20 @@
               <div class="horizontal-controls">
                 <div class="control-item" v-if="isAdminUser">
                   <cv-button 
-                    @click="generateCurrentWeekReport" 
+                    @click="generateCurrentDayReport" 
                     kind="primary" 
                     size="lg"
                     :disabled="loading.generateCurrent"
                     class="control-button-consistent"
                   >
                     <span v-if="loading.generateCurrent">Generating...</span>
-                    <span v-else>Generate Current Week Report</span>
+                    <span v-else>Generate Current Day Report</span>
                   </cv-button>
                 </div>
                 
                 <div class="control-item" v-if="isAdminUser">
                   <cv-button 
-                    @click="openCustomWeekModal" 
+                    @click="openCustomDayModal" 
                     kind="secondary" 
                     size="lg"
                     :disabled="loading.generateCustom"
@@ -41,7 +41,7 @@
                   >
                     <span v-if="loading.generateCustom">Processing...</span>
                     <span v-else-if="selectedFilterDate">Manage Date Filter</span>
-                    <span v-else>Search Custom Week</span>
+                    <span v-else>Search Custom Day</span>
                   </cv-button>
                 </div>
                 
@@ -161,7 +161,7 @@
                   <!-- Report Header -->
                   <div class="report-header">
                     <div class="report-period">
-                      <h4 class="week-label">{{ formatWeekPeriod(report.weekStartDate, report.weekEndDate) }}</h4>
+                      <h4 class="week-label">{{ formatDayPeriod(report.weekStartDate, report.weekEndDate) }}</h4>
                       <span class="generated-date">Generated: {{ formatDateTime(report.generatedAt) }}</span>
                       <span v-if="report === latestReport" class="latest-badge">Latest</span>
                     </div>
@@ -383,13 +383,13 @@
       
       <!-- Custom Week Modal -->
       <cv-modal
-        :visible="showCustomWeekModal"
+        :visible="showCustomDayModal"
         kind="default"
         size="md"
         :auto-hide-off="true"
-        @modal-hide-request="closeCustomWeekModal"
-        @primary-click="handleCustomWeekModalAction"
-        @secondary-click="closeCustomWeekModal"
+        @modal-hide-request="closeCustomDayModal"
+        @primary-click="handleCustomDayModalAction"
+        @secondary-click="closeCustomDayModal"
       >
         <template v-slot:label>
           {{ selectedFilterDate ? 'Filter Reports' : 'Generate Custom Report' }}
@@ -402,7 +402,7 @@
             <p class="form-description">
               {{ selectedFilterDate 
                 ? 'Select a date to filter existing reports, or clear the current filter.' 
-                : 'Select any date to generate a utilization report for that week, or filter existing reports by date.' 
+                : 'Select any date to generate a utilization report for that day, or filter existing reports by date.' 
               }}
             </p>
             
@@ -415,7 +415,7 @@
             </div>
             
             <cv-date-picker
-              v-model="customWeekStart"
+              v-model="customDayStart"
               kind="single"
               :date-format="dateFormat"
               placeholder="Select date (YYYY-MM-DD)"
@@ -429,10 +429,10 @@
           </div>
         </template>
         <template v-slot:primary-button>
-          <span v-if="selectedFilterDate && !customWeekStart">Clear Filter</span>
-          <span v-else-if="selectedFilterDate && customWeekStart && customWeekStart !== selectedFilterDate">Select Date</span>
-          <span v-else-if="selectedFilterDate && customWeekStart === selectedFilterDate">Clear Filter</span>
-          <span v-else-if="!selectedFilterDate && customWeekStart">Filter By Date</span>
+          <span v-if="selectedFilterDate && !customDayStart">Clear Filter</span>
+          <span v-else-if="selectedFilterDate && customDayStart && customDayStart !== selectedFilterDate">Select Date</span>
+          <span v-else-if="selectedFilterDate && customDayStart === selectedFilterDate">Clear Filter</span>
+          <span v-else-if="!selectedFilterDate && customDayStart">Filter By Date</span>
           <span v-else>Select Date</span>
         </template>
         <template v-slot:secondary-button>Cancel</template>
@@ -487,7 +487,7 @@ export default {
       selectedReport: null,
       latestReport: null,
       showReportModal: false,
-      showCustomWeekModal: false,
+      showCustomDayModal: false,
       currentPage: 1,
       pageSize: 10,
       currentStatIndex: 0,
@@ -507,7 +507,7 @@ export default {
         delete: null,
         exportLatest: false
       },
-      customWeekStart: '',
+      customDayStart: '',
       selectedFilterDate: '',
       dateFormat: 'Y-m-d',
       notification: {
@@ -698,8 +698,8 @@ export default {
       }
     },
     
-    async generateCurrentWeekReport() {
-      console.log('Generate current week report clicked');
+    async generateCurrentDayReport() {
+      console.log('Generate current day report clicked');
       console.log('Current user:', this.currentUser);
       console.log('Is admin user:', this.isAdminUser);
       
@@ -714,12 +714,12 @@ export default {
         });
         
         console.log('Response:', response);
-        this.showNotification('success', 'Success', 'Current week report generated successfully');
+        this.showNotification('success', 'Success', 'Current day report generated successfully');
         await this.fetchReports();
       } catch (error) {
-        console.error('Error generating current week report:', error);
+        console.error('Error generating current day report:', error);
         console.error('Error response:', error.response);
-        const message = error.response?.data?.error || 'Failed to generate current week report';
+        const message = error.response?.data?.error || 'Failed to generate current day report';
         this.showNotification('error', 'Error', message);
       } finally {
         this.loading.generateCurrent = false;
@@ -727,25 +727,25 @@ export default {
     },
     
     
-    openCustomWeekModal() {
-      this.showCustomWeekModal = true;
+    openCustomDayModal() {
+      this.showCustomDayModal = true;
       // Initialize with current filter date if exists, otherwise empty
-      this.customWeekStart = this.selectedFilterDate || '';
+      this.customDayStart = this.selectedFilterDate || '';
     },
     
-    closeCustomWeekModal() {
-      this.showCustomWeekModal = false;
-      this.customWeekStart = '';
+    closeCustomDayModal() {
+      this.showCustomDayModal = false;
+      this.customDayStart = '';
     },
     
-    async generateCustomWeekFromModal() {
-      if (!this.customWeekStart) {
+    async generateCustomDayFromModal() {
+      if (!this.customDayStart) {
         this.showNotification('error', 'Missing Date', 'Please select a date');
         return;
       }
       
       // Parse the date and validate that it's valid
-      const date = new Date(this.customWeekStart);
+      const date = new Date(this.customDayStart);
       
       // Check if the date is valid
       if (isNaN(date.getTime())) {
@@ -766,18 +766,18 @@ export default {
           params: { weekStart: formattedDate }
         });
         
-        this.showNotification('success', 'Success', 'Custom week report generated successfully');
-        this.closeCustomWeekModal();
+        this.showNotification('success', 'Success', 'Custom day report generated successfully');
+        this.closeCustomDayModal();
         await this.fetchReports();
       } catch (error) {
-        console.error('Error generating custom week report:', error);
+        console.error('Error generating custom day report:', error);
         if (error.response && error.response.status === 401) {
           this.showNotification('error', 'Authentication Required', 'You must be an admin to generate reports.');
         } else if (error.response && error.response.status === 400) {
           const message = error.response?.data?.error || 'Report already exists for this week';
           this.showNotification('error', 'Unable to Generate', message);
         } else {
-          const message = error.response?.data?.error || 'Failed to generate custom week report';
+          const message = error.response?.data?.error || 'Failed to generate custom day report';
           this.showNotification('error', 'Error', message);
         }
       } finally {
@@ -862,14 +862,14 @@ export default {
         
         // Format filename with week dates
         const weekStart = new Date(this.latestReport.weekStartDate).toISOString().split('T')[0];
-        link.download = `current-week-report-${weekStart}.xlsx`;
+        link.download = `current-day-report-${weekStart}.xlsx`;
         
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         window.URL.revokeObjectURL(url);
         
-        this.showNotification('success', 'Downloaded', 'Current week report downloaded successfully');
+        this.showNotification('success', 'Downloaded', 'Current day report downloaded successfully');
       } catch (error) {
         console.error('Error downloading current report:', error);
         if (error.response && error.response.status === 401) {
@@ -878,7 +878,7 @@ export default {
           const message = error.response?.data?.error || 'Too many download requests. Please wait a few minutes before trying again.';
           this.showNotification('error', 'Rate Limit Exceeded', message);
         } else {
-          this.showNotification('error', 'Download Failed', 'Failed to download current week report');
+          this.showNotification('error', 'Download Failed', 'Failed to download current day report');
         }
       } finally {
         this.loading.exportLatest = false;
@@ -944,12 +944,9 @@ export default {
       return 'very-low-utilization';
     },
     
-    formatWeekPeriod(startDate, endDate) {
+    formatDayPeriod(startDate, endDate) {
       const start = new Date(startDate);
-      const end = new Date(endDate);
-      const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-      return `${startStr} - ${endStr}`;
+      return start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     },
     
     showNotification(kind, title, subtitle) {
@@ -976,14 +973,14 @@ export default {
     },
     
     // New methods for the updated modal functionality
-    handleCustomWeekModalAction() {
-      if (this.selectedFilterDate && !this.customWeekStart) {
+    handleCustomDayModalAction() {
+      if (this.selectedFilterDate && !this.customDayStart) {
         // If there's a filter but no date selected in picker, clear the filter
         this.clearDateFilterFromModal();
-      } else if (this.selectedFilterDate && this.customWeekStart && this.customWeekStart === this.selectedFilterDate) {
+      } else if (this.selectedFilterDate && this.customDayStart && this.customDayStart === this.selectedFilterDate) {
         // If there's a filter and same date is selected, clear the filter
         this.clearDateFilterFromModal();
-      } else if (this.customWeekStart) {
+      } else if (this.customDayStart) {
         // If date is selected (either new filter or changing existing filter), apply the filter
         this.applyDateFilterFromModal();
       } else {
@@ -993,30 +990,30 @@ export default {
     },
     
     applyDateFilterFromModal() {
-      if (!this.customWeekStart) {
+      if (!this.customDayStart) {
         this.showNotification('error', 'Missing Date', 'Please select a date');
         return;
       }
       
       // Validate the date
-      const date = new Date(this.customWeekStart);
+      const date = new Date(this.customDayStart);
       if (isNaN(date.getTime())) {
         this.showNotification('error', 'Invalid Date', 'Please select a valid date');
         return;
       }
       
       // Apply the filter
-      this.selectedFilterDate = this.customWeekStart;
+      this.selectedFilterDate = this.customDayStart;
       this.fetchReports();
-      this.closeCustomWeekModal();
-      this.showNotification('success', 'Filter Applied', `Reports filtered by ${this.formatDate(this.customWeekStart)}`);
+      this.closeCustomDayModal();
+      this.showNotification('success', 'Filter Applied', `Reports filtered by ${this.formatDate(this.customDayStart)}`);
     },
     
     clearDateFilterFromModal() {
       this.selectedFilterDate = null;
-      this.customWeekStart = '';
+      this.customDayStart = '';
       this.fetchReports();
-      this.closeCustomWeekModal();
+      this.closeCustomDayModal();
       this.showNotification('success', 'Filter Cleared', 'Showing all reports');
     },
     
@@ -1225,7 +1222,7 @@ export default {
 .quick-stats-tile,
 .reports-tile {
   background: transparent !important;
-  border: 1px solid rgba(224, 224, 224, 0.3);
+  border: none !important;
   border-radius: 0;
   padding: 1.5rem;
   height: 100%;
@@ -1233,6 +1230,7 @@ export default {
   box-shadow: none;
   position: relative;
   overflow: hidden;
+  margin: 1.5rem;
 }
 
 .tile-header {
@@ -2678,6 +2676,39 @@ export default {
 }
 
 /* Responsive Carousel */
+@media (max-width: 992px) {
+  /* Apply spacing fixes for tablet and mobile screens */
+  .top-row .cv-column:first-child,
+  .top-row .cv-column:last-child {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  
+  .top-row .cv-column:first-child {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .top-row .cv-column:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Also target Carbon's internal classes directly */
+  .top-row :deep(.bx--col):first-child {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .top-row :deep(.bx--col):last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Remove tile margins on tablet/mobile to rely on column spacing */
+  .top-row .controls-tile,
+  .top-row .quick-stats-tile {
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+  }
+}
+
 @media (max-width: 768px) {
   .carousel-container {
     max-width: 100%;
@@ -2737,16 +2768,107 @@ export default {
   .download-button-centered {
     min-width: 100%;
   }
-  
+}
+
+@media (min-width: 769px) and (max-width: 992px) {
+  /* Handle tablet-desktop transition range */
   .top-row .cv-column:first-child,
   .top-row .cv-column:last-child {
-    padding-left: 0;
-    padding-right: 0;
-    margin-bottom: 1rem;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  .top-row .cv-column:first-child {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .top-row .cv-column:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Also target Carbon's internal classes directly */
+  .top-row :deep(.bx--col):first-child {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .top-row :deep(.bx--col):last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Remove tile margins to rely on column spacing */
+  .top-row .controls-tile,
+  .top-row .quick-stats-tile {
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+  }
+}
+
+@media (min-width: 993px) and (max-width: 1399px) {
+  /* Handle the gap between tablet and large desktop breakpoints */
+  /* This covers screens around 1050px where margins were getting lost */
+  .top-row .cv-column:first-child,
+  .top-row .cv-column:last-child {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  
+  .top-row .cv-column:first-child {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .top-row .cv-column:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Also target Carbon's internal classes directly */
+  .top-row :deep(.bx--col):first-child {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .top-row :deep(.bx--col):last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Remove tile margins to rely on column spacing */
+  .top-row .controls-tile,
+  .top-row .quick-stats-tile {
+    margin: 0 !important;
+    margin-bottom: 0 !important;
   }
 }
 
 @media (min-width: 1400px) {
+  /* Ensure proper spacing on large screens too */
+  .top-row .cv-column:first-child,
+  .top-row .cv-column:last-child {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+  
+  .top-row .cv-column:first-child {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .top-row .cv-column:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Also target Carbon's internal classes directly */
+  .top-row :deep(.bx--col):first-child {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .top-row :deep(.bx--col):last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Remove tile margins to rely on column spacing */
+  .top-row .controls-tile,
+  .top-row .quick-stats-tile {
+    margin: 0 !important;
+    margin-bottom: 0 !important;
+  }
+
   .carousel-container {
     max-width: 500px;
     height: 140px;

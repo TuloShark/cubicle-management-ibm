@@ -770,7 +770,7 @@ export default {
 .transparent-tile {
   background: transparent !important;
   backdrop-filter: none;
-  border: 1px solid rgba(224, 224, 224, 0.2) !important;
+  border: none !important;
   box-shadow: none !important;
 }
 
