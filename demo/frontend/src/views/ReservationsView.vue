@@ -91,6 +91,17 @@
             <CubicleGrid :cubicles="cubicles" @update-cubicle-state="updateCubicleState" />
           </div>
         </cv-column>
+        <cv-column :sm="4" :md="16" :lg="16">
+          <div class="grid-management-container">
+            <GridManagement 
+              :selected-date="selectedDate"
+              @date-selected="onDateSelected"
+              @grids-updated="fetchActiveGridDates"
+              @grid-generated="onGridGenerated"
+              @grid-error="onGridError"
+            />
+          </div>
+        </cv-column>
       </cv-row>
     </cv-grid>
   </div>
@@ -104,21 +115,25 @@
  */
 import axios from 'axios';
 import CubicleGrid from '../components/CubicleGrid.vue';
+import GridManagement from '../components/GridManagement.vue';
 import useAuth from '../composables/useAuth';
 
 export default {
   name: 'ReservationsView',
-  components: { CubicleGrid },
+  components: { CubicleGrid, GridManagement },
   data() {
     return { 
       cubicles: [],
       // Status legend state
-      showCounts: false
+      showCounts: false,
+      // Date selection state (controlled by GridManagement)
+      selectedDate: null, // Default to null, not empty string
+      activeGridDates: []
     }
   },
   created() {
-    // Fetch cubicle data on view creation
-    this.fetchCubicles();
+    // Fetch initial data - GridManagement will handle date initialization
+    this.fetchActiveGridDates();
   },
   beforeUnmount() {
     // Clean up any remaining event listeners if needed
@@ -142,9 +157,99 @@ export default {
       });
       
       return stats;
-    }
+    },
   },
   methods: {
+    /**
+     * Handle date selection from GridManagement
+     */
+    async onDateSelected(dateString) {
+      // Only set selectedDate if valid (YYYY-MM-DD), else null
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (dateString && dateRegex.test(dateString)) {
+        this.selectedDate = dateString;
+        await this.fetchCubiclesForDate(dateString);
+      } else {
+        this.selectedDate = null;
+        this.cubicles = [];
+      }
+      this.fetchActiveGridDates(); // Refresh active grids
+    },
+
+    /**
+     * Handle grid generation from GridManagement
+     */
+    async onGridGenerated(event) {
+      const { dateString, message } = event;
+      // Automatically load the newly generated grid
+      if (dateString) {
+        await this.fetchCubiclesForDate(dateString);
+      }
+      this.fetchActiveGridDates(); // Refresh active grids
+      
+      // Show success message if provided
+      if (message) {
+        console.log('Grid generated successfully:', message);
+        // You can add a toast notification here if you have one
+      }
+    },
+
+    /**
+     * Handle grid generation errors from GridManagement
+     */
+    onGridError(event) {
+      const { message } = event;
+      console.error('Grid generation error:', message);
+      // Show error message to user
+      alert(message); // You can replace this with a toast notification
+    },
+    
+    /**
+     * Fetch all active grid dates
+     */
+    async fetchActiveGridDates() {
+      const { token } = useAuth();
+      let idToken = token.value;
+      if (!idToken) {
+        idToken = localStorage.getItem('auth_token');
+      }
+      
+      try {
+        const response = await axios.get('/api/cubicles/grid-dates', {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        this.activeGridDates = response.data;
+      } catch (err) {
+        console.error('Error fetching active grid dates:', err);
+        this.activeGridDates = [];
+      }
+    },
+    
+    /**
+     * Fetch cubicles for a specific date
+     */
+    async fetchCubiclesForDate(dateString) {
+      if (!dateString) return;
+      
+      const { token } = useAuth();
+      let idToken = token.value;
+      if (!idToken) {
+        idToken = localStorage.getItem('auth_token');
+      }
+      
+      try {
+        const response = await axios.get(`/api/cubicles/date/${dateString}`, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        
+        this.cubicles = response.data.cubicles;
+        console.log(`Fetched ${this.cubicles.length} cubicles for date ${dateString}`);
+      } catch (err) {
+        console.error(`Error fetching cubicles for date ${dateString}:`, err);
+        this.cubicles = [];
+      }
+    },
+
     /**
      * Fetch all cubicles from backend API.
      * Sets cubicles array for grid display.
@@ -202,33 +307,52 @@ export default {
       }
     },
     /**
-     * Handles cubicle state updates (reserve, release, error).
-     * Calls backend API and refreshes cubicle data.
+     * Handles cubicle state updates for the selected date.
+     * Now uses date-based API endpoints.
      */
     async updateCubicleState(cubicle) {
+      if (!this.selectedDate) {
+        console.error('No date selected - cannot update cubicle state');
+        return;
+      }
+      
       const { token } = useAuth();
       let idToken = token.value;
       if (!idToken) {
         idToken = localStorage.getItem('auth_token');
       }
+      
       try {
         if (cubicle.status === 'reserved') {
-          // Use POST /reserve to persist reservation and user info
-          await axios.post('/reserve', { cubicleId: cubicle._id }, {
+          // Reserve cubicle for the selected date
+          await axios.post('/api/cubicles/reserve-for-date', {
+            cubicleId: cubicle._id,
+            dateString: this.selectedDate
+          }, {
             headers: { Authorization: `Bearer ${idToken}` }
           });
-        } else {
-          // Use PUT for other status changes (e.g., available, error)
-          await axios.put(`/cubicles/${cubicle._id}`, { status: cubicle.status }, {
+        } else if (cubicle.status === 'available') {
+          // Release cubicle reservation for the selected date
+          await axios.delete('/api/cubicles/release-for-date', {
+            data: {
+              cubicleId: cubicle._id,
+              dateString: this.selectedDate
+            },
             headers: { Authorization: `Bearer ${idToken}` }
           });
         }
-        // Refresh cubicles data to get updated state and reservation info
-        await this.fetchCubicles();
+        
+        // Refresh cubicles for this date and active grids
+        await this.fetchCubiclesForDate(this.selectedDate);
+        this.fetchActiveGridDates();
+        
       } catch (err) {
-        console.error('Error updating cubicle state:', err);
-        // Still refresh to ensure UI is in sync
-        await this.fetchCubicles();
+        console.error('Error updating cubicle state for date:', err);
+        if (err.response && err.response.data && err.response.data.error) {
+          alert(`Error: ${err.response.data.error}`);
+        }
+        // Refresh to ensure UI is in sync
+        await this.fetchCubiclesForDate(this.selectedDate);
       }
     },
     /**
@@ -243,7 +367,7 @@ export default {
      */
     toggleLegendCounts() {
       this.showCounts = !this.showCounts;
-    }
+    },
   }
 }
 </script>
@@ -818,6 +942,21 @@ export default {
   .action-button {
     min-height: 44px;
   }
+}
+
+/* Grid Management Styles */
+.grid-management-container {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  border: none !important;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0.75rem; /* Match .grid-container */
+  position: relative;
+  overflow: visible !important;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 0; /* Remove extra margin to align with .grid-container */
 }
 
 </style>

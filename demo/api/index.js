@@ -10,6 +10,7 @@ const Reservation = require('./models/Reservation');
 const { validarUsuario, validarAdmin } = require('./middleware/auth');
 const usersController = require('./controllers/usersController');
 const cubicleController = require('./controllers/cubicleController');
+const dateBasedCubicleController = require('./controllers/dateBasedCubicleController');
 const utilizationController = require('./controllers/utilizationController');
 const notificationController = require('./controllers/notificationController');
 const rateLimit = require('express-rate-limit');
@@ -237,6 +238,8 @@ async function start() {
   });
 
   app.use('/api/users', usersController);
+  app.use('/api/cubicles', dateBasedCubicleController);
+  app.use('/cubicles', cubicleController);
   app.use('/api/utilization-reports', utilizationController);
   app.use('/api/notifications', notificationController);
 

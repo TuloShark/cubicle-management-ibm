@@ -308,23 +308,22 @@ export default {
 
 <style scoped>
 .cubicle-container {
-  display: grid;
-  grid-template-areas:
-    "left middle right"
-    "left empty right";
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Align all sections to top to fix Section B issue */
+  gap: 1px; /* Match the gap between individual tiles for consistency */
   padding: 0;
   margin: 0;
-  align-items: start;
-  gap: 8px;
   box-sizing: border-box;
   width: 100%;
+  height: 100%;
 }
 
 @media (max-width: 768px) {
   .cubicle-container {
     padding: 0;
     margin: 0;
-    gap: 4px;
+    gap: 1px; /* Keep consistent gap */
   }
 }
 
@@ -332,7 +331,7 @@ export default {
   .cubicle-container {
     padding: 0;
     margin: 0;
-    gap: 2px;
+    gap: 1px; /* Smaller gap on mobile */
   }
   
   /* Only reduce tile size on very small screens */
@@ -358,7 +357,7 @@ export default {
   }
   
   .cubicle-grid {
-    gap: 0.5px;
+    gap: 1px;
   }
 }
 
@@ -380,27 +379,24 @@ export default {
 .section-wrapper {
   display: flex;
   justify-content: center;
-  align-items: flex-start; /* Align all grids to the top */
+  align-items: flex-start; /* Align to top to fix Section B alignment */
+  flex-direction: column;
 }
 
-.left-grid {
-  grid-area: left;
-}
-
-.middle-grid {
-  grid-area: middle;
-}
-
-.right-grid {
-  grid-area: right;
+.left-grid, .middle-grid, .right-grid {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; /* Align grids to top */
 }
 
 .cubicle-grid {
   display: grid;
   padding: 0;
   margin: 0;
-  gap: 2px;
+  gap: 1px; /* Small gap between individual tiles */
   box-sizing: border-box;
+  justify-content: center;
+  align-content: start; /* Align grid content to top */
 }
 
 .cubicle-tile {
@@ -416,6 +412,7 @@ export default {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.1); /* Add subtle border to define tile boundaries */
 }
 
 .cubicle-tile:hover {

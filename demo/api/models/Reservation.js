@@ -17,12 +17,29 @@
  */
 
 const mongoose = require('mongoose');
-module.exports = mongoose.model('Reservation', new mongoose.Schema({
+
+const reservationSchema = new mongoose.Schema({
   cubicle: { type: mongoose.Schema.Types.ObjectId, ref: 'Cubicle', required: true, index: true },
   user: {
     uid: String,
     email: String,
     displayName: String
   },
-  date: Date
-}));
+  date: { type: Date, required: true, index: true },
+  // Date string in YYYY-MM-DD format for easy querying
+  dateString: { type: String, required: true, index: true }
+});
+
+// Create compound index for efficient date + cubicle queries
+reservationSchema.index({ dateString: 1, cubicle: 1 }, { unique: true });
+
+// Pre-save hook to automatically set dateString
+reservationSchema.pre('save', function(next) {
+  if (this.date) {
+    const dateObj = new Date(this.date);
+    this.dateString = dateObj.toISOString().split('T')[0]; // YYYY-MM-DD format
+  }
+  next();
+});
+
+module.exports = mongoose.model('Reservation', reservationSchema);
