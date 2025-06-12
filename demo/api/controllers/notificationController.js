@@ -3,7 +3,7 @@ const router = express.Router();
 const NotificationService = require('../services/NotificationService');
 const NotificationSettings = require('../models/NotificationSettings');
 const NotificationHistory = require('../models/NotificationHistory');
-const admin = require('../firebaseAdmin');
+const admin = require('../firebase');
 const { validarUsuario, validarAdmin } = require('../middleware/auth');
 
 class NotificationController {

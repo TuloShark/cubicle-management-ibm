@@ -1,5 +1,5 @@
 // demo/api/middleware/auth.js
-const admin = require('../firebaseAdmin');
+const admin = require('../firebase');
 const { getAdminUids } = require('../utils/adminUtils');
 
 // Middleware to validate Firebase ID token
