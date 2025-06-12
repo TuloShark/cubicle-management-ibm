@@ -8,9 +8,6 @@ const logger = require('./logger');
 const Cubicle = require('./models/Cubicle');
 const Reservation = require('./models/Reservation');
 const { validarUsuario, validarAdmin } = require('./middleware/auth');
-const usersController = require('./controllers/usersController');
-const cubicleController = require('./controllers/cubicleController');
-const dateBasedCubicleController = require('./controllers/dateBasedCubicleController');
 const utilizationController = require('./controllers/utilizationController');
 const notificationController = require('./controllers/notificationController');
 const rateLimit = require('express-rate-limit');
@@ -35,9 +32,10 @@ function getAdminUids() {
 // Rate limiting middleware
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // limit each IP to 300 requests per windowMs (increased from 100)
+  max: 1000, // limit each IP to 1000 requests per windowMs (increased from 300 to handle real-time updates)
   standardHeaders: true,
   legacyHeaders: false,
+  message: 'Too many requests, please try again later.',
 });
 
 async function start() {
@@ -57,63 +55,43 @@ async function start() {
   }
 
   // 2) Connect mongoose
-  await mongoose.connect(uri, { dbName: 'demo' });
+  await mongoose.connect(uri);
 
   // 3) Optionally seed data
   if (process.env.SEED === 'true') {
     await Cubicle.deleteMany({});
-    // Seed all cubicles with full info for sections A, B, C
+    // Seed all cubicles with sequential numbering for 6x9 grid (54 total)
     const cubicles = [];
-    // Section A: 27 cubicles (3 cols x 9 rows)
-    let aCount = 1;
-    for (let i = 0; i < 27; i++) {
-      const row = Math.floor(i / 3) + 1;
-      const col = (i % 3) + 1;
-      cubicles.push({
-        section: 'A',
-        row,
-        col,
-        serial: `A${row}-SOC CUB${aCount}`,
-        name: `Cubicle ${aCount}`,
-        status: 'available',
-        description: 'More details about this cubicle will be added later.'
-      });
-      aCount++;
+    let cubicleCounter = 1;
+    
+    // Create 54 cubicles in a 6x9 grid
+    for (let row = 1; row <= 9; row++) {
+      for (let col = 1; col <= 6; col++) {
+        // Determine section based on row
+        let section;
+        if (row <= 3) {
+          section = 'A'; // Rows 1-3
+        } else if (row <= 6) {
+          section = 'B'; // Rows 4-6
+        } else {
+          section = 'C'; // Rows 7-9
+        }
+        
+        cubicles.push({
+          section,
+          row,
+          col,
+          serial: `${section}${row}-CUB${cubicleCounter}`,
+          name: `Cubicle ${cubicleCounter}`,
+          status: 'available',
+          description: 'More details about this cubicle will be added later.'
+        });
+        cubicleCounter++;
+      }
     }
-    // Section B: 18 cubicles (3 cols x 6 rows)
-    let bCount = 1;
-    for (let i = 0; i < 18; i++) {
-      const row = Math.floor(i / 3) + 1;
-      const col = (i % 3) + 1;
-      cubicles.push({
-        section: 'B',
-        row,
-        col,
-        serial: `B${row}-SOC CUB${bCount}`,
-        name: `Cubicle ${bCount}`,
-        status: 'available',
-        description: 'More details about this cubicle will be added later.'
-      });
-      bCount++;
-    }
-    // Section C: 27 cubicles (3 cols x 9 rows)
-    let cCount = 1;
-    for (let i = 0; i < 27; i++) {
-      const row = Math.floor(i / 3) + 1;
-      const col = (i % 3) + 1;
-      cubicles.push({
-        section: 'C',
-        row,
-        col,
-        serial: `C${row}-SOC CUB${cCount}`,
-        name: `Cubicle ${cCount}`,
-        status: 'available',
-        description: 'More details about this cubicle will be added later.'
-      });
-      cCount++;
-    }
+    
     await Cubicle.insertMany(cubicles);
-    logger.info('Seeded cubicles');
+    logger.info(`Seeded ${cubicles.length} cubicles in 6x9 grid layout`);
   }
 
   // 4) Express setup with Socket.io
@@ -161,7 +139,83 @@ async function start() {
     }
   });
 
-  app.use('/cubicles', cubicleController);
+  // Add date-based cubicle controller
+  const dateCubicleController = require('./controllers/dateCubicleController');
+  app.use('/api/cubicles', dateCubicleController);
+
+  // Admin endpoint to create database indexes for date-based functionality
+  app.post('/api/admin/create-date-indexes', validarUsuario, validarAdmin, async (req, res) => {
+    try {
+      const db = mongoose.connection.db;
+      
+      // Create compound index on Reservation collection for date-based queries
+      await db.collection('reservations').createIndex(
+        { date: 1, cubicle: 1 },
+        { 
+          name: 'date_cubicle_idx',
+          background: true,
+          sparse: true
+        }
+      );
+      
+      // Create index for date range queries
+      await db.collection('reservations').createIndex(
+        { date: 1 },
+        { 
+          name: 'date_idx',
+          background: true 
+        }
+      );
+      
+      // Create index for user-based queries
+      await db.collection('reservations').createIndex(
+        { 'user.uid': 1, date: 1 },
+        { 
+          name: 'user_date_idx',
+          background: true,
+          sparse: true
+        }
+      );
+      
+      // Create index for cubicle status queries
+      await db.collection('cubicles').createIndex(
+        { section: 1, status: 1 },
+        { 
+          name: 'section_status_idx',
+          background: true 
+        }
+      );
+      
+      // Create index for cubicle position queries
+      await db.collection('cubicles').createIndex(
+        { section: 1, row: 1, col: 1 },
+        { 
+          name: 'position_idx',
+          background: true,
+          unique: true
+        }
+      );
+      
+      // Get current indexes to verify
+      const reservationIndexes = await db.collection('reservations').indexes();
+      const cubicleIndexes = await db.collection('cubicles').indexes();
+      
+      logger.info('Date-based indexes created successfully');
+      
+      res.json({
+        message: 'Database indexes created successfully',
+        reservationIndexes: reservationIndexes.map(i => ({ name: i.name, key: i.key })),
+        cubicleIndexes: cubicleIndexes.map(i => ({ name: i.name, key: i.key }))
+      });
+      
+    } catch (error) {
+      logger.error('Error creating date-based indexes:', error);
+      res.status(500).json({ 
+        error: 'Failed to create database indexes', 
+        details: error.message 
+      });
+    }
+  });
 
   // Protect /reserve route (user must be authenticated)
   app.post(
@@ -237,9 +291,6 @@ async function start() {
     }
   });
 
-  app.use('/api/users', usersController);
-  app.use('/api/cubicles', dateBasedCubicleController);
-  app.use('/cubicles', cubicleController);
   app.use('/api/utilization-reports', utilizationController);
   app.use('/api/notifications', notificationController);
 

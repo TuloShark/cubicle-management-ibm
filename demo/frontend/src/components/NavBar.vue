@@ -123,6 +123,7 @@
 <script>
 import { User16 } from '@carbon/icons-vue';
 import useAuth from '../composables/useAuth';
+import { useDateStore } from '../composables/useDateStore';
 import { updatePassword } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { computed } from 'vue';
@@ -132,13 +133,14 @@ export default {
   components: { User16 },
   setup() {
     const { currentUser, logout } = useAuth();
+    const { getRouteDate } = useDateStore();
     const isAdminUser = computed(() => {
       if (!currentUser.value) return false;
       if (currentUser.value.claims && currentUser.value.claims.admin) return true;
       const adminUids = (import.meta.env.VITE_ADMIN_UIDS || '').split(',').map(u => u.trim());
       return adminUids.includes(currentUser.value.uid);
     });
-    return { currentUser, logout, $firebaseAuth: auth, isAdminUser };
+    return { currentUser, logout, getRouteDate, $firebaseAuth: auth, isAdminUser };
   },
   data() {
     return {
@@ -162,8 +164,18 @@ export default {
       this.expandedSideNav = !this.expandedSideNav;
     },
     navigate(route) {
-      // Use Vue Router for navigation
-      this.$router.push({ name: route });
+      // Use Vue Router for navigation with date preservation for reservations and statistics
+      const currentDate = this.getRouteDate();
+      
+      if ((route === 'reservations' || route === 'statistics') && currentDate) {
+        // Navigate with date parameter to preserve the selected date
+        console.log(`Navigating to ${route} with date: ${currentDate}`);
+        this.$router.push(`/${route}/${currentDate}`);
+      } else {
+        // Default navigation without date parameter
+        this.$router.push({ name: route });
+      }
+      
       this.expandedSideNav = false;
     },
     async handleChangePassword() {

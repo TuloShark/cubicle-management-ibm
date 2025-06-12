@@ -13,7 +13,7 @@ A comprehensive cubicle management and utilization analytics platform built with
 - **Advanced Business Metrics** (efficiency, capacity utilization, growth indicators)
 
 ### 🎯 **Space Management**
-- **81 Cubicles** across 3 sections (A, B, C)
+- **54 Cubicles** across 3 sections (A, B, C) in 6×9 grid layout
 - **Real-time Reservation System** with instant updates
 - **Interactive Section Views** with availability status
 - **User-friendly Booking Interface** with conflict prevention
@@ -93,27 +93,66 @@ cd ../frontend && npm install
 
 ### 2. Environment Configuration
 
-**Backend** (`.env` in `/api/`):
-```env
-MONGO_URI=mongodb://localhost:27017/demo
-SEED=true
-PORT=3000
-FIREBASE_CREDENTIALS_JSON='{"type":"service_account",...}'
-ADMIN_UIDS=uid1,uid2,uid3
+#### Backend Configuration
+Create a `.env` file in the `/api/` directory using the provided template:
+
+```bash
+cp .env.template .env
 ```
 
-**Frontend** (`.env` in `/frontend/`):
-```env
-VITE_API_KEY=your_firebase_api_key
-VITE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_PROJECT_ID=your-project-id
-VITE_STORAGE_BUCKET=your-project.appspot.com
-VITE_MESSAGING_SENDER_ID=123456789
-VITE_APP_ID=1:123456789:web:abcdef
-VITE_MEASUREMENT_ID=G-XXXXXXXXXX
-VITE_ADMIN_UIDS=uid1,uid2,uid3
-VITE_SENTRY_DSN=https://your-sentry-dsn@sentry.io/project
-```
+**Required Configuration:**
+
+| Variable | Description | Notes |
+|----------|-------------|-------|
+| `MONGO_URI` | MongoDB connection string | Local: `mongodb://localhost:27017/db_name`<br/>Atlas: Use connection string from MongoDB Atlas |
+| `FIREBASE_CREDENTIALS_JSON` | Firebase service account JSON | Generate from Firebase Console → Project Settings → Service Accounts |
+| `ADMIN_UIDS` | Admin user Firebase UIDs | Comma-separated list from Firebase Authentication console |
+| `EMAIL_HOST` | SMTP server hostname | Gmail: `smtp.gmail.com`, Outlook: `smtp-mail.outlook.com` |
+| `EMAIL_PORT` | SMTP server port | TLS: `587`, SSL: `465` |
+| `EMAIL_SECURE` | Use SSL connection | `true` for port 465, `false` for port 587 |
+| `EMAIL_USER` | SMTP username | Usually your email address |
+| `EMAIL_PASS` | SMTP password | Use app-specific passwords for Gmail/Outlook |
+| `EMAIL_FROM` | Sender email format | `"App Name <email@domain.com>"` |
+
+**Optional Configuration:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3000` | API server port |
+| `SEED` | `false` | Populate database with sample data |
+| `NOTIFICATIONS_ENABLED` | `true` | Enable notification system |
+| `EMAIL_NOTIFICATIONS_ENABLED` | `true` | Enable email notifications |
+| `FRONTEND_URL` | `http://localhost:8080` | Frontend URL for email links |
+
+#### Frontend Configuration
+Create a `.env` file in the `/frontend/` directory:
+
+**Firebase Configuration** (from Firebase Console → Project Settings → General):
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_API_KEY` | Web API Key |
+| `VITE_AUTH_DOMAIN` | Authentication domain |
+| `VITE_PROJECT_ID` | Project ID |
+| `VITE_STORAGE_BUCKET` | Storage bucket |
+| `VITE_MESSAGING_SENDER_ID` | Messaging sender ID |
+| `VITE_APP_ID` | App ID |
+| `VITE_MEASUREMENT_ID` | Analytics measurement ID (optional) |
+
+**Application Configuration:**
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_ADMIN_UIDS` | Same admin UIDs as backend |
+| `VITE_SENTRY_DSN` | Sentry error tracking DSN (optional) |
+
+#### Firebase Setup Guide
+
+1. **Create Firebase Project**: Go to [Firebase Console](https://console.firebase.google.com)
+2. **Enable Authentication**: Authentication → Sign-in method → Enable Email/Password, Google, GitHub
+3. **Generate Service Account**: Project Settings → Service Accounts → Generate new private key
+4. **Get Web App Config**: Project Settings → General → Your apps → Web app → Config
+5. **Set Admin Users**: Note down UIDs from Authentication → Users after first login
 
 ### 3. Start Development Servers
 ```bash
@@ -224,16 +263,41 @@ docker build -t space-demo-frontend ./frontend
 ### Backend Required Variables
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `MONGO_URI` | MongoDB connection string | `mongodb://localhost:27017/demo` |
-| `FIREBASE_CREDENTIALS_JSON` | Firebase service account JSON | `'{"type":"service_account",...}'` |
-| `ADMIN_UIDS` | Comma-separated admin user IDs | `uid1,uid2,uid3` |
+| `MONGO_URI` | MongoDB connection string | `mongodb://localhost:27017/cubicle_db` |
+| `FIREBASE_CREDENTIALS_JSON` | Firebase service account JSON string | Complete JSON from Firebase Console |
+| `ADMIN_UIDS` | Comma-separated admin user Firebase UIDs | From Firebase Authentication console |
+| `EMAIL_HOST` | SMTP server hostname | Provider-specific hostname |
+| `EMAIL_PORT` | SMTP server port | `587` (TLS) or `465` (SSL) |
+| `EMAIL_USER` | SMTP authentication username | Usually your email address |
+| `EMAIL_PASS` | SMTP authentication password | App-specific password recommended |
+| `EMAIL_FROM` | Email sender format | `"App Name <email@domain.com>"` |
+
+### Backend Optional Variables
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3000` | API server port |
+| `SEED` | `false` | Populate database with sample data |
+| `EMAIL_SECURE` | `false` | Use SSL connection (true for port 465) |
+| `NOTIFICATIONS_ENABLED` | `true` | Enable notification system |
+| `EMAIL_NOTIFICATIONS_ENABLED` | `true` | Enable email notifications |
+| `FRONTEND_URL` | `http://localhost:8080` | Frontend URL for generating links |
 
 ### Frontend Required Variables
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `VITE_API_KEY` | Firebase API key | `AIzaSyB...` |
-| `VITE_PROJECT_ID` | Firebase project ID | `my-project-123` |
-| `VITE_AUTH_DOMAIN` | Firebase auth domain | `my-project.firebaseapp.com` |
+| Variable | Description | Source |
+|----------|-------------|--------|
+| `VITE_API_KEY` | Firebase Web API key | Firebase Console → Project Settings |
+| `VITE_PROJECT_ID` | Firebase project identifier | Firebase Console → Project Settings |
+| `VITE_AUTH_DOMAIN` | Firebase authentication domain | Firebase Console → Project Settings |
+| `VITE_STORAGE_BUCKET` | Firebase storage bucket | Firebase Console → Project Settings |
+| `VITE_MESSAGING_SENDER_ID` | Firebase messaging sender ID | Firebase Console → Project Settings |
+| `VITE_APP_ID` | Firebase app identifier | Firebase Console → Project Settings |
+
+### Frontend Optional Variables
+| Variable | Description |
+|----------|-------------|
+| `VITE_MEASUREMENT_ID` | Google Analytics measurement ID |
+| `VITE_ADMIN_UIDS` | Admin user IDs (same as backend) |
+| `VITE_SENTRY_DSN` | Sentry error tracking DSN |
 
 ## 🤝 Contributing
 

@@ -48,13 +48,10 @@ a:hover {
 html, body {
   margin: 0;
   padding: 0;
-  /* Remove flex layout that causes scrolling issues */
   min-width: 320px;
   min-height: 100vh;
-  /* Ensure normal document flow */
   overflow-x: hidden; /* Prevent horizontal scroll */
-  /* Force single scrollbar behavior */
-  height: 100%;
+  /* Remove height: 100% that can cause double scrollbar */
 }
 
 h1 {
@@ -86,10 +83,8 @@ button:focus-visible {
 }
 
 #app {
-  /* Remove fixed width and centering that can cause layout issues */
   width: 100%;
-  min-height: 100vh;
-  /* Ensure app doesn't create its own scroll context */
+  /* Remove min-height that can cause layout conflicts */
   position: relative;
 }
 
@@ -119,6 +114,12 @@ body {
   height: auto !important;
 }
 
+/* Global scrollbar width compensation for modal-induced layout shifts */
+html {
+  /* Modern browsers: Always reserve space for scrollbar to prevent layout shifts */
+  scrollbar-gutter: stable;
+}
+
 /* Ensure Carbon components don't create additional scroll contexts */
 .bx--content,
 .bx--body,
@@ -126,10 +127,9 @@ body {
   overflow-x: visible !important;
 }
 
-/* Prevent modal backdrop from affecting document scroll */
+/* Clean modal scroll management */
 .bx--modal,
 .cv-modal {
-  /* Don't hide scrollbar, just prevent scroll jumping */
   overflow-x: hidden !important;
 }
 
@@ -138,9 +138,10 @@ body {
   overflow: visible !important;
 }
 
-/* Keep vertical scrollbar visible when Carbon modal is open */
+/* Simplified modal body state management */
 body.bx--body--with-modal-open,
+body.cv-modal-open,
 html.bx--body--with-modal-open {
-  overflow-y: scroll !important;
-  overflow-x: hidden !important;
+  /* Modern approach: use scrollbar-gutter to prevent layout shifts */
+  overflow: hidden !important;
 }

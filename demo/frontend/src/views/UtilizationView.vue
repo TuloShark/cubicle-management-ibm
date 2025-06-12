@@ -2,7 +2,13 @@
   <div class="utilization-container">
     <div class="page-header">
       <h1 class="page-title">Utilization Reports</h1>
-      <p class="page-subtitle">Daily cubicle usage analytics and historical trends</p>
+      <div class="page-subtitle-with-date">
+        <p class="page-subtitle">Daily cubicle usage analytics and historical trends</p>
+        <div class="current-date-display">
+          <span class="date-label">Reports for:</span>
+          <span class="date-value">{{ formatDisplayDate(selectedDateInput) }}</span>
+        </div>
+      </div>
     </div>
     
     <!-- Main Reports Dashboard -->
@@ -27,7 +33,7 @@
                     class="control-button-consistent"
                   >
                     <span v-if="loading.generateCurrent">Generating...</span>
-                    <span v-else>Generate Current Day Report</span>
+                    <span v-else>Generate Report for Selected Date</span>
                   </cv-button>
                 </div>
                 
@@ -40,8 +46,7 @@
                     class="control-button-consistent"
                   >
                     <span v-if="loading.generateCustom">Processing...</span>
-                    <span v-else-if="selectedFilterDate">Manage Date Filter</span>
-                    <span v-else>Search Custom Day</span>
+                    <span v-else>Generate Custom Day Report</span>
                   </cv-button>
                 </div>
                 
@@ -125,16 +130,9 @@
             <div class="tile-header">
               <div class="tile-title-section">
                 <h3 class="tile-title">Available Reports</h3>
-                <div v-if="selectedFilterDate" class="filter-status-badge">
-                  <span class="filter-indicator"></span>
-                  <span class="filter-text">Filtered by {{ formatDate(selectedFilterDate) }}</span>
-                </div>
               </div>
               <p class="tile-subtitle">
-                {{ selectedFilterDate 
-                  ? `Showing reports generated on ${formatDate(selectedFilterDate)}` 
-                  : 'Historical utilization reports with export options' 
-                }}
+                Historical utilization reports with export options
               </p>
             </div>
             
@@ -161,7 +159,7 @@
                   <!-- Report Header -->
                   <div class="report-header">
                     <div class="report-period">
-                      <h4 class="week-label">{{ formatDayPeriod(report.weekStartDate, report.weekEndDate) }}</h4>
+                      <h4 class="week-label">{{ formatReportDate(report) }}</h4>
                       <span class="generated-date">Generated: {{ formatDateTime(report.generatedAt) }}</span>
                       <span v-if="report === latestReport" class="latest-badge">Latest</span>
                     </div>
@@ -266,14 +264,9 @@
               
               <div v-else class="no-data-state">
                 <div class="empty-state-content">
-                  <h4 class="empty-state-title">
-                    {{ selectedFilterDate ? 'No Reports Found for Selected Date' : 'No Reports Available' }}
-                  </h4>
+                  <h4 class="empty-state-title">No Reports Available</h4>
                   <p class="empty-state-description">
-                    {{ selectedFilterDate 
-                        ? `No reports were generated on ${formatDate(selectedFilterDate)}. Try selecting a different date or clear the filter to see all reports.` 
-                        : 'Generated reports will appear here for viewing and downloading.' 
-                    }}
+                    Generated reports will appear here for viewing and downloading.
                   </p>
                 </div>
               </div>
@@ -392,27 +385,16 @@
         @secondary-click="closeCustomDayModal"
       >
         <template v-slot:label>
-          {{ selectedFilterDate ? 'Filter Reports' : 'Generate Custom Report' }}
+          Generate Custom Report
         </template>
         <template v-slot:title>
-          {{ selectedFilterDate ? 'Filter Reports by Date' : 'Select Date for Report Generation' }}
+          Select Date for Report Generation
         </template>
         <template v-slot:content>
           <div class="custom-week-form">
             <p class="form-description">
-              {{ selectedFilterDate 
-                ? 'Select a date to filter existing reports, or clear the current filter.' 
-                : 'Select any date to generate a utilization report for that day, or filter existing reports by date.' 
-              }}
+              Select any date to generate a utilization report for that day.
             </p>
-            
-            <!-- Current Filter Display -->
-            <div v-if="selectedFilterDate" class="current-filter-display">
-              <div class="filter-info">
-                <span class="filter-label">Current Filter:</span>
-                <span class="filter-value">{{ formatDate(selectedFilterDate) }}</span>
-              </div>
-            </div>
             
             <cv-date-picker
               v-model="customDayStart"
@@ -422,17 +404,14 @@
               @change="onModalDateChange"
             >
               <cv-date-picker-input
-                :label="selectedFilterDate ? 'Change Filter Date' : 'Select Date'"
+                label="Select Date"
                 placeholder="YYYY-MM-DD"
               />
             </cv-date-picker>
           </div>
         </template>
         <template v-slot:primary-button>
-          <span v-if="selectedFilterDate && !customDayStart">Clear Filter</span>
-          <span v-else-if="selectedFilterDate && customDayStart && customDayStart !== selectedFilterDate">Select Date</span>
-          <span v-else-if="selectedFilterDate && customDayStart === selectedFilterDate">Clear Filter</span>
-          <span v-else-if="!selectedFilterDate && customDayStart">Filter By Date</span>
+          <span v-if="customDayStart">Generate Report</span>
           <span v-else>Select Date</span>
         </template>
         <template v-slot:secondary-button>Cancel</template>
@@ -455,7 +434,9 @@
 <script>
 import axios from 'axios';
 import useAuth from '../composables/useAuth';
-import { computed } from 'vue';
+import { useDateStore } from '../composables/useDateStore';
+import { computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import Download16 from '@carbon/icons-vue/lib/download/16';
 import View16 from '@carbon/icons-vue/lib/view/16';
 import TrashCan16 from '@carbon/icons-vue/lib/trash-can/16';
@@ -469,6 +450,15 @@ export default {
   },
   setup() {
     const { currentUser, isAdmin } = useAuth();
+    const route = useRoute();
+    const {
+      selectedDate,
+      selectedDateInput,
+      selectedDateString,
+      setSelectedDate,
+      initializeFromRoute
+    } = useDateStore();
+
     const isAdminUser = computed(() => {
       if (!currentUser.value) return false;
       
@@ -479,7 +469,17 @@ export default {
       const adminUids = (import.meta.env.VITE_ADMIN_UIDS || '').split(',').map(u => u.trim());
       return adminUids.includes(currentUser.value.uid);
     });
-    return { isAdminUser, currentUser };
+
+    return { 
+      isAdminUser, 
+      currentUser, 
+      route,
+      selectedDate,
+      selectedDateInput,
+      selectedDateString,
+      setSelectedDate,
+      initializeFromRoute
+    };
   },
   data() {
     return {
@@ -508,7 +508,6 @@ export default {
         exportLatest: false
       },
       customDayStart: '',
-      selectedFilterDate: '',
       dateFormat: 'Y-m-d',
       notification: {
         show: false,
@@ -603,11 +602,28 @@ export default {
     }
   },
   async mounted() {
+    // Initialize date from route parameter if available (similar to StatisticsView)
+    if (this.route.params.date && typeof this.route.params.date === 'string') {
+      console.log('UtilizationView - Initializing from route date:', this.route.params.date);
+      this.initializeFromRoute(this.route.params.date);
+    } else {
+      console.log('UtilizationView - Using current global date:', this.selectedDateString);
+    }
+
     await this.fetchReports();
     this.startCarousel();
   },
   beforeUnmount() {
     this.stopCarousel();
+  },
+  watch: {
+    // Watch for route parameter changes and update global store
+    '$route.params.date'(newDate) {
+      if (newDate && typeof newDate === 'string') {
+        console.log('UtilizationView - Route date changed:', newDate);
+        this.setSelectedDate(newDate);
+      }
+    }
   },
   methods: {
     startCarousel() {
@@ -636,24 +652,11 @@ export default {
       try {
         const idToken = localStorage.getItem('auth_token');
         
-        // Build query parameters
+        // Build query parameters - no date filtering, show all reports
         const params = {
           page: this.currentPage,
           limit: this.pageSize
         };
-        
-        // Add date filter if selected
-        if (this.selectedFilterDate) {
-          const filterDate = new Date(this.selectedFilterDate);
-          const startOfDay = new Date(filterDate);
-          startOfDay.setHours(0, 0, 0, 0);
-          
-          const endOfDay = new Date(filterDate);
-          endOfDay.setHours(23, 59, 59, 999);
-          
-          params.startDate = startOfDay.toISOString();
-          params.endDate = endOfDay.toISOString();
-        }
         
         const response = await axios.get('/api/utilization-reports', {
           headers: { Authorization: `Bearer ${idToken}` },
@@ -699,28 +702,33 @@ export default {
     },
     
     async generateCurrentDayReport() {
-      console.log('Generate current day report clicked');
-      console.log('Current user:', this.currentUser);
-      console.log('Is admin user:', this.isAdminUser);
-      
       this.loading.generateCurrent = true;
       try {
         const idToken = localStorage.getItem('auth_token');
-        console.log('Token exists:', !!idToken);
-        console.log('Token preview:', idToken ? idToken.substring(0, 50) + '...' : 'null');
         
-        const response = await axios.post('/api/utilization-reports/generate-current', {}, {
-          headers: { Authorization: `Bearer ${idToken}` }
+        // Use the raw date input directly (same as StatisticsView)
+        const dateToUse = this.selectedDateInput;
+        console.log('Generating report for date:', dateToUse);
+        
+        const response = await axios.post('/api/utilization-reports/generate', {}, {
+          headers: { Authorization: `Bearer ${idToken}` },
+          params: { weekStart: dateToUse }
         });
         
-        console.log('Response:', response);
-        this.showNotification('success', 'Success', 'Current day report generated successfully');
+        this.showNotification('success', 'Success', `Report generated successfully for ${dateToUse}`);
         await this.fetchReports();
       } catch (error) {
-        console.error('Error generating current day report:', error);
+        console.error('Error generating report for selected date:', error);
         console.error('Error response:', error.response);
-        const message = error.response?.data?.error || 'Failed to generate current day report';
-        this.showNotification('error', 'Error', message);
+        if (error.response && error.response.status === 401) {
+          this.showNotification('error', 'Authentication Required', 'You must be an admin to generate reports.');
+        } else if (error.response && error.response.status === 400) {
+          const message = error.response?.data?.error || 'Report already exists for this date';
+          this.showNotification('error', 'Unable to Generate', message);
+        } else {
+          const message = error.response?.data?.error || 'Failed to generate report for selected date';
+          this.showNotification('error', 'Error', message);
+        }
       } finally {
         this.loading.generateCurrent = false;
       }
@@ -729,8 +737,8 @@ export default {
     
     openCustomDayModal() {
       this.showCustomDayModal = true;
-      // Initialize with current filter date if exists, otherwise empty
-      this.customDayStart = this.selectedFilterDate || '';
+      // Initialize empty to force user to select a date for generation
+      this.customDayStart = '';
     },
     
     closeCustomDayModal() {
@@ -744,26 +752,17 @@ export default {
         return;
       }
       
-      // Parse the date and validate that it's valid
-      const date = new Date(this.customDayStart);
-      
-      // Check if the date is valid
-      if (isNaN(date.getTime())) {
-        this.showNotification('error', 'Invalid Date', 'Please select a valid date');
-        return;
-      }
-      
       this.loading.generateCustom = true;
       
       try {
         const idToken = localStorage.getItem('auth_token');
         
-        // Format the date as ISO string for the API
-        const formattedDate = date.toISOString().split('T')[0];
+        // Use the raw date input directly (no complex date parsing)
+        const dateToUse = this.customDayStart;
         
         await axios.post('/api/utilization-reports/generate', {}, {
           headers: { Authorization: `Bearer ${idToken}` },
-          params: { weekStart: formattedDate }
+          params: { weekStart: dateToUse }
         });
         
         this.showNotification('success', 'Success', 'Custom day report generated successfully');
@@ -945,8 +944,25 @@ export default {
     },
     
     formatDayPeriod(startDate, endDate) {
+      // Simple date formatting - use the date as-is from the database
       const start = new Date(startDate);
       return start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    },
+
+    formatDisplayDate(dateString) {
+      if (!dateString) return '';
+      try {
+        // Simple parsing - add T00:00:00 to ensure proper local date interpretation
+        const date = new Date(dateString + 'T00:00:00');
+        return date.toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+      } catch (e) {
+        return dateString;
+      }
     },
     
     showNotification(kind, title, subtitle) {
@@ -963,58 +979,15 @@ export default {
       }, 5000);
     },
     
-    onDateFilterChange() {
-      this.fetchReports();
-    },
-    
-    clearDateFilter() {
-      this.selectedFilterDate = null;
-      this.fetchReports();
-    },
-    
     // New methods for the updated modal functionality
     handleCustomDayModalAction() {
-      if (this.selectedFilterDate && !this.customDayStart) {
-        // If there's a filter but no date selected in picker, clear the filter
-        this.clearDateFilterFromModal();
-      } else if (this.selectedFilterDate && this.customDayStart && this.customDayStart === this.selectedFilterDate) {
-        // If there's a filter and same date is selected, clear the filter
-        this.clearDateFilterFromModal();
-      } else if (this.customDayStart) {
-        // If date is selected (either new filter or changing existing filter), apply the filter
-        this.applyDateFilterFromModal();
+      if (this.customDayStart) {
+        // Generate report for the selected date
+        this.generateCustomDayFromModal();
       } else {
         // If no date selected, show error
         this.showNotification('error', 'Missing Date', 'Please select a date');
       }
-    },
-    
-    applyDateFilterFromModal() {
-      if (!this.customDayStart) {
-        this.showNotification('error', 'Missing Date', 'Please select a date');
-        return;
-      }
-      
-      // Validate the date
-      const date = new Date(this.customDayStart);
-      if (isNaN(date.getTime())) {
-        this.showNotification('error', 'Invalid Date', 'Please select a valid date');
-        return;
-      }
-      
-      // Apply the filter
-      this.selectedFilterDate = this.customDayStart;
-      this.fetchReports();
-      this.closeCustomDayModal();
-      this.showNotification('success', 'Filter Applied', `Reports filtered by ${this.formatDate(this.customDayStart)}`);
-    },
-    
-    clearDateFilterFromModal() {
-      this.selectedFilterDate = null;
-      this.customDayStart = '';
-      this.fetchReports();
-      this.closeCustomDayModal();
-      this.showNotification('success', 'Filter Cleared', 'Showing all reports');
     },
     
     onModalDateChange() {
@@ -1032,7 +1005,7 @@ export default {
   padding: 0;
   margin-top: 48px;
   background: #f4f4f4;
-  min-height: calc(100vh - 48px);
+  flex: 1; /* Use flex instead of min-height calculation */
   font-family: 'IBM Plex Sans', sans-serif;
 }
 
@@ -1194,12 +1167,43 @@ export default {
   font-family: 'IBM Plex Sans', sans-serif;
 }
 
+.page-subtitle-with-date {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .page-subtitle {
   font-size: 1rem;
   opacity: 0.75;
   margin: 0;
   font-weight: 400;
   font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.current-date-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.date-label {
+  font-size: 0.875rem;
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+.date-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #78a9ff;
+  background: rgba(120, 169, 255, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid rgba(120, 169, 255, 0.3);
 }
 
 /* Grid Layout */
@@ -1269,26 +1273,7 @@ export default {
   gap: 0.5rem;
 }
 
-.filter-status-badge {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: linear-gradient(135deg, #d0e2ff 0%, #a6c8ff 100%);
-  border: 1px solid #0f62fe;
-  border-radius: 16px;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #0043ce;
-}
 
-.filter-indicator {
-  font-size: 0.875rem;
-}
-
-.filter-text {
-  white-space: nowrap;
-}
 
 .tile-subtitle {
   font-size: 0.875rem;
@@ -1657,12 +1642,12 @@ export default {
 }
 
 .reports-grid::-webkit-scrollbar-thumb {
-  background: #0f62fe;
+  background: #c6c6c6;
   border-radius: 4px;
 }
 
 .reports-grid::-webkit-scrollbar-thumb:hover {
-  background: #0043ce;
+  background: #a8a8a8;
 }
 
 .report-card {
@@ -2083,6 +2068,22 @@ export default {
   
   .page-header {
     padding: 1.5rem 1rem 1rem 1rem;
+  }
+  
+  .page-subtitle-with-date {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .current-date-display {
+    align-self: stretch;
+    justify-content: space-between;
+  }
+  
+  .date-value {
+    font-size: 0.8125rem;
+    padding: 0.25rem 0.5rem;
   }
   
   .page-title {
@@ -2928,27 +2929,7 @@ export default {
   margin-bottom: 0.5rem;
 }
 
-.filter-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
 
-.filter-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #0f62fe;
-}
-
-.filter-value {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #161616;
-  background: rgba(255, 255, 255, 0.8);
-  padding: 0.25rem 0.5rem;
-  border-radius: 3px;
-  border: 1px solid rgba(15, 98, 254, 0.2);
-}
 
 .modal-actions-section {
   margin-top: 1rem;

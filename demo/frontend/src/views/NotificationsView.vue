@@ -380,7 +380,7 @@ export default {
   padding: 0;
   margin-top: 64px;
   background-color: #f4f4f4;
-  min-height: calc(100vh - 64px);
+  flex: 1; /* Use flex instead of min-height calculation */
 }
 
 .page-header {

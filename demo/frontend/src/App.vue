@@ -1,23 +1,28 @@
 <template>
-  <div>
+  <div class="app-layout">
     <!-- Only show NavBar if not on login or root page -->
     <NavBar v-if="isLoggedIn && !loading && !isPublicRoute" />
-    <router-view v-if="!loading && (isLoggedIn || isPublicRoute)" :key="$route.fullPath" />
-    <div v-else-if="loading" class="loading-spinner">
-      Loading...
-    </div>
+    <main class="app-main">
+      <router-view v-if="!loading && (isLoggedIn || isPublicRoute)" :key="$route.fullPath" />
+      <div v-else-if="loading" class="loading-spinner">
+        Loading...
+      </div>
+    </main>
+    <!-- Only show footer if not on login or root page -->
+    <AppFooter v-if="isLoggedIn && !loading && !isPublicRoute" />
   </div>
 </template>
 
 <script>
 import NavBar from './components/NavBar.vue';
+import AppFooter from './components/AppFooter.vue';
 import useAuth from './composables/useAuth';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
 export default {
   name: 'App',
-  components: { NavBar },
+  components: { NavBar, AppFooter },
   setup() {
     const { currentUser, loading } = useAuth();
     const isLoggedIn = computed(() => !!currentUser.value);
@@ -31,6 +36,18 @@ export default {
 </script>
 
 <style>
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: none; /* Remove flex: 1 to prevent competition with footer */
+  display: flex;
+  flex-direction: column;
+}
+
 .loading-spinner {
   display: flex;
   align-items: center;
