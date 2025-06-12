@@ -392,28 +392,33 @@ router.get('/:id', validarUsuario, [
  * @access Protected (admin)
  */
 router.post('/generate', validarUsuario, validarAdmin, [
-  query('weekStart').isISO8601()
+  query('weekStart').isISO8601().withMessage('Date must be in ISO format (YYYY-MM-DD)')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.log('Validation errors for report generation:', errors.array());
+      return res.status(400).json({ 
+        error: 'Invalid date format',
+        details: errors.array(),
+        expected: 'Date must be in YYYY-MM-DD format'
+      });
     }
 
-    // Parse the date and ensure it's in Costa Rica timezone
-    const inputDate = new Date(req.query.weekStart);
+    console.log('Generating report with weekStart parameter:', req.query.weekStart);
+
+    // Parse the date more simply to avoid timezone issues
+    const inputDateString = req.query.weekStart; // Should be YYYY-MM-DD format
+    const inputDate = new Date(inputDateString + 'T00:00:00.000Z'); // Force UTC to avoid timezone shifts
     
-    // Create start of day in Costa Rica timezone
-    const dayStart = new Date(inputDate.toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'}) + 'T00:00:00.000-06:00');
-    
-    // Create end of day in Costa Rica timezone  
-    const dayEnd = new Date(inputDate.toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'}) + 'T23:59:59.999-06:00');
+    // Create start and end of day in UTC to avoid timezone conversions
+    const dayStart = new Date(inputDateString + 'T00:00:00.000Z');
+    const dayEnd = new Date(inputDateString + 'T23:59:59.999Z');
 
     console.log('Generating custom report for:');
-    console.log('Input date:', req.query.weekStart);
-    console.log('Parsed date:', inputDate.toString());
-    console.log('Day start:', dayStart.toString());
-    console.log('Day end:', dayEnd.toString());
+    console.log('Input date string:', inputDateString);
+    console.log('Day start:', dayStart.toISOString());
+    console.log('Day end:', dayEnd.toISOString());
 
     // Generate report data
     const reportData = await generateReportData(dayStart, dayEnd);
@@ -478,21 +483,18 @@ router.post('/generate', validarUsuario, validarAdmin, [
  */
 router.post('/generate-current', validarUsuario, validarAdmin, async (req, res) => {
   try {
-    // Use explicit Costa Rica timezone handling
+    // Get current date in simple YYYY-MM-DD format to avoid timezone issues
     const now = new Date();
+    const currentDateString = now.toISOString().split('T')[0]; // Get YYYY-MM-DD format
     
-    // Create start of day in Costa Rica timezone
-    const dayStart = new Date(now.toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'}) + 'T00:00:00.000-06:00');
-    
-    // Create end of day in Costa Rica timezone  
-    const dayEnd = new Date(now.toLocaleDateString('en-CA', {timeZone: 'America/Costa_Rica'}) + 'T23:59:59.999-06:00');
+    // Create start and end of day in UTC to avoid timezone conversions
+    const dayStart = new Date(currentDateString + 'T00:00:00.000Z');
+    const dayEnd = new Date(currentDateString + 'T23:59:59.999Z');
 
     console.log('Generating report for current day:');
-    console.log('Current time:', now.toString());
-    console.log('Day start:', dayStart.toString());
-    console.log('Day end:', dayEnd.toString());
-    console.log('Day start ISO:', dayStart.toISOString());
-    console.log('Day end ISO:', dayEnd.toISOString());
+    console.log('Current date string:', currentDateString);
+    console.log('Day start:', dayStart.toISOString());
+    console.log('Day end:', dayEnd.toISOString());
 
     // Generate report data
     const reportData = await generateReportData(dayStart, dayEnd);

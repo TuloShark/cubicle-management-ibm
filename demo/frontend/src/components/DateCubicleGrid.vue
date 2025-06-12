@@ -183,21 +183,22 @@ export default {
       selectedCubicle.value = cubicle;
       reservationUser.value = null;
       
-      // If cubicle is reserved for this date, fetch reservation info
+      // If cubicle is reserved for this date, set reservation info
       if (currentDateStatus.value === 'reserved') {
-        // Check if this is not the user's reservation
-        if (cubicle.reservationInfo && 
-            currentUser.value && 
-            cubicle.reservationInfo.user?.uid !== currentUser.value.uid) {
-          // Set reservation user info for the modal and show "not your reservation" modal
-          reservationUser.value = cubicle.reservationInfo.user;
-          showNotYourReservationModal.value = true;
-          return;
-        }
+        // Try reservationInfo first (new format), then fall back to reservedByUser (old format)
+        const userInfo = cubicle.reservationInfo?.user || cubicle.reservedByUser;
         
-        // For own reservations, set reservation info
-        if (cubicle.reservationInfo) {
-          reservationUser.value = cubicle.reservationInfo.user;
+        if (userInfo) {
+          // Check if this is not the user's reservation
+          if (currentUser.value && userInfo.uid !== currentUser.value.uid) {
+            // Set reservation user info for the modal and show "not your reservation" modal
+            reservationUser.value = userInfo;
+            showNotYourReservationModal.value = true;
+            return;
+          }
+          
+          // For own reservations, set reservation info
+          reservationUser.value = userInfo;
         }
       }
       

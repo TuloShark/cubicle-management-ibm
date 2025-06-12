@@ -107,6 +107,7 @@ router.get('/date/:date', [
     // Enhance cubicles with reservation status
     const enhancedCubicles = cubicles.map(cubicle => {
       const reservation = reservationMap.get(cubicle._id.toString());
+      const dateStatus = reservation ? 'reserved' : 'available';
       
       return {
         _id: cubicle._id,
@@ -115,9 +116,14 @@ router.get('/date/:date', [
         col: cubicle.col,
         serial: cubicle.serial,
         name: cubicle.name,
-        status: cubicle.status === 'error' ? 'error' : (reservation ? 'reserved' : 'available'),
+        status: cubicle.status, // Keep original global status (for error state)
+        dateStatus: dateStatus, // Add date-specific status
         reservedByUser: reservation ? reservation.user : null,
-        reservationId: reservation ? reservation.reservationId : null
+        reservationInfo: reservation ? {
+          _id: reservation.reservationId,
+          user: reservation.user,
+          date: reservation.date
+        } : null
       };
     });
 
@@ -174,7 +180,9 @@ router.get('/stats/date/:date', [
         reserved: reservations.length,
         available: cubicles.length - reservations.length,
         error: cubicles.filter(c => c.status === 'error').length,
-        percentReserved: cubicles.length > 0 ? Math.round((reservations.length / cubicles.length) * 100) : 0
+        percentReserved: cubicles.length > 0 ? Math.round((reservations.length / cubicles.length) * 100) : 0,
+        percentAvailable: cubicles.length > 0 ? Math.round(((cubicles.length - reservations.length) / cubicles.length) * 100) : 0,
+        percentError: cubicles.length > 0 ? Math.round((cubicles.filter(c => c.status === 'error').length / cubicles.length) * 100) : 0
       },
       sections: ['A', 'B', 'C'].map(section => {
         const sectionCubicles = cubicles.filter(c => c.section === section);
@@ -199,10 +207,25 @@ router.get('/stats/date/:date', [
           return acc;
         }, {})
       ).map(([email, count]) => ({
-        email: email.split('@')[0], // Privacy: show only username part
+        user: email.split('@')[0], // Privacy: show only username part
         reserved: count,
         percent: reservations.length > 0 ? Math.round((count / reservations.length) * 100) : 0
       })).sort((a, b) => b.reserved - a.reserved),
+      comparison: [
+        { metric: 'Total Users', value: Object.keys(reservations.reduce((acc, r) => {
+          if (r.user?.email) acc[r.user.email] = true;
+          return acc;
+        }, {})).length },
+        { metric: 'Total Reservations', value: reservations.length },
+        { metric: 'Avg. Reservations/User', value: reservations.length > 0 && Object.keys(reservations.reduce((acc, r) => {
+          if (r.user?.email) acc[r.user.email] = true;
+          return acc;
+        }, {})).length > 0 ? Math.round(reservations.length / Object.keys(reservations.reduce((acc, r) => {
+          if (r.user?.email) acc[r.user.email] = true;
+          return acc;
+        }, {})).length) : 0 },
+        { metric: 'Error Rate', value: `${cubicles.length > 0 ? Math.round((cubicles.filter(c => c.status === 'error').length / cubicles.length) * 100) : 0}%` }
+      ],
       timestamp: new Date().toISOString()
     };
 
@@ -471,6 +494,95 @@ router.get('/reservations/date/:date', [
       adminUser: req.user?.email 
     });
     res.status(500).json({ error: 'Failed to fetch reservations' });
+  }
+});
+
+/**
+ * PUT /:id
+ * Update cubicle status (admin only for error state)
+ * @route PUT /api/cubicles/:id
+ * @access Protected (user, admin for error state)
+ */
+router.put('/:id', validarUsuario, [
+  param('id').isMongoId().withMessage('Valid cubicle ID required'),
+  body('status').isIn(['available', 'reserved', 'error']).withMessage('Status must be available, reserved, or error')
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const cubicleId = req.params.id;
+    const { status } = req.body;
+
+    // Find the cubicle
+    const cubicle = await Cubicle.findById(cubicleId);
+    if (!cubicle) {
+      return res.status(404).json({ error: 'Cubicle not found' });
+    }
+
+    // Check permissions for error state (admin only)
+    if (status === 'error') {
+      const adminUids = (process.env.ADMIN_UIDS || '').split(',').map(u => u.trim());
+      const isAdmin = adminUids.includes(req.user.uid);
+      
+      if (!isAdmin) {
+        logger.warn('Non-admin user attempted to set cubicle to error state', {
+          user: req.user.email,
+          cubicleId
+        });
+        return res.status(403).json({ error: 'Only administrators can set cubicles to error state' });
+      }
+    }
+
+    // Update cubicle status
+    cubicle.status = status;
+    await cubicle.save();
+
+    // If status is changed to available, remove any existing reservations
+    if (status === 'available') {
+      await Reservation.deleteMany({ cubicle: cubicleId });
+      logger.info('Removed reservations for cubicle set to available', { cubicleId });
+    }
+
+    // Emit real-time update
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('cubicleStatusUpdate', {
+        cubicleId,
+        status,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    logger.info('Cubicle status updated successfully', {
+      cubicleId,
+      newStatus: status,
+      user: req.user.email
+    });
+
+    res.json({
+      message: 'Cubicle status updated successfully',
+      cubicle: {
+        _id: cubicle._id,
+        status: cubicle.status,
+        section: cubicle.section,
+        row: cubicle.row,
+        col: cubicle.col,
+        serial: cubicle.serial,
+        name: cubicle.name
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error updating cubicle status:', {
+      error: error.message,
+      cubicleId: req.params.id,
+      status: req.body.status,
+      user: req.user?.email
+    });
+    res.status(500).json({ error: 'Failed to update cubicle status' });
   }
 });
 

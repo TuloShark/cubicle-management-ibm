@@ -648,6 +648,7 @@ export default {
       this.startCarousel(); // Restart the auto-advance timer
     },
     async fetchReports() {
+      console.log('UtilizationView - fetchReports started');
       this.loading.reports = true;
       try {
         const idToken = localStorage.getItem('auth_token');
@@ -658,11 +659,13 @@ export default {
           limit: this.pageSize
         };
         
+        console.log('UtilizationView - Making API call with params:', params);
         const response = await axios.get('/api/utilization-reports', {
           headers: { Authorization: `Bearer ${idToken}` },
           params
         });
         
+        console.log('UtilizationView - API response:', response.data);
         this.reports = response.data.reports || [];
         this.pagination = response.data.pagination || {
           totalReports: 0,
@@ -671,6 +674,8 @@ export default {
           hasPrev: false
         };
         
+        console.log('UtilizationView - Set reports:', this.reports.length, 'reports');
+        
         // Set latest report for quick stats
         if (this.reports.length > 0) {
           this.latestReport = this.reports[0];
@@ -678,7 +683,8 @@ export default {
           this.latestReport = null;
         }
       } catch (error) {
-        console.error('Error fetching reports:', error);
+        console.error('UtilizationView - Error fetching reports:', error);
+        console.error('UtilizationView - Error response:', error.response);
         if (error.response && error.response.status === 401) {
           this.showNotification('error', 'Authentication Required', 'Please log in to view utilization reports.');
         } else if (error.response && error.response.status === 404) {
@@ -697,6 +703,7 @@ export default {
           this.showNotification('error', 'Error Loading Reports', message);
         }
       } finally {
+        console.log('UtilizationView - fetchReports finished, loading.reports = false');
         this.loading.reports = false;
       }
     },
@@ -716,7 +723,9 @@ export default {
         });
         
         this.showNotification('success', 'Success', `Report generated successfully for ${dateToUse}`);
+        console.log('Report generation successful, fetching reports...');
         await this.fetchReports();
+        console.log('Reports fetched. Current reports count:', this.reports.length);
       } catch (error) {
         console.error('Error generating report for selected date:', error);
         console.error('Error response:', error.response);
@@ -994,7 +1003,22 @@ export default {
       // This method is called when the date picker value changes
       // It helps trigger reactivity for the button text updates
       this.$forceUpdate();
-    }
+    },
+    
+    formatReportDate(report) {
+      // Extract the date from weekStartDate without timezone conversion
+      if (report.weekStartDate) {
+        // If it's a Date object or ISO string, extract just the date part
+        const dateStr = report.weekStartDate.toString();
+        if (dateStr.includes('T')) {
+          // ISO string - get the date part before 'T'
+          return dateStr.split('T')[0];
+        }
+        // Otherwise, return as-is (should already be a date string)
+        return dateStr;
+      }
+      return 'Unknown Date';
+    },
   }
 };
 </script>
@@ -1980,10 +2004,6 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
-}
-
-.daily-progress {
-  width: 100%;
 }
 
 .sections-grid {
