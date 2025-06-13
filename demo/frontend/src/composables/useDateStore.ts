@@ -1,7 +1,7 @@
 /**
  * Global Date Store - Vue 3 Composition API
  * Manages application-wide date state for consistent navigation between views
- * Solves the date synchronization issue between EnhancedReservationsView and StatisticsView
+ * Solves the date synchronization issue between ReservationsView and StatisticsView
  */
 import { ref, computed, watch } from 'vue';
 
@@ -12,7 +12,7 @@ const selectedDateInput = ref<string>('');
 let isInitialized = false;
 
 /**
- * Get today's date in YYYY-MM-DD format (consistent with EnhancedReservationsView logic)
+ * Get today's date in YYYY-MM-DD format (consistent with ReservationsView logic)
  */
 function getTodayString(): string {
   const today = new Date();
@@ -23,7 +23,7 @@ function getTodayString(): string {
 }
 
 /**
- * Format Date object to YYYY-MM-DD string (consistent with EnhancedReservationsView logic)
+ * Format Date object to YYYY-MM-DD string (consistent with ReservationsView logic)
  */
 function formatDateToString(date: Date): string {
   const year = date.getFullYear();
@@ -146,7 +146,7 @@ export function useDateStore() {
   }
 
   /**
-   * Handle date input change (consistent with EnhancedReservationsView logic)
+   * Handle date input change (consistent with ReservationsView logic)
    */
   function handleDateInputChange(event?: Event) {
     ensureInitialized();

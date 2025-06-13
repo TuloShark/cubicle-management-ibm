@@ -21,9 +21,9 @@
         
         <div class="brand-text">
           <h1 class="brand-title">Cubicle Management</h1>
-          <p class="brand-subtitle">Powered by IBM Z</p>
+          <p class="brand-subtitle">Powered by IBM</p>
           <p class="brand-description">
-            Modern workspace management with enterprise-grade security and reliability.
+            IBM Space Optimization.
           </p>
         </div>
       </div>
@@ -63,41 +63,14 @@
               />
             </div>
 
-            <div class="form-actions">
-              <cv-button 
-                type="submit" 
-                kind="primary" 
-                :disabled="loading"
-                class="login-button"
-              >
-                {{ loading ? 'Signing in...' : 'Sign in' }}
-              </cv-button>
-            </div>
-
-            <div class="divider">
-              <span class="divider-text">or continue with</span>
-            </div>
-
-            <div class="social-actions">
-              <cv-button 
-                kind="tertiary" 
-                @click="loginWithGoogle" 
-                :disabled="loading"
-                class="social-button"
-              >
-                <GoogleIcon class="social-icon" />
-                Google
-              </cv-button>
-              <cv-button 
-                kind="tertiary" 
-                @click="loginWithGithub" 
-                :disabled="loading"
-                class="social-button"
-              >
-                <GithubIcon class="social-icon" />
-                GitHub
-              </cv-button>
-            </div>
+            <cv-button 
+              type="submit" 
+              kind="primary" 
+              :disabled="loading"
+              class="login-button"
+            >
+              {{ loading ? 'Signing in...' : 'Sign in' }}
+            </cv-button>
 
             <div v-if="error" class="error-message">
               <WarningIcon class="error-icon" />
@@ -113,21 +86,17 @@
 <script>
 /**
  * LoginView
- * Handles user login via email/password and social providers (Google, GitHub).
+ * Handles user login via email/password.
  * On successful login, stores auth token and redirects to reservations view.
  */
-import { signInWithEmailAndPassword, signInWithRedirect, getRedirectResult, GoogleAuthProvider, GithubAuthProvider } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import useAuth from '../composables/useAuth';
-import GoogleIcon from '../components/icons/GoogleIcon.vue';
-import GithubIcon from '../components/icons/GithubIcon.vue';
 import WarningIcon from '../components/icons/WarningIcon.vue';
 
 export default {
   name: 'LoginView',
   components: {
-    GoogleIcon,
-    GithubIcon,
     WarningIcon
   },
   data() {
@@ -141,22 +110,6 @@ export default {
     // Use the loading state from useAuth composable
     const { loading } = useAuth();
     return { loading };
-  },
-  async mounted() {
-    // Handle redirect result for social logins
-    try {
-      const result = await getRedirectResult(auth);
-      if (result && result.user) {
-        // Fetch ID token and store in localStorage
-        const idToken = await result.user.getIdToken();
-        localStorage.setItem('auth_token', idToken);
-        this.$emit('login');
-        this.error = '';
-      }
-    } catch (err) {
-      // Only show error if redirect failed
-      if (err && err.message) this.error = err.message;
-    }
   },
   methods: {
     /**
@@ -180,20 +133,6 @@ export default {
       } catch (err) {
         this.error = 'Invalid credentials';
       }
-    },
-    /**
-     * Login with Google provider (redirect).
-     */
-    loginWithGoogle() {
-      const provider = new GoogleAuthProvider();
-      signInWithRedirect(auth, provider);
-    },
-    /**
-     * Login with GitHub provider (redirect).
-     */
-    loginWithGithub() {
-      const provider = new GithubAuthProvider();
-      signInWithRedirect(auth, provider);
     }
   }
 };
@@ -204,17 +143,22 @@ export default {
   display: flex;
   min-height: 100vh;
   background-color: #f4f4f4;
+  /* Smart responsive layout - auto-stacks on smaller screens */
+  flex-direction: row;
+  flex-wrap: wrap;
 }
 
-/* Left Brand Panel */
+/* Left Brand Panel - Responsive without media queries */
 .login-brand-panel {
-  flex: 1;
+  /* Smart flex behavior - takes up appropriate space */
+  flex: 1 1 clamp(300px, 40vw, 600px);
+  min-height: clamp(300px, 40vh, 100vh);
   background: linear-gradient(135deg, #0f62fe 0%, #001d6c 100%);
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 3rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
   overflow: hidden;
 }
 
@@ -235,20 +179,21 @@ export default {
   z-index: 2;
   text-align: center;
   color: white;
-  max-width: 500px;
+  max-width: clamp(300px, 80vw, 500px);
+  width: 100%;
 }
 
 .brand-logo-container {
   position: relative;
-  margin-bottom: 2rem;
+  margin-bottom: clamp(1rem, 4vw, 2rem);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .brand-logo {
-  width: 180px;
-  height: 180px;
+  width: clamp(100px, 20vw, 180px);
+  height: clamp(100px, 20vw, 180px);
   background: #ffffff;
   border-radius: 50%;
   display: flex;
@@ -260,17 +205,17 @@ export default {
 }
 
 .brand-image {
-  width: 120px;
-  height: 120px;
+  width: clamp(70px, 15vw, 120px);
+  height: clamp(70px, 15vw, 120px);
   object-fit: contain;
   border-radius: 0;
 }
 
-/* Bee Elements - Circling Animation */
+/* Bee Elements - Responsive Circling Animation */
 .bee-element {
   position: absolute;
-  width: 32px;
-  height: 32px;
+  width: clamp(20px, 4vw, 32px);
+  height: clamp(20px, 4vw, 32px);
   z-index: 15;
   top: 50%;
   left: 50%;
@@ -278,29 +223,31 @@ export default {
 
 .bee-1 {
   animation: circleClockwise 8s linear infinite;
-  transform-origin: -120px 0;
+  /* Responsive transform origin */
+  transform-origin: clamp(-60px, -15vw, -120px) 0;
 }
 
 .bee-2 {
   animation: circleCounterClockwise 10s linear infinite;
-  transform-origin: -140px 0;
+  /* Responsive transform origin */
+  transform-origin: clamp(-70px, -17vw, -140px) 0;
 }
 
 @keyframes circleClockwise {
   from {
-    transform: rotate(0deg) translateX(-120px) rotate(0deg);
+    transform: rotate(0deg) translateX(clamp(-60px, -15vw, -120px)) rotate(0deg);
   }
   to {
-    transform: rotate(360deg) translateX(-120px) rotate(-360deg);
+    transform: rotate(360deg) translateX(clamp(-60px, -15vw, -120px)) rotate(-360deg);
   }
 }
 
 @keyframes circleCounterClockwise {
   from {
-    transform: rotate(0deg) translateX(-140px) rotate(0deg);
+    transform: rotate(0deg) translateX(clamp(-70px, -17vw, -140px)) rotate(0deg);
   }
   to {
-    transform: rotate(-360deg) translateX(-140px) rotate(360deg);
+    transform: rotate(-360deg) translateX(clamp(-70px, -17vw, -140px)) rotate(360deg);
   }
 }
 
@@ -313,49 +260,50 @@ export default {
 }
 
 .brand-title {
-  font-size: 2.5rem;
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
   font-weight: 300;
   margin: 0 0 0.5rem 0;
   letter-spacing: -0.02em;
 }
 
 .brand-subtitle {
-  font-size: 1.25rem;
-  margin: 0 0 2rem 0;
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  margin: 0 0 clamp(1rem, 3vw, 2rem) 0;
   opacity: 0.9;
   font-weight: 400;
 }
 
 .brand-description {
-  font-size: 1rem;
+  font-size: clamp(0.875rem, 2vw, 1rem);
   line-height: 1.6;
   opacity: 0.8;
   margin: 0;
 }
 
-/* Right Form Panel */
+/* Right Form Panel - Responsive without media queries */
 .login-form-panel {
-  flex: 1;
+  /* Smart flex behavior - adapts to available space */
+  flex: 1 1 clamp(300px, 50vw, 600px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 3rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
   background-color: #ffffff;
   position: relative;
 }
 
 .form-container {
   width: 100%;
-  max-width: 400px;
+  max-width: clamp(300px, 80vw, 400px);
 }
 
 .form-header {
-  margin-bottom: 3rem;
+  margin-bottom: clamp(2rem, 5vw, 3rem);
   text-align: center;
 }
 
 .form-title {
-  font-size: 2rem;
+  font-size: clamp(1.5rem, 4vw, 2rem);
   font-weight: 400;
   color: #161616;
   margin: 0 0 0.5rem 0;
@@ -363,223 +311,68 @@ export default {
 }
 
 .form-subtitle {
-  font-size: 1rem;
+  font-size: clamp(0.875rem, 2vw, 1rem);
   color: #6f6f6f;
   margin: 0;
 }
 
 .login-form {
-  background: transparent;
-  padding: 0;
-  border-radius: 0;
-  box-shadow: none;
+  width: 100%;
 }
 
 .input-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: clamp(1rem, 3vw, 1.5rem);
 }
 
 .form-input {
   width: 100%;
 }
 
-.form-actions {
-  margin: 2rem 0;
-  display: flex;
-  justify-content: center;
-  width: 100%;
+/* Ensure Carbon input components take full width */
+.login-form .cv-text-input,
+.login-form .bx--text-input {
+  width: 100% !important;
 }
 
 .login-button {
   width: 100% !important;
-  height: 48px;
-  font-size: 1rem;
-  font-weight: 400;
-  box-sizing: border-box;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-/* Target the Carbon Vue button specifically with multiple selectors */
-.login-button :deep(.bx--btn),
-.login-button :deep(.bx--btn--primary),
-.login-button :deep(button) {
-  width: 100% !important;
-  box-sizing: border-box !important;
-  min-width: 100% !important;
-  max-width: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
-}
-
-/* Additional fallback for Carbon Design System button */
-.form-actions .login-button {
+  margin-bottom: clamp(1rem, 3vw, 1.5rem) !important;
   display: block !important;
+  max-width: none !important;
+  min-height: clamp(44px, 6vh, 52px) !important;
+}
+
+/* Ensure Carbon Design System button takes full width */
+.login-form .cv-button,
+.login-form .bx--btn {
   width: 100% !important;
-}
-
-.form-actions .login-button :deep(*) {
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-.divider {
-  position: relative;
-  text-align: center;
-  margin: 2rem 0;
-}
-
-.divider::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background-color: #e0e0e0;
-}
-
-.divider-text {
-  background-color: #ffffff;
-  padding: 0 1rem;
-  color: #6f6f6f;
-  font-size: 0.875rem;
-  position: relative;
-  z-index: 1;
-}
-
-.social-actions {
-  display: flex;
-  gap: 1rem;
-}
-
-.social-button {
-  flex: 1;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border: 1px solid #e0e0e0;
-  background-color: #ffffff;
-  color: #161616;
-  transition: all 0.15s ease;
-}
-
-.social-button:hover {
-  background-color: #f4f4f4;
-  border-color: #c6c6c6;
-}
-
-.social-icon {
-  width: 20px;
-  height: 20px;
+  max-width: none !important;
 }
 
 .error-message {
-  margin-top: 1.5rem;
-  padding: 1rem;
+  margin-top: clamp(1rem, 3vw, 1.5rem);
+  padding: clamp(0.75rem, 2vw, 1rem);
   background-color: #fff1f1;
   border: 1px solid #fa4d56;
-  border-radius: 4px;
+  border-radius: 0;
   color: #da1e28;
-  font-size: 0.875rem;
+  font-size: clamp(0.8rem, 2vw, 0.875rem);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: clamp(0.25rem, 1vw, 0.5rem);
 }
 
 .error-icon {
-  width: 16px;
-  height: 16px;
+  width: clamp(14px, 2.5vw, 16px);
+  height: clamp(14px, 2.5vw, 16px);
   flex-shrink: 0;
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .login-layout {
-    flex-direction: column;
-  }
-  
-  .login-brand-panel {
-    min-height: 40vh;
-    padding: 2rem;
-  }
-  
-  .brand-title {
-    font-size: 2rem;
-  }
-  
-  .brand-logo {
-    width: 130px;
-    height: 130px;
-  }
-  
-  .brand-image {
-    width: 90px;
-    height: 90px;
-  }
-  
-  .bee-element {
-    width: 22px;
-    height: 22px;
-  }
-  
-  .bee-1 {
-    transform-origin: -80px 0;
-  }
-  
-  .bee-2 {
-    transform-origin: -90px 0;
-  }
-  
-  .login-form-panel {
-    padding: 2rem;
-  }
-  
-  .form-title {
-    font-size: 1.5rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .social-actions {
-    flex-direction: column;
-  }
-  
-  .login-brand-panel {
-    min-height: 30vh;
-    padding: 1.5rem;
-  }
-  
-  .brand-logo {
-    width: 100px;
-    height: 100px;
-  }
-  
-  .brand-image {
-    width: 70px;
-    height: 70px;
-  }
-  
-  .bee-element {
-    width: 24px;
-    height: 24px;
-  }
-  
-  .bee-1 {
-    transform-origin: -60px 0;
-  }
-  
-  .bee-2 {
-    transform-origin: -70px 0;
-  }
-  
-  .login-form-panel {
-    padding: 1.5rem;
-  }
-}
+/* Modern Flexbox Design - No Media Queries Needed! */
+/* The layout automatically adapts based on available space:
+   - Side-by-side on wide screens
+   - Stacked on narrow screens
+   - Everything scales smoothly using clamp() and viewport units
+   - Flexbox handles all the responsive behavior automatically
+*/
 </style>
