@@ -1,19 +1,10 @@
 <template>
   <div class="statistics-container">
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-titles">
-          <h1 class="page-title">Cubicle Statistics Overview</h1>
-          <div class="date-info">
-            <span class="date-label">Selected Date:</span>
-            <span class="date-value">{{ formatDisplayDate(selectedDateString) }}</span>
-          </div>
-          <p class="page-subtitle">
-            Real-time analytics and usage metrics for the selected date
-          </p>
-        </div>
-      </div>
-    </div>
+    <!-- Simple Consistent Header Component -->
+    <PageHeader
+      title="Cubicle Statistics Overview"
+      subtitle="Real-time analytics and usage metrics for the selected date"
+    />
     
     <!-- Main Statistics Dashboard -->
     <cv-grid class="statistics-grid">
@@ -286,6 +277,7 @@ import {
 } from 'chart.js';
 import useAuth from '../composables/useAuth';
 import { useDateStore } from '../composables/useDateStore';
+import PageHeader from '../components/PageHeader.vue';
 
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement, PointElement, LineElement);
 
@@ -297,7 +289,8 @@ export default {
   components: {
     Doughnut,
     Bar,
-    Line
+    Line,
+    PageHeader
   },
   setup() {
     const { token } = useAuth();
@@ -819,7 +812,13 @@ export default {
       
       // Connect to backend websocket
       const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-      socket = io(apiUrl);
+      socket = io(apiUrl, {
+        transports: ['websocket', 'polling'],
+        upgrade: true,
+        withCredentials: true,
+        forceNew: false,
+        autoConnect: true
+      });
       
       // Debounce timer for statistics refresh
       let statsRefreshTimeout = null;
@@ -896,73 +895,11 @@ export default {
 /* IBM Carbon Design System inspired styling */
 .statistics-container {
   padding: 0;
-  margin-top: 64px; /* Space for navbar */
+  margin-top: 48px; /* Space for navbar - consistent with other views */
   background-color: #f4f4f4;
   min-height: calc(100vh - 64px - 60px); /* Calculate exact height: viewport - navbar - footer */
   overflow-x: hidden; /* Prevent horizontal scrollbar */
   padding-bottom: 2rem; /* Add bottom padding for footer separation */
-}
-
-.page-header {
-  background-color: #ffffff;
-  padding: 2rem 2rem 1.5rem 2rem;
-  border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 1.5rem; /* Reduced margin for minimal spacing */
-}
-
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 2rem;
-  max-width: 1584px;
-  margin: 0 auto;
-}
-
-.header-titles {
-  flex: 1;
-}
-
-.page-title {
-  font-size: 2rem;
-  font-weight: 400;
-  color: #161616;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.25;
-}
-
-.date-info {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-  padding: 0.75rem 1rem;
-  background-color: #0f62fe;
-  border-left: 4px solid #0043ce;
-}
-
-.date-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #ffffff;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.date-value {
-  font-size: 1.125rem;
-  font-weight: 400;
-  color: #ffffff;
-  padding: 0.25rem 0.75rem;
-  background-color: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.page-subtitle {
-  font-size: 1rem;
-  color: #525252;
-  margin: 0;
-  font-weight: 400;
 }
 
 .statistics-grid {
@@ -1687,29 +1624,6 @@ export default {
     padding: 0;
   }
   
-  .page-header {
-    padding: 1.5rem 1rem;
-  }
-  
-  .header-content {
-    flex-direction: column;
-    gap: 1.5rem;
-    align-items: stretch;
-  }
-  
-  .header-titles {
-    text-align: center;
-  }
-  
-  .page-title {
-    font-size: 1.75rem;
-    margin-bottom: 0.5rem;
-  }
-  
-  .page-subtitle {
-    font-size: 0.875rem;
-  }
-  
   .statistics-grid {
     padding: 1rem 0.75rem; /* Enhanced mobile padding */
     gap: 1rem; /* Increased gap for mobile */
@@ -1889,32 +1803,6 @@ export default {
     padding: 1rem;
   }
   
-  .page-header {
-    padding: 1.5rem 1rem 1rem 1rem;
-  }
-  
-  .header-content {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .page-title {
-    font-size: 1.75rem;
-  }
-  
-  .date-info {
-    padding: 0.5rem 0.75rem;
-  }
-  
-  .date-label {
-    font-size: 0.75rem;
-  }
-  
-  .date-value {
-    font-size: 1rem;
-    padding: 0.25rem 0.5rem;
-  }
-  
   .top-stats-row,
   .stats-row,
   .user-metrics-row,
@@ -2039,21 +1927,6 @@ export default {
 
 @media (max-width: 672px) {
   .statistics-grid {
-    padding: 0.75rem;
-  }
-  
-  .page-header {
-    padding: 1rem 0.75rem;
-  }
-  
-  .page-title {
-    font-size: 1.5rem;
-  }
-  
-  .date-info {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
     padding: 0.75rem;
   }
   

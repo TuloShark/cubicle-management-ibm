@@ -1,9 +1,10 @@
 <template>
   <div class="notifications-container">
-    <div class="page-header">
-      <h1 class="page-title">Notifications</h1>
-      <p class="page-subtitle">Send cubicle sequence notifications to users via email and Slack</p>
-    </div>
+    <!-- Simple Consistent Header Component -->
+    <PageHeader
+      title="Notifications"
+      subtitle="Send cubicle sequence notifications to users via email and Slack"
+    />
     
     <!-- Main Content Area -->
     <cv-grid class="notifications-grid">
@@ -20,7 +21,7 @@
                 </div>
                 <div class="header-text">
                   <h3 class="tile-title">Send Notification Update</h3>
-                  <p class="tile-subtitle">Get your current cubicle sequence assignment via email and Slack</p>
+                  <p class="tile-subtitle">Get your cubicle sequence assignment for the selected date via email and Slack</p>
                 </div>
               </div>
             </div>
@@ -69,7 +70,7 @@
                     <span>Sending Notification...</span>
                   </template>
                   <template v-else>
-                    Send My Notification Update
+                    Send Notification for Selected Date
                   </template>
                 </cv-button>
               </div>
@@ -131,26 +132,31 @@
 <script>
 import axios from 'axios';
 import useAuth from '../composables/useAuth';
+import { useDateStore } from '../composables/useDateStore';
 import { computed } from 'vue';
+import PageHeader from '../components/PageHeader.vue';
 
 export default {
   name: 'NotificationsView',
+  components: {
+    PageHeader
+  },
   setup() {
     const { currentUser, isAdmin } = useAuth();
+    const { selectedDateString } = useDateStore();
     const isAdminUser = computed(() => {
       if (!currentUser.value) return false;
       if (isAdmin.value) return true;
       const adminUids = (import.meta.env.VITE_ADMIN_UIDS || '').split(',').map(u => u.trim());
       return adminUids.includes(currentUser.value.uid);
     });
-    return { isAdminUser, currentUser };
+    return { isAdminUser, currentUser, selectedDateString };
   },
   data() {
     return {
       notificationSettings: {
         emailEnabled: true,
         slackEnabled: false,
-        mondayEnabled: false,
         email: '',
         frequency: 'daily'
       },
@@ -204,7 +210,6 @@ export default {
           this.notificationSettings = {
             emailEnabled: true,
             slackEnabled: false,
-            mondayEnabled: false,
             email: this.currentUser?.email || '',
             frequency: 'daily'
           };
@@ -217,7 +222,6 @@ export default {
           this.notificationSettings = {
             emailEnabled: response.data.data.emailNotifications || true,
             slackEnabled: response.data.data.slackNotifications || false,
-            mondayEnabled: response.data.data.mondayComNotifications || false,
             email: response.data.data.email || this.currentUser?.email || '',
             frequency: response.data.data.frequency || 'daily'
           };
@@ -237,7 +241,6 @@ export default {
         await axios.put('/api/notifications/settings', {
           emailNotifications: this.notificationSettings.emailEnabled,
           slackNotifications: this.notificationSettings.slackEnabled,
-          mondayComNotifications: this.notificationSettings.mondayEnabled,
           email: this.notificationSettings.email,
           frequency: this.notificationSettings.frequency
         }, {
@@ -260,11 +263,19 @@ export default {
           this.showSuccessNotification('Notification sent successfully (demo mode)');
           return;
         }
-        const response = await axios.post('/api/notifications/send-individual', {}, {
+        
+        // Include the selected date from the global date store
+        const requestData = {};
+        if (this.selectedDateString) {
+          requestData.date = this.selectedDateString;
+        }
+        
+        const response = await axios.post('/api/notifications/send-individual', requestData, {
           headers: { Authorization: `Bearer ${idToken}` }
         });
         if (response.data && response.data.success) {
-          this.showSuccessNotification('Notification sent successfully to your account');
+          const dateMessage = this.selectedDateString ? ` for ${new Date(this.selectedDateString + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}` : '';
+          this.showSuccessNotification(`Notification sent successfully to your account${dateMessage}`);
         } else {
           throw new Error('Failed to send notification');
         }
@@ -378,31 +389,9 @@ export default {
 /* IBM Carbon Design System styling */
 .notifications-container {
   padding: 0;
-  margin-top: 64px;
+  margin-top: 48px;
   background-color: #f4f4f4;
   flex: 1; /* Use flex instead of min-height calculation */
-}
-
-.page-header {
-  background-color: #ffffff;
-  padding: 2rem 2rem 1.5rem 2rem;
-  border-bottom: 1px solid #e0e0e0;
-  margin-bottom: 0;
-}
-
-.page-title {
-  font-size: 2rem;
-  font-weight: 400;
-  color: #161616;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.25;
-}
-
-.page-subtitle {
-  font-size: 1rem;
-  color: #525252;
-  margin: 0;
-  font-weight: 400;
 }
 
 .notifications-grid {
@@ -716,14 +705,6 @@ export default {
 @media (max-width: 768px) {
   .notifications-container {
     margin-top: 48px;
-  }
-  
-  .page-header {
-    padding: 1.5rem 1rem 1rem 1rem;
-  }
-  
-  .page-title {
-    font-size: 1.75rem;
   }
   
   .notifications-grid {

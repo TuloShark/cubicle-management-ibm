@@ -1,15 +1,10 @@
 <template>
   <div class="utilization-container">
-    <div class="page-header">
-      <h1 class="page-title">Utilization Reports</h1>
-      <div class="page-subtitle-with-date">
-        <p class="page-subtitle">Daily cubicle usage analytics and historical trends</p>
-        <div class="current-date-display">
-          <span class="date-label">Reports for:</span>
-          <span class="date-value">{{ formatDisplayDate(selectedDateInput) }}</span>
-        </div>
-      </div>
-    </div>
+    <!-- Simple Consistent Header Component -->
+    <PageHeader
+      title="Utilization Reports"
+      subtitle="Daily cubicle usage analytics and historical trends"
+    />
     
     <!-- Main Reports Dashboard -->
     <cv-grid class="utilization-grid">
@@ -440,13 +435,15 @@ import { useRoute } from 'vue-router';
 import Download16 from '@carbon/icons-vue/lib/download/16';
 import View16 from '@carbon/icons-vue/lib/view/16';
 import TrashCan16 from '@carbon/icons-vue/lib/trash-can/16';
+import PageHeader from '../components/PageHeader.vue';
 
 export default {
   name: 'UtilizationView',
   components: {
     Download16,
     View16,
-    TrashCan16
+    TrashCan16,
+    PageHeader
   },
   setup() {
     const { currentUser, isAdmin } = useAuth();
@@ -623,6 +620,13 @@ export default {
         console.log('UtilizationView - Route date changed:', newDate);
         this.setSelectedDate(newDate);
       }
+    },
+    // Watch for selected date changes and refetch reports
+    selectedDateString(newDate, oldDate) {
+      if (newDate !== oldDate) {
+        console.log('UtilizationView - Selected date changed from', oldDate, 'to', newDate);
+        this.setLatestReportForSelectedDate();
+      }
     }
   },
   methods: {
@@ -653,7 +657,7 @@ export default {
       try {
         const idToken = localStorage.getItem('auth_token');
         
-        // Build query parameters - no date filtering, show all reports
+        // Build query parameters - fetch all reports for the list
         const params = {
           page: this.currentPage,
           limit: this.pageSize
@@ -666,8 +670,8 @@ export default {
         });
         
         console.log('UtilizationView - API response:', response.data);
-        this.reports = response.data.reports || [];
-        this.pagination = response.data.pagination || {
+        this.reports = response.data.data?.reports || [];
+        this.pagination = response.data.data?.pagination || {
           totalReports: 0,
           totalPages: 1,
           hasNext: false,
@@ -676,12 +680,8 @@ export default {
         
         console.log('UtilizationView - Set reports:', this.reports.length, 'reports');
         
-        // Set latest report for quick stats
-        if (this.reports.length > 0) {
-          this.latestReport = this.reports[0];
-        } else {
-          this.latestReport = null;
-        }
+        // Set latest report for quick stats - find report for selected date
+        this.setLatestReportForSelectedDate();
       } catch (error) {
         console.error('UtilizationView - Error fetching reports:', error);
         console.error('UtilizationView - Error response:', error.response);
@@ -705,6 +705,35 @@ export default {
       } finally {
         console.log('UtilizationView - fetchReports finished, loading.reports = false');
         this.loading.reports = false;
+      }
+    },
+    
+    setLatestReportForSelectedDate() {
+      console.log('UtilizationView - Setting latest report for selected date:', this.selectedDateString);
+      
+      if (!this.selectedDateString || this.reports.length === 0) {
+        this.latestReport = null;
+        console.log('UtilizationView - No selected date or no reports, clearing latestReport');
+        return;
+      }
+      
+      // Find a report that matches the selected date
+      // Reports have weekStartDate field that should match our selected date
+      const selectedDateStr = this.selectedDateString;
+      const matchingReport = this.reports.find(report => {
+        if (report.weekStartDate) {
+          const reportDate = new Date(report.weekStartDate).toISOString().split('T')[0];
+          return reportDate === selectedDateStr;
+        }
+        return false;
+      });
+      
+      if (matchingReport) {
+        this.latestReport = matchingReport;
+        console.log('UtilizationView - Found matching report for date:', selectedDateStr);
+      } else {
+        this.latestReport = null;
+        console.log('UtilizationView - No report found for selected date:', selectedDateStr);
       }
     },
     
@@ -807,7 +836,7 @@ export default {
           headers: { Authorization: `Bearer ${idToken}` }
         });
         
-        this.selectedReport = response.data;
+        this.selectedReport = response.data.data;
         this.showReportModal = true;
       } catch (error) {
         console.error('Error fetching report details:', error);
@@ -932,6 +961,13 @@ export default {
     },
     
     formatDate(dateString) {
+      if (!dateString) return '';
+      // Handle YYYY-MM-DD format to avoid timezone issues
+      if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const [year, month, day] = dateString.split('-').map(Number);
+        const date = new Date(year, month - 1, day);
+        return date.toLocaleDateString();
+      }
       return new Date(dateString).toLocaleDateString();
     },
     
@@ -1018,6 +1054,21 @@ export default {
         return dateStr;
       }
       return 'Unknown Date';
+    },
+
+    // Event handlers for PageHeader component
+    onDateChanged(date) {
+      console.log('UtilizationView - Date changed from PageHeader:', date);
+      // Update global date store - this will trigger reactive updates
+      this.setSelectedDate(date);
+      
+      // Update route parameter to keep URL in sync
+      if (this.$route.params.date !== date) {
+        this.$router.replace({
+          name: 'utilization',
+          params: { date }
+        });
+      }
     },
   }
 };
@@ -1171,63 +1222,6 @@ export default {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Page Header - IBM Carbon Design */
-.page-header {
-  background: #161616;
-  color: #ffffff;
-  padding: 2rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid #393939;
-}
-
-.page-title {
-  font-size: 2.5rem;
-  font-weight: 300;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-  font-family: 'IBM Plex Sans', sans-serif;
-}
-
-.page-subtitle-with-date {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.page-subtitle {
-  font-size: 1rem;
-  opacity: 0.75;
-  margin: 0;
-  font-weight: 400;
-  font-family: 'IBM Plex Sans', sans-serif;
-}
-
-.current-date-display {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: 'IBM Plex Sans', sans-serif;
-}
-
-.date-label {
-  font-size: 0.875rem;
-  opacity: 0.7;
-  font-weight: 400;
-}
-
-.date-value {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #78a9ff;
-  background: rgba(120, 169, 255, 0.1);
-  padding: 0.25rem 0.75rem;
-  border-radius: 4px;
-  border: 1px solid rgba(120, 169, 255, 0.3);
 }
 
 /* Grid Layout */
@@ -2084,30 +2078,6 @@ export default {
 @media (max-width: 768px) {
   .utilization-container {
     margin-top: 48px;
-  }
-  
-  .page-header {
-    padding: 1.5rem 1rem 1rem 1rem;
-  }
-  
-  .page-subtitle-with-date {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-  }
-  
-  .current-date-display {
-    align-self: stretch;
-    justify-content: space-between;
-  }
-  
-  .date-value {
-    font-size: 0.8125rem;
-    padding: 0.25rem 0.5rem;
-  }
-  
-  .page-title {
-    font-size: 1.5rem;
   }
   
   .utilization-grid {

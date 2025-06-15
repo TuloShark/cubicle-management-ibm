@@ -1,13 +1,14 @@
 <template>
   <div class="reservations-container">
-    <div class="page-header">
-      <h1 class="page-title">Cubicle Reservations</h1>
-      <p class="page-subtitle">Reserve, release, and manage office cubicle assignments</p>
-    </div>
+    <!-- Simple Consistent Header Component -->
+    <PageHeader
+      title="Cubicle Reservations"
+      subtitle="Reserve, release, and manage office cubicle assignments"
+    />
     
     <!-- Main Content Area -->
     <cv-grid class="reservations-grid">
-      <!-- Quick Actions Panel - Enhanced with Date Selection -->
+      <!-- Quick Actions Panel - Simplified without date controls -->
       <cv-row class="actions-row">
         <cv-column :sm="4" :md="16" :lg="16">
           <div class="actions-panel">
@@ -15,8 +16,8 @@
               <h3 class="panel-title">Quick Actions</h3>
               <p class="panel-subtitle">Common cubicle management operations</p>
             </div>
-
-            <!-- Date Selection Enhancement -->
+            
+            <!-- Date Selection Panel -->
             <div class="date-selection-container">
               <div class="date-selector-group">
                 <label class="date-label">Select Date:</label>
@@ -44,51 +45,18 @@
                   <div :key="selectedDateString" class="stats-content">
                     <div class="stat-item">
                       <span class="stat-label">Selected Date</span>
-                      <span class="stat-value">{{ selectedDateString }}</span>
+                      <span class="stat-value">{{ formatDisplayDate(selectedDateString) }}</span>
                     </div>
                     <div class="stat-item">
                       <span class="stat-label">Utilization</span>
-                      <span class="stat-value">{{ dateStats.general.percentReserved }}%</span>
+                      <span class="stat-value">{{ dateStats.general ? dateStats.general.percentReserved : 0 }}%</span>
                     </div>
                   </div>
                 </transition>
               </div>
             </div>
             
-            <div class="actions-content">
-              <div class="action-container">
-                <div class="action-info-card">
-                  <span class="action-label">Refresh Cubicles</span>
-                  <span class="action-description">Update all cubicle statuses for selected date</span>
-                </div>
-                <cv-button 
-                  @click="handleRefresh" 
-                  kind="primary" 
-                  size="lg"
-                  class="action-button refresh-button"
-                  :disabled="loading"
-                >
-                  {{ loading ? 'Loading...' : 'Refresh' }}
-                </cv-button>
-              </div>
-              
-              <div class="action-container">
-                <div class="action-info-card">
-                  <span class="action-label">View Statistics</span>
-                  <span class="action-description">Check usage analytics and metrics</span>
-                </div>
-                <cv-button 
-                  @click="goToStatistics" 
-                  kind="secondary" 
-                  size="lg"
-                  class="action-button statistics-button"
-                >
-                  Statistics
-                </cv-button>
-              </div>
-            </div>
-            
-            <!-- Status Legend inside actions panel -->
+            <!-- Status Legend -->
             <div class="legend-container">
               <div 
                 class="status-legend"
@@ -198,13 +166,15 @@ import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import DateCubicleGrid from '../components/DateCubicleGrid.vue';
+import PageHeader from '../components/PageHeader.vue';
 import useAuth from '../composables/useAuth';
 import { useDateStore } from '../composables/useDateStore';
 
 export default {
   name: 'ReservationsView',
-  components: { 
-    DateCubicleGrid 
+  components: {
+    DateCubicleGrid,
+    PageHeader
   },
   setup() {
     const router = useRouter();
@@ -249,6 +219,23 @@ export default {
       const day = String(futureDate.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     });
+
+    // Format display date function to match the header
+    const formatDisplayDate = (dateStr) => {
+      if (!dateStr) return 'No date selected'
+      try {
+        const date = new Date(dateStr + 'T00:00:00') // Parse as local date
+        return date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        })
+      } catch (error) {
+        console.warn('Error formatting date:', error)
+        return dateStr
+      }
+    }
 
     // Methods - enhanced but keeping original patterns
     const fetchCubiclesForDate = async (date = selectedDate.value) => {
@@ -351,7 +338,13 @@ export default {
         
       } catch (err) {
         console.error('Error refreshing cubicles data:', err);
-        // Don't show error for silent refresh, just log it
+        // If the refresh fails, we should at least preserve the existing data
+        // rather than clearing it completely
+        if (err.response?.status === 401) {
+          error.value = 'Authentication expired. Please login again.';
+        } else if (err.response?.status === 403) {
+          error.value = 'Access denied. Insufficient permissions.';
+        }
       }
     };
 
@@ -576,7 +569,15 @@ export default {
     let socketUpdateTimeout = null;
 
     const setupSocket = () => {
-      socket.value = io('http://localhost:3000');
+      // Use environment variable or default to localhost:3000
+      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      socket.value = io(apiUrl, {
+        transports: ['websocket', 'polling'],
+        upgrade: true,
+        withCredentials: true,
+        forceNew: false,
+        autoConnect: true
+      });
       
       socket.value.on('dateReservationUpdate', (data) => {
         if (data.date === selectedDateString.value) {
@@ -655,7 +656,7 @@ export default {
         }
         
         // Update global cubicle status (e.g., for error state)
-        await axios.put(`/cubicles/${cubicle._id}`, { 
+        await axios.put(`/api/cubicles/${cubicle._id}`, { 
           status: cubicle.status 
         }, {
           headers: {
@@ -680,6 +681,13 @@ export default {
       }
     };
 
+    // New event handlers for PageHeader component
+    const onDateChanged = async (newDateString) => {
+      // The date store will automatically update and trigger watchers
+      // Just ensure we have the latest data
+      await refreshDataSilently();
+    };
+
     return {
       selectedDate,
       selectedDateInput,
@@ -692,6 +700,7 @@ export default {
       minDate,
       maxDate,
       gridContainer,
+      formatDisplayDate,
       fetchCubiclesForDate,
       refreshDataSilently,
       handleDateInputChange,
@@ -702,6 +711,7 @@ export default {
       updateCubicleState,
       toggleLegendCounts,
       goToStatistics,
+      onDateChanged,
     };
   }
 };
@@ -715,29 +725,6 @@ export default {
   padding: 0;
   margin: 0;
   margin-top: 48px;
-}
-
-.page-header {
-  background: #161616;
-  color: white;
-  padding: 2rem;
-  margin-bottom: 0;
-  border-bottom: 1px solid #393939;
-}
-
-.page-title {
-  font-size: 2.5rem;
-  font-weight: 300;
-  margin: 0 0 0.5rem 0;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-}
-
-.page-subtitle {
-  font-size: 1rem;
-  opacity: 0.75;
-  margin: 0;
-  font-weight: 400;
 }
 
 .reservations-grid {
@@ -1481,14 +1468,6 @@ export default {
 }
 
 /* Modern Flexbox Responsive Design - No Media Queries Needed! */
-.page-header {
-  padding: clamp(0.75rem, 2vw, 1.5rem);
-}
-
-.page-title {
-  font-size: clamp(1.5rem, 4vw, 2.5rem);
-}
-
 .actions-content {
   /* Auto-stacking when space is tight */
   flex-direction: column;

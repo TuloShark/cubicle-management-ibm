@@ -1,34 +1,76 @@
+/**
+ * @fileoverview Date-based Cubicle Management Controller
+ * @description Comprehensive cubicle operations for specific dates with enterprise-grade
+ * validation, security, performance optimizations, and real-time capabilities
+ * 
+ * @version 2.1.0
+ * @author Cubicle Management System - IBM Space Optimization
+ * @since 1.0.0
+ * 
+ * @module DateCubicleController
+ * 
+ * API Endpoints:
+ * - GET    /api/cubicles/date/:date              - Get cubicles for specific date
+ * - GET    /api/cubicles/stats/date/:date        - Get statistics for specific date  
+ * - POST   /api/cubicles/reserve/date/:date      - Reserve cubicle for date
+ * - DELETE /api/cubicles/reservation/:id         - Cancel reservation
+ * - GET    /api/cubicles/reservations/date/:date - Get all reservations (admin)
+ * - PUT    /api/cubicles/:id                     - Update cubicle status
+ */
+
 const express = require('express');
 const { param, body, validationResult } = require('express-validator');
-const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const Cubicle = require('../models/Cubicle');
 const Reservation = require('../models/Reservation');
+const { getAdminUids } = require('../utils/adminUtils');
 const { validarUsuario, validarAdmin } = require('../middleware/auth');
+const { rateLimiters, rateLimiterCombinations } = require('../middleware/rateLimiting');
 const logger = require('../logger');
 
+// ================================================================================
+// CONFIGURATION CONSTANTS
+// ================================================================================
+
 /**
- * @fileoverview Date-based Cubicle Controller
- * @description Handles cubicle operations for specific dates with proper validation, 
- * security, and performance optimizations
- * @version 2.0.0
- * @author Cubicle Management System
+ * Available cubicle sections in the system
+ * Used for statistics calculations and validation
  */
+const CUBICLE_SECTIONS = ['A', 'B', 'C'];
 
-// Rate limiting for reservation operations
-const reservationLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 reservation requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many reservation requests. Please try again later.' }
-});
+// ================================================================================
+// UTILITY FUNCTIONS
+// ================================================================================
 
 /**
- * Utility function to create date range for a given date
- * Centralizes date parsing logic and handles timezone consistently
- * @param {Date} targetDate - The target date
- * @returns {Object} Object containing startOfDay and endOfDay dates
+ * Admin detection utility
+ * Centralizes admin privilege checking for consistency across endpoints
+ * @param {Object} user - JWT decoded user object from Firebase authentication
+ * @returns {boolean} True if user has admin privileges
+ * @example
+ * const isAdmin = isUserAdmin(req.user);
+ * if (!isAdmin) return res.status(403).json({error: 'Admin required'});
+ */
+function isUserAdmin(user) {
+  // Primary: Check Firebase custom claims (preferred method)
+  if (user.admin === true) {
+    return true;
+  }
+  
+  // Fallback: Environment variable check for UIDs
+  const adminUids = getAdminUids();
+  return adminUids.includes(user.uid);
+}
+
+/**
+ * Date range creation utility
+ * Creates consistent start/end date boundaries for database queries
+ * @param {Date} targetDate - The target date for range creation
+ * @returns {{startOfDay: Date, endOfDay: Date}} Date range object
+ * @example
+ * const {startOfDay, endOfDay} = createDateRange(new Date('2025-06-14'));
+ * // startOfDay: 2025-06-14T00:00:00.000Z
+ * // endOfDay: 2025-06-14T23:59:59.999Z
  */
 function createDateRange(targetDate) {
   const startOfDay = new Date(targetDate);
@@ -39,24 +81,102 @@ function createDateRange(targetDate) {
 }
 
 /**
- * Utility function to format date consistently
- * @param {Date} date - Date to format
+ * Date formatting utility
+ * Provides consistent YYYY-MM-DD formatting across the application
+ * @param {Date} date - Date object to format
  * @returns {string} Formatted date string (YYYY-MM-DD)
+ * @example
+ * formatDateString(new Date('2025-06-14T15:30:00Z')); // '2025-06-14'
  */
 function formatDateString(date) {
   return date.toISOString().split('T')[0];
 }
 
 /**
- * Utility function to validate date is not in the past (except today)
- * @param {Date} date - Date to validate
- * @returns {boolean} True if date is valid for reservations
+ * Reservation date validation utility
+ * Ensures reservations can only be made for today or future dates
+ * @param {Date} date - Date to validate for reservation eligibility
+ * @returns {boolean} True if date is valid for new reservations
+ * @example
+ * isValidReservationDate(new Date('2025-06-13')); // false (if today is 2025-06-14)
+ * isValidReservationDate(new Date('2025-06-14')); // true (today)
+ * isValidReservationDate(new Date('2025-06-15')); // true (future)
  */
 function isValidReservationDate(date) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return date >= today;
 }
+
+/**
+ * Statistics: Unique users extraction
+ * Efficiently extracts unique users from reservations for analytics
+ * @param {Array} reservations - Array of reservation objects
+ * @returns {Object} Map-like object with emails as keys for O(1) lookups
+ * @private
+ */
+function getUniqueUsers(reservations) {
+  return reservations.reduce((acc, r) => {
+    if (r.user?.email) {
+      acc[r.user.email] = true;
+    }
+    return acc;
+  }, {});
+}
+
+/**
+ * Statistics: User analytics calculation
+ * Generates user-specific statistics with privacy protection
+ * @param {Array} reservations - Array of reservation objects
+ * @returns {Array} Sorted array of user statistics
+ * @example
+ * // Returns: [{user: 'john', reserved: 3, percent: 50}, ...]
+ */
+function calculateUserStats(reservations) {
+  const userCounts = reservations.reduce((acc, r) => {
+    if (r.user?.email) {
+      const email = r.user.email;
+      acc[email] = (acc[email] || 0) + 1;
+    }
+    return acc;
+  }, {});
+
+  return Object.entries(userCounts)
+    .map(([email, count]) => ({
+      user: email.split('@')[0], // Privacy: show only username part
+      reserved: count,
+      percent: reservations.length > 0 ? Math.round((count / reservations.length) * 100) : 0
+    }))
+    .sort((a, b) => b.reserved - a.reserved);
+}
+
+/**
+ * Statistics: Comparison metrics calculation
+ * Generates system-wide comparison metrics for dashboard
+ * @param {Array} reservations - Array of reservation objects
+ * @param {Array} cubicles - Array of cubicle objects
+ * @returns {Array} Array of metric objects for comparison display
+ * @example
+ * // Returns: [{metric: 'Total Users', value: 25}, {metric: 'Error Rate', value: '5%'}, ...]
+ */
+function calculateComparisonMetrics(reservations, cubicles) {
+  const uniqueUsers = getUniqueUsers(reservations);
+  const uniqueUserCount = Object.keys(uniqueUsers).length;
+  const errorCubicles = cubicles.filter(c => c.status === 'error').length;
+  
+  return [
+    { metric: 'Total Users', value: uniqueUserCount },
+    { metric: 'Total Reservations', value: reservations.length },
+    { metric: 'Avg. Reservations/User', value: reservations.length > 0 && uniqueUserCount > 0 
+        ? Math.round(reservations.length / uniqueUserCount) : 0 },
+    { metric: 'Error Rate', value: `${cubicles.length > 0 
+        ? Math.round((errorCubicles / cubicles.length) * 100) : 0}%` }
+  ];
+}
+
+// ================================================================================
+// API ROUTE HANDLERS
+// ================================================================================
 
 /**
  * GET /date/:date
@@ -132,8 +252,8 @@ router.get('/date/:date', [
       cubicles: enhancedCubicles,
       summary: {
         total: enhancedCubicles.length,
-        available: enhancedCubicles.filter(c => c.status === 'available').length,
-        reserved: enhancedCubicles.filter(c => c.status === 'reserved').length,
+        available: enhancedCubicles.filter(c => c.dateStatus === 'available' && c.status !== 'error').length,
+        reserved: enhancedCubicles.filter(c => c.dateStatus === 'reserved').length,
         error: enhancedCubicles.filter(c => c.status === 'error').length
       }
     });
@@ -184,7 +304,7 @@ router.get('/stats/date/:date', [
         percentAvailable: cubicles.length > 0 ? Math.round(((cubicles.length - reservations.length) / cubicles.length) * 100) : 0,
         percentError: cubicles.length > 0 ? Math.round((cubicles.filter(c => c.status === 'error').length / cubicles.length) * 100) : 0
       },
-      sections: ['A', 'B', 'C'].map(section => {
+      sections: CUBICLE_SECTIONS.map(section => {
         const sectionCubicles = cubicles.filter(c => c.section === section);
         const sectionReservations = reservations.filter(r => r.cubicle?.section === section);
         
@@ -198,34 +318,8 @@ router.get('/stats/date/:date', [
             : 0
         };
       }),
-      users: Object.entries(
-        reservations.reduce((acc, r) => {
-          if (r.user?.email) {
-            const email = r.user.email;
-            acc[email] = (acc[email] || 0) + 1;
-          }
-          return acc;
-        }, {})
-      ).map(([email, count]) => ({
-        user: email.split('@')[0], // Privacy: show only username part
-        reserved: count,
-        percent: reservations.length > 0 ? Math.round((count / reservations.length) * 100) : 0
-      })).sort((a, b) => b.reserved - a.reserved),
-      comparison: [
-        { metric: 'Total Users', value: Object.keys(reservations.reduce((acc, r) => {
-          if (r.user?.email) acc[r.user.email] = true;
-          return acc;
-        }, {})).length },
-        { metric: 'Total Reservations', value: reservations.length },
-        { metric: 'Avg. Reservations/User', value: reservations.length > 0 && Object.keys(reservations.reduce((acc, r) => {
-          if (r.user?.email) acc[r.user.email] = true;
-          return acc;
-        }, {})).length > 0 ? Math.round(reservations.length / Object.keys(reservations.reduce((acc, r) => {
-          if (r.user?.email) acc[r.user.email] = true;
-          return acc;
-        }, {})).length) : 0 },
-        { metric: 'Error Rate', value: `${cubicles.length > 0 ? Math.round((cubicles.filter(c => c.status === 'error').length / cubicles.length) * 100) : 0}%` }
-      ],
+      users: calculateUserStats(reservations),
+      comparison: calculateComparisonMetrics(reservations, cubicles),
       timestamp: new Date().toISOString()
     };
 
@@ -247,7 +341,7 @@ router.get('/stats/date/:date', [
  * @returns {Object} Reservation confirmation
  */
 router.post('/reserve/date/:date', [
-  reservationLimiter,
+  ...rateLimiterCombinations.reservationOperation,
   validarUsuario,
   param('date').isISO8601().toDate().custom((value) => {
     if (!isValidReservationDate(value)) {
@@ -286,7 +380,7 @@ router.post('/reserve/date/:date', [
     if (existingReservation) {
       return res.status(409).json({ 
         error: 'Cubicle already reserved for this date',
-        conflictWith: existingReservation.user.email
+        message: 'This cubicle is not available for the selected date'
       });
     }
 
@@ -377,9 +471,9 @@ router.delete('/reservation/:reservationId', [
       return res.status(404).json({ error: 'Reservation not found' });
     }
 
-    // Enhanced authorization check using JWT claims
+    // Enhanced authorization check using centralized admin detection
     const isOwner = reservation.user.uid === req.user.uid;
-    const isAdmin = req.user.admin === true; // Proper boolean check
+    const isAdmin = isUserAdmin(req.user);
 
     if (!isOwner && !isAdmin) {
       logger.warn('Unauthorized reservation cancellation attempt', {
@@ -480,7 +574,7 @@ router.get('/reservations/date/:date', [
       reservations: formattedReservations,
       summary: {
         total: formattedReservations.length,
-        sections: ['A', 'B', 'C'].map(section => ({
+        sections: CUBICLE_SECTIONS.map(section => ({
           section,
           count: formattedReservations.filter(r => r.cubicle.section === section).length
         }))
@@ -524,8 +618,7 @@ router.put('/:id', validarUsuario, [
 
     // Check permissions for error state (admin only)
     if (status === 'error') {
-      const adminUids = (process.env.ADMIN_UIDS || '').split(',').map(u => u.trim());
-      const isAdmin = adminUids.includes(req.user.uid);
+      const isAdmin = isUserAdmin(req.user);
       
       if (!isAdmin) {
         logger.warn('Non-admin user attempted to set cubicle to error state', {
@@ -536,8 +629,9 @@ router.put('/:id', validarUsuario, [
       }
     }
 
-    // Update cubicle status
+    // Update cubicle status and audit trail
     cubicle.status = status;
+    cubicle.lastModifiedBy = req.user.email || req.user.uid;
     await cubicle.save();
 
     // If status is changed to available, remove any existing reservations

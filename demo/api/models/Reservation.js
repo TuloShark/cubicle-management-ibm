@@ -1,5 +1,3 @@
-const mongoose = require('mongoose');
-
 /**
  * @fileoverview Reservation Model
  * 
@@ -8,9 +6,11 @@ const mongoose = require('mongoose');
  * business intelligence capabilities with proper validation, indexing, and audit trails.
  * 
  * @author IBM Space Optimization Team
- * @version 2.0.0
+ * @version 2.1.0
  * @since 1.0.0
  */
+
+const mongoose = require('mongoose');
 
 /**
  * Reservation Schema
@@ -252,9 +252,29 @@ const ReservationSchema = new mongoose.Schema({
         }
         
         // Check-in cannot be in the future
-        return checkedInAt <= new Date();
+        if (checkedInAt > new Date()) {
+          return false;
+        }
+        
+        // Check-in must be on the same date as reservation
+        const checkedInDate = new Date(checkedInAt);
+        checkedInDate.setHours(0, 0, 0, 0);
+        const reservationDate = new Date(this.date);
+        reservationDate.setHours(0, 0, 0, 0);
+        
+        if (checkedInDate.getTime() !== reservationDate.getTime()) {
+          return false;
+        }
+        
+        // Business hours validation (6 AM to 10 PM)
+        const hour = checkedInAt.getHours();
+        if (hour < 6 || hour >= 22) {
+          return false;
+        }
+        
+        return true;
       },
-      message: 'Check-in time must be after reservation time and not in the future'
+      message: 'Check-in time must be after reservation time, not in the future, on the same date as reservation, and during business hours (6 AM - 10 PM)'
     }
   },
 
@@ -281,9 +301,34 @@ const ReservationSchema = new mongoose.Schema({
         }
         
         // Check-out cannot be in the future
-        return checkedOutAt <= new Date();
+        if (checkedOutAt > new Date()) {
+          return false;
+        }
+        
+        // Check-out should be on the same date as reservation (allow next day for overnight work)
+        const checkoutDate = new Date(checkedOutAt);
+        checkoutDate.setHours(0, 0, 0, 0);
+        const reservationDate = new Date(this.date);
+        reservationDate.setHours(0, 0, 0, 0);
+        const nextDay = new Date(reservationDate);
+        nextDay.setDate(nextDay.getDate() + 1);
+        
+        if (checkoutDate.getTime() !== reservationDate.getTime() && 
+            checkoutDate.getTime() !== nextDay.getTime()) {
+          return false;
+        }
+        
+        // Business hours validation for same-day checkout (allow 24/7 for next-day)
+        if (checkoutDate.getTime() === reservationDate.getTime()) {
+          const hour = checkedOutAt.getHours();
+          if (hour < 6 || hour >= 22) {
+            return false;
+          }
+        }
+        
+        return true;
       },
-      message: 'Check-out time must be after check-in time and not in the future'
+      message: 'Check-out time must be after check-in time, not in the future, within one day of reservation, and during business hours for same-day checkout (6 AM - 10 PM)'
     }
   },
 
@@ -719,6 +764,45 @@ ReservationSchema.virtual('formattedDate').get(function() {
 });
 
 // ====================================
+// UTILITY METHODS FOR BUSINESS LOGIC
+// ====================================
+
+/**
+ * Normalize Date to Start of Day
+ * 
+ * Utility function to normalize dates for consistent comparison and storage.
+ * Used throughout the model for date operations.
+ * 
+ * @param {Date} date - Date to normalize
+ * @returns {Date} Normalized date (start of day in UTC)
+ * 
+ * @example
+ * const normalized = ReservationSchema.statics.normalizeDate(new Date());
+ */
+ReservationSchema.statics.normalizeDate = function(date) {
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
+};
+
+/**
+ * Validate Business Hours
+ * 
+ * Checks if a given time falls within business hours (6 AM - 10 PM).
+ * Used for check-in/check-out validation.
+ * 
+ * @param {Date} time - Time to validate
+ * @returns {Boolean} True if within business hours
+ * 
+ * @example
+ * const isValid = ReservationSchema.statics.isBusinessHours(new Date());
+ */
+ReservationSchema.statics.isBusinessHours = function(time) {
+  const hour = time.getHours();
+  return hour >= 6 && hour < 22;
+};
+
+// ====================================
 // INSTANCE METHODS FOR BUSINESS LOGIC
 // ====================================
 
@@ -726,10 +810,14 @@ ReservationSchema.virtual('formattedDate').get(function() {
  * Check In User
  * 
  * Records when a user physically arrives and checks into their reserved cubicle.
- * Updates status and timestamps with validation.
+ * Updates status and timestamps with comprehensive validation.
  * 
  * @param {Date} [checkInTime] - Custom check-in time (defaults to now)
  * @returns {Promise<Reservation>} Updated reservation document
+ * 
+ * @throws {Error} If reservation status is invalid for check-in
+ * @throws {Error} If check-in time validation fails
+ * @throws {Error} If business rules are violated
  * 
  * @example
  * await reservation.checkIn();
@@ -742,13 +830,27 @@ ReservationSchema.methods.checkIn = async function(checkInTime = new Date()) {
     throw new Error(`Cannot check in from status '${this.status}'. Reservation must be active.`);
   }
   
-  // Validate check-in time
+  // Validate check-in time is not in the future
   if (checkInTime > new Date()) {
     throw new Error('Check-in time cannot be in the future');
   }
   
+  // Validate check-in time is after reservation was made
   if (checkInTime < this.reservedAt) {
     throw new Error('Check-in time cannot be before reservation was made');
+  }
+  
+  // Validate check-in is on the same date as reservation
+  const checkInDate = this.constructor.normalizeDate(checkInTime);
+  const reservationDate = this.constructor.normalizeDate(this.date);
+  
+  if (checkInDate.getTime() !== reservationDate.getTime()) {
+    throw new Error(`Check-in must be on the same date as reservation (${reservationDate.toDateString()})`);
+  }
+  
+  // Validate business hours
+  if (!this.constructor.isBusinessHours(checkInTime)) {
+    throw new Error('Check-in must be during business hours (6:00 AM - 10:00 PM)');
   }
   
   // Update status and timestamp
@@ -770,18 +872,29 @@ ReservationSchema.methods.checkIn = async function(checkInTime = new Date()) {
     }
   });
   
-  await this.save();
-  return this;
+  try {
+    await this.save();
+    return this;
+  } catch (error) {
+    // Reset status on save failure
+    this.status = 'active';
+    this.checkedInAt = undefined;
+    throw new Error(`Failed to check in: ${error.message}`);
+  }
 };
 
 /**
  * Check Out User
  * 
  * Records when a user finishes using the cubicle and checks out.
- * Calculates actual duration and updates analytics metadata.
+ * Calculates actual duration and updates analytics metadata with comprehensive validation.
  * 
  * @param {Date} [checkOutTime] - Custom check-out time (defaults to now)
  * @returns {Promise<Reservation>} Updated reservation document
+ * 
+ * @throws {Error} If reservation status is invalid for check-out
+ * @throws {Error} If check-out time validation fails
+ * @throws {Error} If business rules are violated
  * 
  * @example
  * await reservation.checkOut();
@@ -792,23 +905,51 @@ ReservationSchema.methods.checkOut = async function(checkOutTime = new Date()) {
     throw new Error(`Cannot check out from status '${this.status}'. User must be checked in first.`);
   }
   
-  // Validate check-out time
+  // Validate check-out time is not in the future
   if (checkOutTime > new Date()) {
     throw new Error('Check-out time cannot be in the future');
   }
   
+  // Validate check-out time is after check-in time
   if (checkOutTime < this.checkedInAt) {
     throw new Error('Check-out time cannot be before check-in time');
+  }
+  
+  // Validate check-out date (same day or next day for overnight work)
+  const checkOutDate = this.constructor.normalizeDate(checkOutTime);
+  const reservationDate = this.constructor.normalizeDate(this.date);
+  const nextDay = new Date(reservationDate);
+  nextDay.setDate(nextDay.getDate() + 1);
+  
+  const isSameDay = checkOutDate.getTime() === reservationDate.getTime();
+  const isNextDay = checkOutDate.getTime() === nextDay.getTime();
+  
+  if (!isSameDay && !isNextDay) {
+    throw new Error('Check-out must be on the same date as reservation or the following day');
+  }
+  
+  // Validate business hours for same-day checkout
+  if (isSameDay && !this.constructor.isBusinessHours(checkOutTime)) {
+    throw new Error('Same-day check-out must be during business hours (6:00 AM - 10:00 PM)');
+  }
+  
+  // Calculate duration and validate reasonable limits
+  const durationMs = checkOutTime.getTime() - this.checkedInAt.getTime();
+  const durationMinutes = Math.round(durationMs / (1000 * 60));
+  
+  if (durationMinutes < 0) {
+    throw new Error('Invalid duration calculated - check-out before check-in');
+  }
+  
+  if (durationMinutes > (24 * 60)) { // More than 24 hours
+    throw new Error('Duration cannot exceed 24 hours. For extended usage, create a new reservation.');
   }
   
   // Update status and timestamp
   this.status = 'checked-out';
   this.checkedOutAt = checkOutTime;
   
-  // Calculate actual duration in minutes
-  const durationMs = checkOutTime.getTime() - this.checkedInAt.getTime();
-  const durationMinutes = Math.round(durationMs / (1000 * 60));
-  
+  // Update metadata with duration
   if (!this.metadata) this.metadata = {};
   this.metadata.actualDuration = durationMinutes;
   
@@ -825,8 +966,18 @@ ReservationSchema.methods.checkOut = async function(checkOutTime = new Date()) {
     }
   });
   
-  await this.save();
-  return this;
+  try {
+    await this.save();
+    return this;
+  } catch (error) {
+    // Reset status on save failure
+    this.status = 'checked-in';
+    this.checkedOutAt = undefined;
+    if (this.metadata) {
+      delete this.metadata.actualDuration;
+    }
+    throw new Error(`Failed to check out: ${error.message}`);
+  }
 };
 
 /**
@@ -1224,6 +1375,112 @@ ReservationSchema.statics.getDailyUtilization = async function(startDate, endDat
   return await this.aggregate(pipeline).exec();
 };
 
+/**
+ * Expire Old Active Reservations
+ * 
+ * Automatically marks active reservations as expired when they're past their date
+ * and haven't been checked in. Used for maintenance and cleanup operations.
+ * 
+ * @param {Object} [options] - Expiration options
+ * @param {Number} [options.gracePeriodHours=2] - Grace period after reservation date before expiring
+ * @param {Boolean} [options.dryRun=false] - If true, returns count without making changes
+ * @returns {Promise<Object>} Expiration results with count and details
+ * 
+ * @example
+ * // Expire reservations older than 2 hours past their date
+ * const result = await Reservation.expireOldReservations();
+ * console.log(`Expired ${result.expiredCount} reservations`);
+ * 
+ * @example
+ * // Check what would be expired without making changes
+ * const dryRun = await Reservation.expireOldReservations({ dryRun: true });
+ */
+ReservationSchema.statics.expireOldReservations = async function(options = {}) {
+  const {
+    gracePeriodHours = 2,
+    dryRun = false
+  } = options;
+  
+  // Calculate cutoff date (reservation date + grace period)
+  const cutoffDate = new Date();
+  cutoffDate.setHours(cutoffDate.getHours() - gracePeriodHours);
+  cutoffDate.setHours(0, 0, 0, 0); // Start of day for date comparison
+  
+  // Find active reservations past their expiration date
+  const expiredQuery = {
+    status: 'active',
+    date: { $lt: cutoffDate }
+  };
+  
+  if (dryRun) {
+    const count = await this.countDocuments(expiredQuery);
+    const reservations = await this.find(expiredQuery)
+      .select('_id user.email date cubicle')
+      .populate('cubicle', 'serial section')
+      .lean();
+    
+    return {
+      wouldExpireCount: count,
+      reservations: reservations.map(r => ({
+        id: r._id,
+        userEmail: r.user.email,
+        date: r.date,
+        cubicle: r.cubicle?.serial || 'Unknown',
+        daysOverdue: Math.floor((new Date() - r.date) / (1000 * 60 * 60 * 24))
+      }))
+    };
+  }
+  
+  // Update expired reservations
+  const updateResult = await this.updateMany(
+    expiredQuery,
+    {
+      $set: {
+        status: 'expired'
+      },
+      $push: {
+        'metadata.modifications': {
+          timestamp: new Date(),
+          field: 'status',
+          oldValue: 'active',
+          newValue: 'expired',
+          modifiedBy: {
+            uid: 'system',
+            email: 'system@company.com'
+          }
+        }
+      }
+    }
+  );
+  
+  // Get details of expired reservations for logging
+  const expiredReservations = await this.find({
+    status: 'expired',
+    'metadata.modifications': {
+      $elemMatch: {
+        field: 'status',
+        newValue: 'expired',
+        timestamp: { $gte: new Date(Date.now() - 60000) } // Last minute
+      }
+    }
+  })
+  .select('_id user.email date cubicle')
+  .populate('cubicle', 'serial section')
+  .lean();
+  
+  return {
+    expiredCount: updateResult.modifiedCount,
+    matchedCount: updateResult.matchedCount,
+    reservations: expiredReservations.map(r => ({
+      id: r._id,
+      userEmail: r.user.email,
+      date: r.date,
+      cubicle: r.cubicle?.serial || 'Unknown',
+      daysOverdue: Math.floor((new Date() - r.date) / (1000 * 60 * 60 * 24))
+    }))
+  };
+};
+
 // ====================================
 // MIDDLEWARE FOR BUSINESS LOGIC
 // ====================================
@@ -1241,6 +1498,19 @@ ReservationSchema.pre('save', async function(next) {
       const normalizedDate = new Date(this.date);
       normalizedDate.setHours(0, 0, 0, 0);
       this.date = normalizedDate;
+    }
+    
+    // Check for existing reservation on same cubicle and date for new documents
+    if (this.isNew) {
+      const existingReservation = await this.constructor.findOne({
+        cubicle: this.cubicle,
+        date: this.date,
+        _id: { $ne: this._id }
+      });
+      
+      if (existingReservation) {
+        throw new Error(`Cubicle is already reserved for ${this.date.toDateString()}`);
+      }
     }
     
     // Normalize email to lowercase
@@ -1316,11 +1586,42 @@ ReservationSchema.pre('validate', function(next) {
       if (this.date < sixMonthsAgo) {
         throw new Error('Cannot create reservations more than 6 months in the past');
       }
+      
+      // Add maximum advance booking validation (90 days)
+      const maxAdvanceDate = new Date();
+      maxAdvanceDate.setDate(maxAdvanceDate.getDate() + 90);
+      
+      if (this.date > maxAdvanceDate) {
+        throw new Error('Cannot create reservations more than 90 days in advance');
+      }
+      
+      // Validate reservation is not for today if it's past business hours
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const reservationDate = new Date(this.date);
+      reservationDate.setHours(0, 0, 0, 0);
+      
+      if (reservationDate.getTime() === today.getTime()) {
+        const now = new Date();
+        if (now.getHours() >= 22) { // After 10 PM
+          throw new Error('Cannot create same-day reservations after 10:00 PM');
+        }
+      }
     }
     
     // Validate planned duration is reasonable
     if (this.metadata?.plannedDuration && (this.metadata.plannedDuration < 0.5 || this.metadata.plannedDuration > 24)) {
       throw new Error('Planned duration must be between 0.5 and 24 hours');
+    }
+    
+    // Validate equipment requests are not excessive
+    if (this.metadata?.equipment && this.metadata.equipment.length > 5) {
+      throw new Error('Cannot request more than 5 equipment items per reservation');
+    }
+    
+    // Validate notes length
+    if (this.metadata?.notes && this.metadata.notes.length > 500) {
+      throw new Error('Notes cannot exceed 500 characters');
     }
     
     next();
