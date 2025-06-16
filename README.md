@@ -1,334 +1,534 @@
-# 🏢 Space Optimization Demo
+# IBM Cubicle Management System
 
-A comprehensive cubicle management and utilization analytics platform built with Vue.js, Node.js, and MongoDB. Features real-time reservations, advanced reporting, and business intelligence dashboards.
+## Enterprise Space Optimization Platform
 
-## 🚀 Features
-
-### 📊 **Analytics & Reporting**
-- **Weekly Utilization Reports** with Excel export
-- **Real-time Statistics** via WebSocket connections
-- **Peak Hours Analysis** with 10-slot time breakdown
-- **Week-over-week Trends** with predictive analytics
-- **User Activity Tracking** and favorite section analysis
-- **Advanced Business Metrics** (efficiency, capacity utilization, growth indicators)
-
-### 🎯 **Space Management**
-- **54 Cubicles** across 3 sections (A, B, C) in 6×9 grid layout
-- **Real-time Reservation System** with instant updates
-- **Interactive Section Views** with availability status
-- **User-friendly Booking Interface** with conflict prevention
-
-### 🔐 **Authentication & Authorization**
-- **Firebase Authentication** with Google, GitHub, Email/Password
-- **Role-based Access Control** (Admin/User permissions)
-- **JWT Token Management** with automatic refresh
-- **Admin Dashboard** for user management
-
-### 🎨 **Modern UI/UX**
-- **Carbon Design System** components and icons
-- **Responsive Design** for mobile and desktop
-- **Real-time Updates** without page refresh
-- **Dark/Light Theme** support
-- **Accessibility** compliant interface
-
-## 🏗️ Architecture
-
-```
-📁 demo/
-├── 📁 api/                    # Backend (Node.js/Express)
-│   ├── 📁 controllers/        # Route handlers
-│   ├── 📁 models/            # MongoDB schemas
-│   ├── 📁 middleware/        # Auth & validation
-│   └── 📄 index.js           # Server entry point
-└── 📁 frontend/              # Frontend (Vue.js)
-    ├── 📁 src/
-    │   ├── 📁 views/         # Page components
-    │   ├── 📁 composables/   # Vue composition functions
-    │   └── 📁 router/        # Navigation routing
-    └── 📄 package.json
-```
-
-## 🛠️ Tech Stack
-
-### **Backend**
-- **Node.js** v18+ with Express.js
-- **MongoDB** with Mongoose ODM
-- **Firebase Admin SDK** for authentication
-- **Socket.IO** for real-time communication
-- **XLSX** for Excel report generation
-- **Winston** for structured logging
-
-### **Frontend**
-- **Vue.js 3** with Composition API
-- **Vue Router 4** for SPA navigation
-- **Carbon Design System** for UI components
-- **Chart.js** for data visualization
-- **Axios** for HTTP requests
-- **Socket.IO Client** for real-time updates
-
-### **Infrastructure**
-- **Docker** containerization support
-- **GitHub Actions** CI/CD pipeline
-- **Firebase** for authentication services
-- **MongoDB Atlas** cloud database option
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 18+ and npm
-- MongoDB (local or Atlas)
-- Firebase project with Authentication enabled
-
-### 1. Clone & Install
-```bash
-git clone <repository-url>
-cd demo
-
-# Install backend dependencies
-cd api && npm install
-
-# Install frontend dependencies
-cd ../frontend && npm install
-```
-
-### 2. Environment Configuration
-
-#### Backend Configuration
-Create a `.env` file in the `/api/` directory using the provided template:
-
-```bash
-cp .env.template .env
-```
-
-**Required Configuration:**
-
-| Variable | Description | Notes |
-|----------|-------------|-------|
-| `MONGO_URI` | MongoDB connection string | Local: `mongodb://localhost:27017/db_name`<br/>Atlas: Use connection string from MongoDB Atlas |
-| `FIREBASE_CREDENTIALS_JSON` | Firebase service account JSON | Generate from Firebase Console → Project Settings → Service Accounts |
-| `ADMIN_UIDS` | Admin user Firebase UIDs | Comma-separated list from Firebase Authentication console |
-| `EMAIL_HOST` | SMTP server hostname | Gmail: `smtp.gmail.com`, Outlook: `smtp-mail.outlook.com` |
-| `EMAIL_PORT` | SMTP server port | TLS: `587`, SSL: `465` |
-| `EMAIL_SECURE` | Use SSL connection | `true` for port 465, `false` for port 587 |
-| `EMAIL_USER` | SMTP username | Usually your email address |
-| `EMAIL_PASS` | SMTP password | Use app-specific passwords for Gmail/Outlook |
-| `EMAIL_FROM` | Sender email format | `"App Name <email@domain.com>"` |
-
-**Optional Configuration:**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3000` | API server port |
-| `SEED` | `false` | Populate database with sample data |
-| `NOTIFICATIONS_ENABLED` | `true` | Enable notification system |
-| `EMAIL_NOTIFICATIONS_ENABLED` | `true` | Enable email notifications |
-| `FRONTEND_URL` | `http://localhost:8080` | Frontend URL for email links |
-
-#### Frontend Configuration
-Create a `.env` file in the `/frontend/` directory:
-
-**Firebase Configuration** (from Firebase Console → Project Settings → General):
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_API_KEY` | Web API Key |
-| `VITE_AUTH_DOMAIN` | Authentication domain |
-| `VITE_PROJECT_ID` | Project ID |
-| `VITE_STORAGE_BUCKET` | Storage bucket |
-| `VITE_MESSAGING_SENDER_ID` | Messaging sender ID |
-| `VITE_APP_ID` | App ID |
-| `VITE_MEASUREMENT_ID` | Analytics measurement ID (optional) |
-
-**Application Configuration:**
-
-| Variable | Description |
-|----------|-------------|
-| `VITE_ADMIN_UIDS` | Same admin UIDs as backend |
-| `VITE_SENTRY_DSN` | Sentry error tracking DSN (optional) |
-
-#### Firebase Setup Guide
-
-1. **Create Firebase Project**: Go to [Firebase Console](https://console.firebase.google.com)
-2. **Enable Authentication**: Authentication → Sign-in method → Enable Email/Password, Google, GitHub
-3. **Generate Service Account**: Project Settings → Service Accounts → Generate new private key
-4. **Get Web App Config**: Project Settings → General → Your apps → Web app → Config
-5. **Set Admin Users**: Note down UIDs from Authentication → Users after first login
-
-### 3. Start Development Servers
-```bash
-# Terminal 1 - Backend
-cd api && npm run dev
-
-# Terminal 2 - Frontend  
-cd frontend && npm run dev
-```
-
-### 4. Access the Application
-- **Frontend**: http://localhost:8080
-- **Backend API**: http://localhost:3000
-- **Health Check**: http://localhost:3000/health
-
-## 📊 API Documentation
-
-### **Authentication Endpoints**
-```http
-POST   /reserve                    # Reserve a cubicle (user)
-GET    /api/cubicle-stats          # Real-time statistics
-GET    /report/daily               # Daily report (admin)
-```
-
-### **Utilization Reports**
-```http
-GET    /api/utilization-reports               # List reports (paginated)
-GET    /api/utilization-reports/:id           # Get specific report
-GET    /api/utilization-reports/:id/export    # Export Excel report
-POST   /api/utilization-reports/generate      # Generate custom week report (admin)
-POST   /api/utilization-reports/generate-current # Generate current week (admin)
-DELETE /api/utilization-reports/:id           # Delete report (admin)
-```
-
-### **User Management**
-```http
-GET    /api/users                  # List users (admin)
-GET    /api/users/:uid             # Get user details
-PUT    /api/users/:uid             # Update user (admin/self)
-POST   /api/users/:uid/setAdmin    # Set admin status (admin)
-```
-
-## 📈 Excel Reports Structure
-
-Generated reports include 6 detailed sheets:
-
-1. **Summary** - Key metrics and KPIs
-2. **Daily Breakdown** - Day-by-day utilization data
-3. **Section Analysis** - Performance by sections A, B, C
-4. **User Activity** - Individual user statistics
-5. **Peak Hours** - Hourly utilization patterns
-6. **Advanced Analytics** - Business insights and trends
-
-### Report Metrics Include:
-- **Utilization Percentages** (average, peak, lowest)
-- **User Engagement** (active users, favorite sections)
-- **Efficiency Metrics** (capacity utilization, turnover rates)
-- **Trend Analysis** (week-over-week changes, predictions)
-- **Business Insights** (consistency scores, growth indicators)
-
-## 🔐 Security Features
-
-- **JWT Authentication** with Firebase integration
-- **Role-based Authorization** (Admin/User levels)
-- **Rate Limiting** on API endpoints
-- **Input Validation** with express-validator
-- **CORS Protection** for cross-origin requests
-- **Error Handling** with structured logging
-
-## 🌐 Real-time Features
-
-- **Live Cubicle Status** updates via WebSocket
-- **Instant Reservation** confirmations
-- **Dynamic Statistics** refresh automatically
-- **Multi-user Synchronization** prevents conflicts
-- **Connection Management** with automatic reconnection
-
-## 🧪 Testing & Development
-
-### Running Tests
-```bash
-# Backend tests
-cd api && npm test
-
-# Frontend tests  
-cd frontend && npm test
-```
-
-### Development Tools
-- **ESLint** for code linting
-- **Prettier** for code formatting
-- **Vue DevTools** for debugging
-- **MongoDB Compass** for database management
-
-## 🐳 Docker Deployment
-
-```bash
-# Build and run with Docker Compose
-docker-compose up -d
-
-# Or build individual containers
-docker build -t space-demo-api ./api
-docker build -t space-demo-frontend ./frontend
-```
-
-## 📝 Environment Variables Reference
-
-### Backend Required Variables
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `MONGO_URI` | MongoDB connection string | `mongodb://localhost:27017/cubicle_db` |
-| `FIREBASE_CREDENTIALS_JSON` | Firebase service account JSON string | Complete JSON from Firebase Console |
-| `ADMIN_UIDS` | Comma-separated admin user Firebase UIDs | From Firebase Authentication console |
-| `EMAIL_HOST` | SMTP server hostname | Provider-specific hostname |
-| `EMAIL_PORT` | SMTP server port | `587` (TLS) or `465` (SSL) |
-| `EMAIL_USER` | SMTP authentication username | Usually your email address |
-| `EMAIL_PASS` | SMTP authentication password | App-specific password recommended |
-| `EMAIL_FROM` | Email sender format | `"App Name <email@domain.com>"` |
-
-### Backend Optional Variables
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PORT` | `3000` | API server port |
-| `SEED` | `false` | Populate database with sample data |
-| `EMAIL_SECURE` | `false` | Use SSL connection (true for port 465) |
-| `NOTIFICATIONS_ENABLED` | `true` | Enable notification system |
-| `EMAIL_NOTIFICATIONS_ENABLED` | `true` | Enable email notifications |
-| `FRONTEND_URL` | `http://localhost:8080` | Frontend URL for generating links |
-
-### Frontend Required Variables
-| Variable | Description | Source |
-|----------|-------------|--------|
-| `VITE_API_KEY` | Firebase Web API key | Firebase Console → Project Settings |
-| `VITE_PROJECT_ID` | Firebase project identifier | Firebase Console → Project Settings |
-| `VITE_AUTH_DOMAIN` | Firebase authentication domain | Firebase Console → Project Settings |
-| `VITE_STORAGE_BUCKET` | Firebase storage bucket | Firebase Console → Project Settings |
-| `VITE_MESSAGING_SENDER_ID` | Firebase messaging sender ID | Firebase Console → Project Settings |
-| `VITE_APP_ID` | Firebase app identifier | Firebase Console → Project Settings |
-
-### Frontend Optional Variables
-| Variable | Description |
-|----------|-------------|
-| `VITE_MEASUREMENT_ID` | Google Analytics measurement ID |
-| `VITE_ADMIN_UIDS` | Admin user IDs (same as backend) |
-| `VITE_SENTRY_DSN` | Sentry error tracking DSN |
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-For support and questions:
-- Create an issue in the GitHub repository
-- Check the [API Documentation](#api-documentation)
-- Review the [Environment Configuration](#environment-configuration)
-
-## 🚧 Future Enhancements
-
-### Planned Features
-- [ ] **Slack Notifications** for report generation
-- [ ] **Monday.com Integration** for project management
-- [ ] **Advanced Analytics Dashboard** with more visualizations
-- [ ] **Mobile App** (React Native)
-- [ ] **Calendar Integration** (Google Calendar, Outlook)
-- [ ] **Resource Allocation** algorithms
-- [ ] **Predictive Analytics** with ML models
+The IBM Cubicle Management System is a comprehensive, production-ready enterprise application designed for efficient office space utilization, real-time reservation management, and advanced business analytics. Built with modern web technologies and enterprise-grade architecture, this system provides scalable workspace management solutions for corporate environments.
 
 ---
 
-Built with ❤️ using modern web technologies for efficient space management.
+## 🏗️ System Architecture
+
+### Technical Stack
+
+**Backend Infrastructure:**
+- **Node.js 18+** with Express.js 5.x framework
+- **MongoDB 6.0+** with Mongoose ODM and advanced indexing
+- **Socket.IO 4.8+** for real-time WebSocket communication
+- **Firebase Admin SDK** for enterprise authentication
+- **Winston** structured logging with audit trails
+- **Express Rate Limiting** with Redis-compatible storage
+
+**Frontend Application:**
+- **Vue.js 3.5+** with Composition API and TypeScript 5.0+
+- **IBM Carbon Design System** (@carbon/vue 3.0+)
+- **Vite 6.3+** for optimized build pipeline
+- **Vue Router 4.5+** with authentication guards
+- **Chart.js 4.4+** for data visualization
+- **Axios** HTTP client with interceptors
+
+**Infrastructure & DevOps:**
+- **Docker** containerization with multi-stage builds
+- **Docker Compose** orchestration with health checks
+- **Nginx** reverse proxy with SSL termination support
+- **MongoDB** with replica sets and sharding support
+- **Redis** session storage and caching layer
+
+### Database Architecture
+
+**Collections & Models:**
+- **Cubicles**: 54-cubicle grid system (6×9 layout) with sections A, B, C
+- **Reservations**: Temporal reservation management with user tracking
+- **UtilizationReports**: Pre-computed analytics with Excel export capability
+- **NotificationHistory**: Audit trail for all system notifications
+- **NotificationSettings**: User preference management system
+
+**Indexing Strategy:**
+- Compound indexes on date/cubicle combinations for reservation queries
+- Section-based indexes for spatial analytics
+- User-based indexes for permission checking and audit trails
+- Background index creation with performance monitoring
+
+---
+
+## 🎯 Core Features
+
+### Reservation Management
+- **Real-time Grid Interface**: Interactive 6×9 cubicle grid with live status updates
+- **Conflict Prevention**: Atomic reservation transactions with database-level constraints
+- **Role-based Access Control**: Admin and user permissions with Firebase JWT integration
+- **WebSocket Synchronization**: Instant updates across all connected clients
+- **Audit Trail**: Complete reservation history with user attribution
+
+### Analytics & Reporting
+- **Utilization Reports**: Comprehensive weekly/daily analytics with trend analysis
+- **Excel Export**: Multi-sheet reports with advanced business metrics
+- **Peak Hours Analysis**: 10-slot time breakdown with usage patterns
+- **Section Performance**: Comparative analysis across cubicle sections
+- **User Activity Tracking**: Individual usage patterns and preferences
+- **Predictive Analytics**: Week-over-week trends with growth indicators
+
+### Enterprise Integrations
+- **Email Notifications**: SMTP integration with HTML templates and scheduling
+- **Slack Integration**: Webhook-based notifications with rich message formatting
+- **Firebase Authentication**: Enterprise SSO with Google Workspace integration
+- **Monday.com API**: Project management integration for task automation
+- **Sentry Error Monitoring**: Production error tracking with performance insights
+
+### Security & Compliance
+- **JWT Token Management**: Secure authentication with automatic refresh
+- **Rate Limiting**: API protection with configurable limits per endpoint
+- **Input Validation**: Comprehensive data sanitization using express-validator
+- **CORS Configuration**: Production-ready cross-origin resource sharing
+- **Audit Logging**: Complete audit trail for compliance requirements
+
+---
+
+## 🚀 Production Deployment
+
+### Prerequisites
+- **Node.js 18+** LTS version
+- **MongoDB 6.0+** with replica set configuration
+- **Redis 6.0+** for session management
+- **Docker & Docker Compose** for containerized deployment
+- **Firebase Project** with Authentication enabled
+- **SMTP Server** for email notifications (optional)
+
+### Environment Configuration
+
+Create production environment files:
+
+**Backend Configuration** (`/demo/api/.env`):
+```bash
+# Application Settings
+PORT=3000
+NODE_ENV=production
+FRONTEND_URL=https://your-domain.com
+
+# Database Configuration
+MONGO_URI=mongodb://username:password@mongodb-host:27017/cubicle_management?authSource=admin
+
+# Firebase Authentication
+FIREBASE_CREDENTIALS_JSON={"type":"service_account","project_id":"your-project",...}
+ADMIN_UIDS=firebase-uid-1,firebase-uid-2
+
+# Email Services
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_SECURE=false
+EMAIL_USER=notifications@company.com
+EMAIL_PASS=app-specific-password
+EMAIL_FROM="IBM Space Management <notifications@company.com>"
+
+# Notification Services
+NOTIFICATIONS_ENABLED=true
+EMAIL_NOTIFICATIONS_ENABLED=true
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+
+# Security Configuration
+JWT_SECRET=your-secure-random-string
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=100
+```
+
+**Frontend Configuration** (`/demo/frontend/.env`):
+```bash
+# Firebase Configuration
+VITE_FIREBASE_API_KEY=your-firebase-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789
+VITE_FIREBASE_APP_ID=1:123456789:web:abcdef123456
+
+# Application Configuration
+VITE_API_BASE_URL=https://api.your-domain.com
+VITE_ADMIN_UIDS=firebase-uid-1,firebase-uid-2
+
+# Error Monitoring
+VITE_SENTRY_DSN=https://your-sentry-dsn@sentry.io/project-id
+VITE_ENVIRONMENT=production
+```
+
+### Docker Production Deployment
+
+```bash
+# Clone repository
+git clone https://github.com/ibm/cubicle-management-system.git
+cd cubicle-management-system
+
+# Configure environment variables
+cp demo/.env.example demo/.env
+# Edit demo/.env with production values
+
+# Build and deploy with Docker Compose
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Verify deployment
+docker-compose ps
+docker-compose logs api
+docker-compose logs frontend
+```
+
+### Kubernetes Deployment
+
+```yaml
+# kubernetes/cubicle-management.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cubicle-management-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cubicle-management-api
+  template:
+    metadata:
+      labels:
+        app: cubicle-management-api
+    spec:
+      containers:
+      - name: api
+        image: cubicle-management/api:latest
+        ports:
+        - containerPort: 3000
+        env:
+        - name: MONGO_URI
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-secret
+              key: connection-string
+        - name: FIREBASE_CREDENTIALS_JSON
+          valueFrom:
+            secretKeyRef:
+              name: firebase-secret
+              key: service-account-json
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+```
+
+---
+
+## 📊 API Documentation
+
+### Authentication Endpoints
+```http
+POST   /auth/login              # User authentication
+POST   /auth/refresh            # Token refresh
+POST   /auth/logout             # User logout
+GET    /auth/profile            # User profile
+```
+
+### Cubicle Management
+```http
+GET    /api/cubicles            # Get all cubicles with status
+GET    /api/cubicles/:date      # Get cubicles for specific date
+POST   /reserve                 # Create reservation
+DELETE /reservations/:id        # Cancel reservation
+PUT    /cubicles/:id/status     # Update cubicle status (admin)
+```
+
+### Analytics & Reporting
+```http
+GET    /api/utilization-reports           # List reports (paginated)
+GET    /api/utilization-reports/:id       # Get specific report
+POST   /api/utilization-reports/generate  # Generate custom report (admin)
+GET    /api/utilization-reports/:id/export # Export Excel report
+DELETE /api/utilization-reports/:id       # Delete report (admin)
+```
+
+### User Management
+```http
+GET    /api/users               # List users (admin)
+GET    /api/users/:uid          # Get user details
+PUT    /api/users/:uid          # Update user (admin/self)
+POST   /api/users/:uid/admin    # Grant admin privileges (admin)
+```
+
+### Real-time WebSocket Events
+```javascript
+// Client-side WebSocket connection
+const socket = io('wss://api.your-domain.com');
+
+// Subscribe to real-time updates
+socket.on('statistics-update', (data) => {
+  // Handle live statistics updates
+});
+
+socket.on('reservation-update', (data) => {
+  // Handle reservation status changes
+});
+
+socket.on('cubicle-status-update', (data) => {
+  // Handle cubicle availability changes
+});
+```
+
+---
+
+## � Business Intelligence Features
+
+### Utilization Analytics
+- **Capacity Planning**: Historical trends with predictive modeling
+- **Peak Usage Identification**: Optimal scheduling recommendations
+- **Space Efficiency Metrics**: ROI calculations for office space investment
+- **User Behavior Analysis**: Individual and team usage patterns
+- **Section Performance**: Comparative utilization across office areas
+
+### Excel Report Generation
+The system generates comprehensive Excel reports with multiple worksheets:
+
+1. **Executive Summary**: Key metrics and KPIs
+2. **Daily Breakdown**: Day-by-day utilization analysis
+3. **Section Analysis**: Performance metrics by office sections
+4. **User Activity**: Individual usage statistics and rankings
+5. **Peak Hours**: Hourly utilization patterns with heatmaps
+6. **Advanced Analytics**: Trend analysis and business insights
+
+### Notification System
+- **Email Notifications**: Automated reports and reservation confirmations
+- **Slack Integration**: Team notifications and alerts
+- **Custom Scheduling**: Configurable notification frequency
+- **User Preferences**: Individual notification settings management
+
+---
+
+## 🔧 Development & Maintenance
+
+### Local Development Setup
+
+```bash
+# Backend Development
+cd demo/api
+npm install
+npm run dev
+
+# Frontend Development
+cd demo/frontend
+npm install
+npm run dev
+
+# Database Setup (if using local MongoDB)
+mongod --dbpath /data/db
+
+# Redis Setup (optional, for session management)
+redis-server
+```
+
+### Code Quality & Testing
+
+```bash
+# Backend Testing
+cd demo/api
+npm test
+npm run test:coverage
+npm run lint
+npm run lint:fix
+
+# Frontend Testing
+cd demo/frontend
+npm test
+npm run test:e2e
+npm run lint
+npm run type-check
+```
+
+### Performance Monitoring
+
+```bash
+# Database Performance
+# Monitor slow queries
+db.setLogLevel(1, "command")
+
+# Check index usage
+db.reservations.getIndexes()
+db.reservations.stats()
+
+# Application Performance
+# Memory usage monitoring
+node --inspect index.js
+
+# CPU profiling
+node --prof index.js
+```
+
+### Security Hardening
+
+```bash
+# Update dependencies
+npm audit
+npm audit fix
+
+# Security headers validation
+curl -I https://your-domain.com
+
+# SSL certificate verification
+openssl s_client -connect your-domain.com:443
+
+# Firewall configuration
+ufw allow 80/tcp
+ufw allow 443/tcp
+ufw enable
+```
+
+---
+
+## 🏢 Enterprise Integration
+
+### Firebase Authentication Setup
+1. Create Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
+2. Enable Authentication with desired providers
+3. Generate service account credentials
+4. Configure admin users in Firebase Authentication console
+
+### MongoDB Atlas Configuration
+1. Create MongoDB Atlas cluster
+2. Configure network access and database users
+3. Enable MongoDB Charts for additional analytics
+4. Set up backup and monitoring alerts
+
+### Slack Integration Setup
+1. Create Slack app at [api.slack.com](https://api.slack.com)
+2. Configure incoming webhooks
+3. Set up bot permissions and OAuth scopes
+4. Install app to desired Slack workspace
+
+### Monday.com Integration
+1. Create Monday.com developer account
+2. Generate API token with appropriate permissions
+3. Configure board templates for automation
+4. Set up webhook endpoints for bidirectional sync
+
+---
+
+## 📋 System Requirements
+
+### Minimum Hardware Requirements
+- **CPU**: 2 cores, 2.4GHz
+- **RAM**: 4GB (8GB recommended)
+- **Storage**: 20GB SSD
+- **Network**: 100Mbps bandwidth
+
+### Production Hardware Requirements
+- **CPU**: 4+ cores, 3.0GHz
+- **RAM**: 16GB (32GB recommended)
+- **Storage**: 100GB SSD with backup
+- **Network**: 1Gbps bandwidth
+- **Load Balancer**: Nginx or AWS ALB
+- **CDN**: CloudFlare or AWS CloudFront
+
+### Browser Support
+- **Chrome**: 90+
+- **Firefox**: 88+
+- **Safari**: 14+
+- **Edge**: 90+
+- **Mobile**: iOS 14+, Android 10+
+
+---
+
+## 🔒 Security & Compliance
+
+### Data Protection
+- **Encryption at Rest**: AES-256 encryption for database storage
+- **Encryption in Transit**: TLS 1.3 for all API communications
+- **PII Protection**: Data anonymization for analytics
+- **Backup Encryption**: Encrypted database backups with rotation
+
+### Access Control
+- **Multi-factor Authentication**: Firebase MFA integration
+- **Role-based Permissions**: Granular access control
+- **Session Management**: Secure JWT token handling
+- **API Rate Limiting**: DDoS protection and abuse prevention
+
+### Compliance Features
+- **GDPR Compliance**: Data export and deletion capabilities
+- **Audit Logging**: Complete activity trail for compliance
+- **Data Retention**: Configurable data retention policies
+- **Privacy Controls**: User consent management
+
+---
+
+## 🚨 Monitoring & Alerting
+
+### Application Monitoring
+- **Health Checks**: Automated endpoint monitoring
+- **Performance Metrics**: Response time and throughput tracking
+- **Error Tracking**: Real-time error detection and alerting
+- **Resource Usage**: CPU, memory, and disk utilization
+
+### Database Monitoring
+- **Query Performance**: Slow query detection and optimization
+- **Connection Pooling**: Database connection management
+- **Replication Lag**: MongoDB replica set monitoring
+- **Index Usage**: Query optimization recommendations
+
+### Infrastructure Monitoring
+- **Container Health**: Docker container status monitoring
+- **Load Balancing**: Traffic distribution and failover
+- **SSL Certificate**: Automatic certificate renewal monitoring
+- **Backup Verification**: Database backup integrity checks
+
+---
+
+## 📞 Support & Maintenance
+
+### Production Support
+- **24/7 Monitoring**: Automated alerting and incident response
+- **Backup & Recovery**: Daily automated backups with disaster recovery
+- **Security Updates**: Regular security patches and updates
+- **Performance Optimization**: Ongoing performance tuning and optimization
+
+### Documentation & Training
+- **API Documentation**: Interactive Swagger/OpenAPI documentation
+- **User Guides**: Comprehensive end-user documentation
+- **Admin Training**: System administration and configuration guides
+- **Developer Resources**: Integration guides and code examples
+
+---
+
+## 📄 License & Legal
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### Third-party Licenses
+- **Vue.js**: MIT License
+- **Express.js**: MIT License
+- **MongoDB**: Server Side Public License (SSPL)
+- **Firebase**: Google Terms of Service
+- **Carbon Design System**: Apache License 2.0
+
+---
+
+## 🤝 Contributors & Acknowledgments
+
+**Development Team:**
+- IBM Space Optimization Engineering Team
+- Enterprise Architecture and Security Team
+- DevOps and Infrastructure Team
+
+**Special Thanks:**
+- IBM Design System Team for Carbon UI components
+- Firebase Team for authentication infrastructure
+- MongoDB Team for database optimization guidance
+
+---
+
+*Built with enterprise-grade architecture for scalable workspace management solutions.*
+```

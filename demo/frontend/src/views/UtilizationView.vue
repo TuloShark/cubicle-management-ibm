@@ -1,3 +1,75 @@
+<!--
+===================================================================
+VIEWS: UtilizationView
+===================================================================
+PURPOSE: 
+Main view component for displaying utilization reports and analytics dashboard.
+Provides comprehensive cubicle usage statistics with data visualization, 
+report generation capabilities, and interactive filtering options.
+
+FEATURES:
+- Real-time utilization data display with interactive cards
+- Date-based filtering with calendar picker integration
+- Report generation for current and custom date ranges
+- Excel export functionality for detailed analysis
+- Pagination support for large datasets
+- Loading states with timeout handling to prevent infinite loading
+- Comprehensive error handling with user-friendly notifications
+- Responsive design optimized for all device sizes
+- Integration with IBM Carbon Design System components
+
+INTEGRATION:
+- Route: /utilization/:date? (supports optional date parameter)
+- Authentication: Requires valid Firebase auth token
+- API Dependencies: /api/utilization-reports endpoints
+- Global State: Uses useDateStore for date management
+- Components: PageHeader, AnalyticsCarousel, IBM Carbon components
+
+CORE FUNCTIONALITY:
+1. **Data Fetching**: Retrieves utilization reports with pagination
+2. **Report Generation**: Creates new reports for specified dates
+3. **Date Management**: Handles date selection and validation
+4. **Export Features**: Supports Excel export of report data
+5. **Real-time Updates**: Auto-refreshes data after report generation
+
+DATA FLOW:
+- selectedDate (from global store) → API params → backend query
+- API response → reports array → UI components
+- User interactions → loading states → API calls → UI updates
+
+ERROR HANDLING:
+- Network failures with retry suggestions
+- Invalid date formats with validation messages
+- Authentication errors with login redirects
+- Rate limiting with appropriate user feedback
+- Empty states with actionable guidance
+
+PERFORMANCE OPTIMIZATIONS:
+- Debounced API calls to prevent excessive requests
+- Loading timeouts to handle slow network conditions
+- Efficient re-rendering with Vue 3 reactivity
+- Lazy loading of heavy components
+- Optimized date formatting to avoid timezone issues
+
+ACCESSIBILITY:
+- ARIA labels for all interactive elements
+- Keyboard navigation support
+- Screen reader announcements for loading states
+- High contrast color schemes
+- Focus management for modal interactions
+
+DEPENDENCIES:
+- Vue 3 Composition API with reactivity
+- IBM Carbon Design System components
+- Axios for HTTP requests
+- Firebase Authentication
+- Global date store (useDateStore)
+- Utility functions for date handling and error management
+
+LAST UPDATED: June 2025
+===================================================================
+-->
+
 <template>
   <div class="utilization-container">
     <!-- Simple Consistent Header Component -->
@@ -508,43 +580,15 @@ export default {
         title: '',
         subtitle: ''
       },
-      tableColumns: [
-        {
-          key: 'reportDate',
-          header: 'Report Date',
-          sortable: true
-        },
-        {
-          key: 'avgUtilization',
-          header: 'Avg Utilization',
-          sortable: true
-        },
-        {
-          key: 'peakUtilization',
-          header: 'Peak Utilization',
-          sortable: true
-        },
-        {
-          key: 'totalReservations',
-          header: 'Total Reservations',
-          sortable: true
-        },
-        {
-          key: 'uniqueUsers',
-          header: 'Unique Users',
-          sortable: true
-        },
-        {
-          key: 'generatedAt',
-          header: 'Generated',
-          sortable: true
-        },
-        {
-          key: 'actions',
-          header: 'Actions',
-          sortable: false
-        }
-      ]
+      // Loading timeout configuration
+      loadingTimeouts: {
+        reports: 30000,     // 30 seconds for report fetching
+        generate: 60000,    // 60 seconds for report generation
+        export: 45000,      // 45 seconds for export operations
+        delete: 15000       // 15 seconds for delete operations
+      },
+      // Active timeout references for cleanup
+      activeTimeouts: new Map()
     };
   },
   computed: {
@@ -572,26 +616,12 @@ export default {
           indicatorClass: 'users'
         }
       ];
-    },
-    tableData() {
-      return this.reports.map(report => ({
-        _id: report._id,
-        reportDate: this.formatDate(report.reportStartDate),
-        avgUtilization: `${report.summary.avgUtilization}%`,
-        peakUtilization: `${report.summary.peakUtilization}%`,
-        totalReservations: report.summary.totalReservations,
-        uniqueUsers: report.summary.uniqueUsers,
-        generatedAt: this.formatDateTime(report.generatedAt)
-      }));
     }
   },
   async mounted() {
     // Initialize date from route parameter if available (similar to StatisticsView)
     if (this.route.params.date && typeof this.route.params.date === 'string') {
-      console.log('UtilizationView - Initializing from route date:', this.route.params.date);
       await this.initializeFromRoute(this.route.params.date);
-    } else {
-      console.log('UtilizationView - Using current global date:', this.selectedDateString);
     }
 
     await this.fetchReports();
@@ -600,26 +630,218 @@ export default {
     // Watch for route parameter changes and update global store
     async '$route.params.date'(newDate) {
       if (newDate && typeof newDate === 'string') {
-        console.log('UtilizationView - Route date changed:', newDate);
         await this.setSelectedDate(newDate);
       }
     },
     // Watch for selected date changes and refetch reports
     selectedDateString(newDate, oldDate) {
       if (newDate !== oldDate) {
-        console.log('UtilizationView - Selected date changed from', oldDate, 'to', newDate);
         this.setLatestReportForSelectedDate();
       }
     }
   },
+  beforeUnmount() {
+    // Clean up all active timeouts to prevent memory leaks
+    this.activeTimeouts.forEach((timeoutId, operationKey) => {
+      clearTimeout(timeoutId);
+    });
+    this.activeTimeouts.clear();
+  },
   methods: {
+    /**
+     * Handle Analytics Carousel Stat Change
+     * 
+     * Handles stat change events from the AnalyticsCarousel component.
+     * 
+     * @method onStatChanged
+     * @param {number} index - Index of the newly displayed stat
+     * @returns {void}
+     * 
+     * @description
+     * Called when the analytics carousel rotates to a new statistic.
+     * Currently used for debugging and could be extended for analytics tracking.
+     * 
+     * @example
+     * // Template usage in AnalyticsCarousel:
+     * // @stat-changed="onStatChanged"
+     */
     onStatChanged(index) {
       // Handle stat change event from AnalyticsCarousel if needed
-      console.log('UtilizationView - Stat changed to index:', index);
     },
+    /**
+     * Centralized Error Handler
+     * 
+     * Processes API errors and displays appropriate user notifications with
+     * standardized error handling patterns.
+     * 
+     * @method handleApiError
+     * @param {Error} error - The error object from the API call
+     * @param {string} operation - Description of the operation that failed
+     * @param {Object} options - Additional options for error handling
+     * @param {boolean} options.showGenericError - Whether to show generic error for unknown errors
+     * @param {string} options.genericMessage - Custom generic error message
+     * @returns {void}
+     * 
+     * @description
+     * Centralizes error handling logic for all API operations. Provides consistent
+     * error messages and logging for different HTTP status codes and error types.
+     * 
+     * @example
+     * try {
+     *   await axios.get('/api/reports');
+     * } catch (error) {
+     *   this.handleApiError(error, 'fetching reports');
+     * }
+     */
+    handleApiError(error, operation, options = {}) {
+      const {
+        showGenericError = true,
+        genericMessage = `Failed to ${operation}`
+      } = options;
+      
+      console.error(`UtilizationView - Error ${operation}:`, error);
+      console.error('UtilizationView - Error response:', error.response);
+      
+      if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+        
+        switch (status) {
+          case 401:
+            this.showNotification('error', 'Authentication Required', 
+              'Please log in to continue.');
+            break;
+          case 403:
+            this.showNotification('error', 'Access Denied', 
+              'You do not have permission to perform this action.');
+            break;
+          case 404:
+            this.showNotification('error', 'Not Found', 
+              'The requested resource was not found.');
+            break;
+          case 400:
+            const message = data?.error || 'Invalid request';
+            this.showNotification('error', 'Invalid Request', message);
+            break;
+          case 429:
+            const rateLimitMessage = data?.error || 
+              'Too many requests. Please wait a few minutes before trying again.';
+            this.showNotification('error', 'Rate Limit Exceeded', rateLimitMessage);
+            break;
+          case 500:
+          default:
+            if (showGenericError) {
+              const serverMessage = data?.error || genericMessage;
+              this.showNotification('error', 'Server Error', serverMessage);
+            }
+            break;
+        }
+      } else if (error.request) {
+        // Network error
+        this.showNotification('error', 'Network Error', 
+          'Unable to connect to the server. Please check your connection.');
+      } else {
+        // Other error
+        if (showGenericError) {
+          this.showNotification('error', 'Error', genericMessage);
+        }
+      }
+    },
+
+    /**
+     * Set Loading Timeout
+     * 
+     * Sets a timeout for loading operations to prevent infinite loading states
+     * and provides user feedback for long-running operations.
+     * 
+     * @method setLoadingTimeout
+     * @param {string} operationKey - Key identifying the loading operation
+     * @param {number} timeout - Timeout duration in milliseconds
+     * @param {Function} callback - Function to call when timeout expires
+     * @returns {void}
+     * 
+     * @description
+     * Manages loading timeouts to ensure good user experience by preventing
+     * infinite loading states. Automatically cleans up timeouts and provides
+     * user feedback when operations take too long.
+     * 
+     * @example
+     * this.setLoadingTimeout('reports', 30000, () => {
+     *   this.loading.reports = false;
+     *   this.showNotification('warning', 'Timeout', 'Operation took too long');
+     * });
+     */
+    setLoadingTimeout(operationKey, timeout, callback) {
+      // Clear any existing timeout for this operation
+      this.clearLoadingTimeout(operationKey);
+      
+      const timeoutId = setTimeout(() => {
+        console.warn(`UtilizationView - Operation timeout: ${operationKey}`);
+        callback();
+        this.activeTimeouts.delete(operationKey);
+      }, timeout);
+      
+      this.activeTimeouts.set(operationKey, timeoutId);
+    },
+
+    /**
+     * Clear Loading Timeout
+     * 
+     * Clears a specific loading timeout to prevent it from executing.
+     * 
+     * @method clearLoadingTimeout
+     * @param {string} operationKey - Key identifying the loading operation
+     * @returns {void}
+     * 
+     * @description
+     * Cancels a previously set loading timeout when an operation completes
+     * successfully before the timeout expires.
+     * 
+     * @example
+     * // Clear timeout when operation completes
+     * this.clearLoadingTimeout('reports');
+     */
+    clearLoadingTimeout(operationKey) {
+      const timeoutId = this.activeTimeouts.get(operationKey);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        this.activeTimeouts.delete(operationKey);
+      }
+    },
+    /**
+     * Fetch Utilization Reports
+     * 
+     * Retrieves paginated utilization reports from the backend API with proper
+     * error handling and loading state management.
+     * 
+     * @method fetchReports
+     * @async
+     * @returns {Promise<void>}
+     * 
+     * @description
+     * This method fetches utilization reports from the API with pagination support.
+     * It handles various error states gracefully and updates the component's
+     * reports list and pagination information. Also sets the latest report for
+     * the selected date.
+     * 
+     * @throws {Error} API errors (401 Unauthorized, 404 Not Found, 500 Server Error)
+     * 
+     * @example
+     * // Fetch reports on component mount
+     * await this.fetchReports();
+     * 
+     * @see setLatestReportForSelectedDate
+     */
     async fetchReports() {
-      console.log('UtilizationView - fetchReports started');
       this.loading.reports = true;
+      
+      // Set loading timeout
+      this.setLoadingTimeout('reports', this.loadingTimeouts.reports, () => {
+        this.loading.reports = false;
+        this.showNotification('warning', 'Slow Loading', 
+          'Reports are taking longer than expected to load. Please try refreshing.');
+      });
+      
       try {
         const idToken = this.token;
         
@@ -629,13 +851,11 @@ export default {
           limit: this.pageSize
         };
         
-        console.log('UtilizationView - Making API call with params:', params);
         const response = await axios.get('/api/utilization-reports', {
           headers: { Authorization: `Bearer ${idToken}` },
           params
         });
         
-        console.log('UtilizationView - API response:', response.data);
         this.reports = response.data.data?.reports || [];
         this.pagination = response.data.data?.pagination || {
           totalReports: 0,
@@ -644,17 +864,17 @@ export default {
           hasPrev: false
         };
         
-        console.log('UtilizationView - Set reports:', this.reports.length, 'reports');
         
         // Set latest report for quick stats - find report for selected date
         this.setLatestReportForSelectedDate();
+        
+        // Clear timeout on success
+        this.clearLoadingTimeout('reports');
       } catch (error) {
-        console.error('UtilizationView - Error fetching reports:', error);
-        console.error('UtilizationView - Error response:', error.response);
-        if (error.response && error.response.status === 401) {
-          this.showNotification('error', 'Authentication Required', 'Please log in to view utilization reports.');
-        } else if (error.response && error.response.status === 404) {
-          // Handle case where no reports exist - this is not an error, just empty state
+        this.clearLoadingTimeout('reports');
+        
+        // Handle 404 as empty state (not an error)
+        if (error.response && error.response.status === 404) {
           this.reports = [];
           this.latestReport = null;
           this.pagination = {
@@ -664,100 +884,281 @@ export default {
             hasPrev: false
           };
         } else {
-          // Only show error notification for actual errors, not empty states
-          const message = error.response?.data?.error || 'Failed to fetch utilization reports';
-          this.showNotification('error', 'Error Loading Reports', message);
+          // Use centralized error handler for all other errors
+          this.handleApiError(error, 'fetching utilization reports');
         }
       } finally {
-        console.log('UtilizationView - fetchReports finished, loading.reports = false');
         this.loading.reports = false;
       }
     },
     
+    /**
+     * Set Latest Report for Selected Date
+     * 
+     * Finds and sets a report matching the currently selected date for display
+     * in the quick statistics section. Uses improved date comparison to avoid
+     * timezone-related issues.
+     * 
+     * @method setLatestReportForSelectedDate
+     * @returns {void}
+     * 
+     * @description
+     * This function searches through the available reports to find one that matches
+     * the currently selected date. It handles various date formats and ensures
+     * accurate matching without timezone conversion issues.
+     * 
+     * @example
+     * // Called when selectedDateString changes
+     * this.setLatestReportForSelectedDate();
+     * // Sets this.latestReport to matching report or null
+     */
     setLatestReportForSelectedDate() {
-      console.log('UtilizationView - Setting latest report for selected date:', this.selectedDateString);
       
       if (!this.selectedDateString || this.reports.length === 0) {
         this.latestReport = null;
-        console.log('UtilizationView - No selected date or no reports, clearing latestReport');
         return;
       }
       
-      // Find a report that matches the selected date
-      // Reports have reportDate field that should match our selected date
+      // Find a report that matches the selected date using improved date comparison
       const selectedDateStr = this.selectedDateString;
       const matchingReport = this.reports.find(report => {
         const reportDate = report.reportStartDate;
-        if (reportDate) {
-          const dateStr = new Date(reportDate).toISOString().split('T')[0];
-          return dateStr === selectedDateStr;
+        if (!reportDate) return false;
+        
+        // Improved date comparison - handle both string and Date formats
+        let reportDateStr;
+        if (typeof reportDate === 'string') {
+          // If it's already a string, check if it's ISO format or date-only
+          reportDateStr = reportDate.includes('T') ? reportDate.split('T')[0] : reportDate;
+        } else if (reportDate instanceof Date) {
+          // If it's a Date object, convert to YYYY-MM-DD format
+          const year = reportDate.getFullYear();
+          const month = String(reportDate.getMonth() + 1).padStart(2, '0');
+          const day = String(reportDate.getDate()).padStart(2, '0');
+          reportDateStr = `${year}-${month}-${day}`;
+        } else {
+          return false;
         }
-        return false;
+        
+        return reportDateStr === selectedDateStr;
       });
       
       if (matchingReport) {
         this.latestReport = matchingReport;
-        console.log('UtilizationView - Found matching report for date:', selectedDateStr);
       } else {
         this.latestReport = null;
-        console.log('UtilizationView - No report found for selected date:', selectedDateStr);
       }
     },
     
+    /**
+     * Generate Current Day Report
+     * 
+     * Generates a utilization report for the currently selected date with
+     * comprehensive error handling and user feedback.
+     * 
+     * @method generateCurrentDayReport
+     * @async
+     * @returns {Promise<void>}
+     * 
+     * @description
+     * Creates a new utilization report for the date currently selected in the
+     * global date store. This method is restricted to admin users and provides
+     * detailed error messages for various failure scenarios.
+     * 
+     * @throws {Error} API errors (401 Unauthorized, 400 Bad Request, 500 Server Error)
+     * 
+     * @example
+     * // Generate report for selected date
+     * await this.generateCurrentDayReport();
+     * 
+     * @see generateCustomDayFromModal
+     * @see fetchReports
+     */
     async generateCurrentDayReport() {
       this.loading.generateCurrent = true;
+      
+      // Set loading timeout for generation
+      this.setLoadingTimeout('generateCurrent', this.loadingTimeouts.generate, () => {
+        this.loading.generateCurrent = false;
+        this.showNotification('warning', 'Generation Timeout', 
+          'Report generation is taking longer than expected. Please try again.');
+      });
+      
       try {
         const idToken = this.token;
         
-        // Use the raw date input directly (same as StatisticsView)
-        const dateToUse = this.selectedDateInput;
-        console.log('Generating report for date:', dateToUse);
+        // Use the raw date input with robust fallback system
+        let dateToUse = this.selectedDateInput;
         
-        const response = await axios.post('/api/utilization-reports/generate', {}, {
+        
+        // Fallback chain to ensure we always have a valid date
+        if (!dateToUse || dateToUse === '') {
+          dateToUse = this.selectedDateString;
+        }
+        
+        if (!dateToUse || dateToUse === '') {
+          if (this.selectedDate) {
+            // Convert Date object to YYYY-MM-DD string
+            const year = this.selectedDate.getFullYear();
+            const month = String(this.selectedDate.getMonth() + 1).padStart(2, '0');
+            const day = String(this.selectedDate.getDate()).padStart(2, '0');
+            dateToUse = `${year}-${month}-${day}`;
+          }
+        }
+        
+        if (!dateToUse || dateToUse === '') {
+          if (this.route.params.date && typeof this.route.params.date === 'string') {
+            dateToUse = this.route.params.date;
+          }
+        }
+        
+        // Final fallback to today's date
+        if (!dateToUse || dateToUse === '') {
+          const today = new Date();
+          dateToUse = today.toISOString().split('T')[0];
+        }
+        
+        // Validate date format before sending
+        if (!dateToUse || typeof dateToUse !== 'string') {
+          throw new Error('No date selected or invalid date format');
+        }
+        
+        // Ensure date is in YYYY-MM-DD format
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(dateToUse)) {
+          throw new Error(`Invalid date format: ${dateToUse}. Expected YYYY-MM-DD format.`);
+        }
+        
+        // Generate the report
+        const requestConfig = {
           headers: { Authorization: `Bearer ${idToken}` },
-          params: { weekStart: dateToUse }
-        });
+          params: { reportDate: dateToUse }
+        };
+        
+        const response = await axios.post('/api/utilization-reports/generate', {}, requestConfig);
         
         this.showNotification('success', 'Success', `Report generated successfully for ${dateToUse}`);
-        console.log('Report generation successful, fetching reports...');
+        
+        // Clear timeout on success
+        this.clearLoadingTimeout('generateCurrent');
+        
         await this.fetchReports();
-        console.log('Reports fetched. Current reports count:', this.reports.length);
       } catch (error) {
-        console.error('Error generating report for selected date:', error);
-        console.error('Error response:', error.response);
-        if (error.response && error.response.status === 401) {
-          this.showNotification('error', 'Authentication Required', 'You must be an admin to generate reports.');
-        } else if (error.response && error.response.status === 400) {
-          const message = error.response?.data?.error || 'Report already exists for this date';
-          this.showNotification('error', 'Unable to Generate', message);
-        } else {
-          const message = error.response?.data?.error || 'Failed to generate report for selected date';
-          this.showNotification('error', 'Error', message);
+        this.clearLoadingTimeout('generateCurrent');
+        
+        // Handle validation errors specifically
+        if (error.message && error.message.includes('Invalid date format')) {
+          this.showNotification('error', 'Invalid Date', error.message);
+          return;
         }
+        
+        this.handleApiError(error, 'generating report for selected date', {
+          showGenericError: true,
+          genericMessage: 'Failed to generate report for selected date'
+        });
       } finally {
         this.loading.generateCurrent = false;
       }
     },
     
     
+    /**
+     * Open Custom Day Modal
+     * 
+     * Opens the custom date selection modal and resets the date input for
+     * a fresh user experience.
+     * 
+     * @method openCustomDayModal
+     * @returns {void}
+     * 
+     * @description
+     * Displays the modal dialog for custom date selection. Resets the date
+     * input to ensure users must explicitly select a date.
+     * 
+     * @example
+     * // Open modal when user clicks custom date button
+     * this.openCustomDayModal();
+     */
     openCustomDayModal() {
       this.showCustomDayModal = true;
       // Initialize empty to force user to select a date for generation
       this.customDayStart = '';
     },
     
+    /**
+     * Close Custom Day Modal
+     * 
+     * Closes the custom date selection modal and cleans up the date input state.
+     * 
+     * @method closeCustomDayModal
+     * @returns {void}
+     * 
+     * @description
+     * Hides the custom day modal and resets the date selection state to
+     * prevent stale data from affecting future modal interactions.
+     * 
+     * @example
+     * // Close modal on cancel or after successful generation
+     * this.closeCustomDayModal();
+     */
     closeCustomDayModal() {
       this.showCustomDayModal = false;
       this.customDayStart = '';
     },
     
+    /**
+     * Generate Custom Day Report from Modal
+     * 
+     * Generates a utilization report for the date selected in the custom day modal
+     * with validation and comprehensive error handling.
+     * 
+     * @method generateCustomDayFromModal
+     * @async
+     * @returns {Promise<void>}
+     * 
+     * @description
+     * Processes the custom date selection from the modal and generates a report
+     * for that specific date. Includes validation to ensure a date was selected
+     * and handles all API error scenarios with user-friendly messages.
+     * 
+     * @throws {Error} API errors (401 Unauthorized, 400 Bad Request, 500 Server Error)
+     * 
+     * @example
+     * // Called when user confirms date selection in modal
+     * await this.generateCustomDayFromModal();
+     * 
+     * @see generateCurrentDayReport
+     * @see closeCustomDayModal
+     */
     async generateCustomDayFromModal() {
       if (!this.customDayStart) {
         this.showNotification('error', 'Missing Date', 'Please select a date');
         return;
       }
       
+      // Validate date format
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(this.customDayStart)) {
+        this.showNotification('error', 'Invalid Date Format', 'Please select a valid date');
+        return;
+      }
+      
+      // Validate date is not in the future
+      const selectedDate = new Date(this.customDayStart + 'T00:00:00');
+      const today = new Date();
+      today.setHours(23, 59, 59, 999); // End of today
+      
+      if (selectedDate > today) {
+        this.showNotification('error', 'Future Date', 'Cannot generate reports for future dates');
+        return;
+      }
+      
       this.loading.generateCustom = true;
+      
+      // Set loading timeout
+      this.setLoadingTimeout('generateCustom', this.loadingTimeouts.generate, () => {
+        this.loading.generateCustom = false;
+        this.showNotification('warning', 'Generation Timeout', 
+          'Custom report generation is taking longer than expected. Please try again.');
+      });
       
       try {
         const idToken = this.token;
@@ -765,25 +1166,26 @@ export default {
         // Use the raw date input directly (no complex date parsing)
         const dateToUse = this.customDayStart;
         
-        await axios.post('/api/utilization-reports/generate', {}, {
+        const requestConfig = {
           headers: { Authorization: `Bearer ${idToken}` },
-          params: { weekStart: dateToUse }
-        });
+          params: { reportDate: dateToUse }
+        };
+        
+        await axios.post('/api/utilization-reports/generate', {}, requestConfig);
         
         this.showNotification('success', 'Success', 'Custom day report generated successfully');
         this.closeCustomDayModal();
+        
+        // Clear timeout on success
+        this.clearLoadingTimeout('generateCustom');
+        
         await this.fetchReports();
       } catch (error) {
-        console.error('Error generating custom day report:', error);
-        if (error.response && error.response.status === 401) {
-          this.showNotification('error', 'Authentication Required', 'You must be an admin to generate reports.');
-        } else if (error.response && error.response.status === 400) {
-          const message = error.response?.data?.error || 'Report already exists for this date';
-          this.showNotification('error', 'Unable to Generate', message);
-        } else {
-          const message = error.response?.data?.error || 'Failed to generate custom day report';
-          this.showNotification('error', 'Error', message);
-        }
+        this.clearLoadingTimeout('generateCustom');
+        this.handleApiError(error, 'generating custom day report', {
+          showGenericError: true,
+          genericMessage: 'Failed to generate custom day report'
+        });
       } finally {
         this.loading.generateCustom = false;
       }
@@ -924,7 +1326,6 @@ export default {
     
     handleSort(event) {
       // Implement sorting if needed
-      console.log('Sort event:', event);
     },
     
     formatDate(dateString) {
@@ -991,7 +1392,26 @@ export default {
       }, 5000);
     },
     
-    // New methods for the updated modal functionality
+    /**
+     * Handle Custom Day Modal Action
+     * 
+     * Processes the primary action (Generate Report) button click in the custom
+     * day selection modal. Validates date selection and triggers report generation.
+     * 
+     * @method handleCustomDayModalAction
+     * @returns {void}
+     * 
+     * @description
+     * This method is called when the user clicks the primary button in the custom
+     * day modal. It validates that a date has been selected and either generates
+     * the report or shows an error message.
+     * 
+     * @example
+     * // Template usage:
+     * // @primary-click="handleCustomDayModalAction"
+     * 
+     * @see generateCustomDayFromModal
+     */
     handleCustomDayModalAction() {
       if (this.customDayStart) {
         // Generate report for the selected date
@@ -1002,10 +1422,29 @@ export default {
       }
     },
     
-    onModalDateChange() {
-      // This method is called when the date picker value changes
-      // It helps trigger reactivity for the button text updates
-      this.$forceUpdate();
+    /**
+     * Handle Modal Date Change
+     * 
+     * Handles date picker value changes in the custom day modal. This method
+     * ensures proper reactivity for the modal button states without forcing
+     * unnecessary re-renders.
+     * 
+     * @method onModalDateChange
+     * @param {string} newDate - The newly selected date value
+     * @returns {void}
+     * 
+     * @description
+     * Called when the date picker value changes. This method is more efficient
+     * than the previous $forceUpdate() approach as it relies on Vue's natural
+     * reactivity system.
+     * 
+     * @example
+     * // Template usage:
+     * // @change="onModalDateChange"
+     */
+    onModalDateChange(newDate) {
+      // The reactivity is handled automatically by Vue
+      // No need for manual updates
     },
     
     formatReportDate(report) {
@@ -1026,14 +1465,13 @@ export default {
 
     // Event handlers for PageHeader component
     onDateChanged(date) {
-      console.log('UtilizationView - Date changed from PageHeader:', date);
       // Update global date store - this will trigger reactive updates
       this.setSelectedDate(date);
       
       // Update route parameter to keep URL in sync
       if (this.$route.params.date !== date) {
         this.$router.replace({
-          name: 'utilization',
+          name: 'utilization-with-date',
           params: { date }
         });
       }

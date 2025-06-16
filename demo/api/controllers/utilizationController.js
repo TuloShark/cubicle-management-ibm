@@ -628,28 +628,31 @@ router.get('/:id', validarUsuario, [
  * @route POST /api/utilization-reports/generate
  * @access Protected (admin)
  * @param {Object} req.query - Query parameters
- * @param {string} req.query.targetDate - Target date in ISO format (YYYY-MM-DD)
+ * @param {string} req.query.reportDate - Target date in ISO format (YYYY-MM-DD)
  */
 router.post('/generate', ...rateLimiterCombinations.reportGeneration, validarUsuario, validarAdmin, [
-  query('weekStart').isISO8601().withMessage('Date must be in ISO format (YYYY-MM-DD)')
+  query('reportDate').isISO8601().withMessage('Date must be in ISO format (YYYY-MM-DD)')
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       logger.warn('Validation errors for report generation:', errors.array());
+      logger.warn('Received query parameters:', req.query);
       return res.status(400).json({ 
         success: false,
         message: 'Invalid date format',
         errors: errors.array(),
-        expected: 'Date must be in YYYY-MM-DD format'
+        expected: 'Date must be in YYYY-MM-DD format',
+        received: req.query
       });
     }
 
-    const inputDateString = req.query.weekStart;
+    const inputDateString = req.query.reportDate;
     
     // Validate the input date string format
     if (!inputDateString || !/^\d{4}-\d{2}-\d{2}$/.test(inputDateString)) {
       logger.error('Invalid date format received:', inputDateString);
+      logger.error('All received query params:', req.query);
       return res.status(400).json({ 
         success: false,
         message: 'Invalid date format',
@@ -707,7 +710,7 @@ router.post('/generate', ...rateLimiterCombinations.reportGeneration, validarUsu
       message: hasChanges ? 'Report generated successfully' : 'Existing report returned (no changes detected)'
     });
   } catch (error) {
-    logger.error(`Error generating utilization report for date ${req.query.weekStart}:`, error);
+    logger.error(`Error generating utilization report for date ${req.query.reportDate}:`, error);
     res.status(500).json({ 
       success: false,
       message: 'Failed to generate utilization report',

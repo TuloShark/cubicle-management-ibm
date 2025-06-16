@@ -220,8 +220,11 @@
 }
 
 .chart-loading {
-  padding: 2rem;
-  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  opacity: 0.7;
 }
 
 /* ===========================================
@@ -374,6 +377,69 @@
 .loading-container {
   padding: 2rem;
   text-align: center;
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 8888;
+}
+
+.loading-overlay .bx--loading {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ===========================================
+   NOTIFICATIONS & LOADING STATES
+   =========================================== */
+
+.statistics-notification {
+  position: fixed;
+  top: 80px;
+  right: 1rem;
+  z-index: 9999;
+  min-width: 300px;
+  max-width: 400px;
+}
+
+/* Real-time connection indicator */
+.realtime-indicator {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  z-index: 9000;
+  transition: all 0.3s ease;
+}
+
+.realtime-indicator.connected {
+  background: #24a148;
+  color: white;
+}
+
+.realtime-indicator.disconnected {
+  background: #fa4d56;
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
 }
 
 /* ===========================================

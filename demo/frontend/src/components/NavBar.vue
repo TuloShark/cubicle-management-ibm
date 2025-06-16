@@ -311,13 +311,19 @@ export default {
      * Navigates to a route with date preservation for certain views
      * @param {string} routeName - The route name to navigate to
      */
-    const navigate = (routeName) => {
-      const currentDate = getRouteDate();
-      
-      if ((routeName === 'reservations' || routeName === 'statistics') && currentDate) {
-        console.log(`Navigating to ${routeName} with date: ${currentDate}`);
-        router.push(`/${routeName}/${currentDate}`);
-      } else {
+    const navigate = async (routeName) => {
+      try {
+        const currentDate = await getRouteDate();
+        
+        if ((routeName === 'reservations' || routeName === 'statistics' || routeName === 'utilization') && currentDate) {
+          console.log(`Navigating to ${routeName} with date: ${currentDate}`);
+          router.push(`/${routeName}/${currentDate}`);
+        } else {
+          router.push({ name: routeName });
+        }
+      } catch (error) {
+        console.error('Error getting route date for navigation:', error);
+        // Fallback to base route without date
         router.push({ name: routeName });
       }
       

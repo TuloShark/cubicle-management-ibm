@@ -169,11 +169,11 @@ export default {
           return { label: 'Invalid Data', value: '--', indicatorClass: 'no-data' };
         }
         
-        if (!stat.label || !stat.value || !stat.indicatorClass) {
+        if (!stat.label || stat.value === undefined || stat.value === null || !stat.indicatorClass) {
           console.warn('Incomplete stat object - missing required properties:', stat);
           return { 
             label: stat.label || 'Unknown', 
-            value: stat.value || '--', 
+            value: stat.value !== undefined && stat.value !== null ? stat.value : '--', 
             indicatorClass: stat.indicatorClass || 'no-data' 
           };
         }

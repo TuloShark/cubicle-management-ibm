@@ -3,7 +3,6 @@ import vue from '@vitejs/plugin-vue';
 import { resolve } from 'path';
 
 export default defineConfig(({ mode }) => {
-  // Load env variables
   const env = loadEnv(mode, process.cwd(), '');
   const apiBase = env.VITE_API_BASE_URL || 'http://localhost:3000';
   return {
@@ -21,7 +20,6 @@ export default defineConfig(({ mode }) => {
         '/report': apiBase,
         '/api': apiBase,
         '/test-stats-update': apiBase,
-        // Add WebSocket proxy for socket.io
         '/socket.io': {
           target: apiBase,
           changeOrigin: true,
