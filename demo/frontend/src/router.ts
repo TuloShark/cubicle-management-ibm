@@ -6,7 +6,7 @@
  * and accessibility features. Implements route guards for authentication, parameter validation,
  * and navigation tracking for optimal user experience.
  * 
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @version 2.1.0
  * @since 1.0.0
  * 

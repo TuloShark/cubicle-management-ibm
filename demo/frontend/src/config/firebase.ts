@@ -5,7 +5,7 @@
  * Provides secure authentication configuration using environment variables and
  * exports the Firebase authentication instance for use throughout the application.
  * 
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @version 1.0.0
  * @since 1.0.0
  * 

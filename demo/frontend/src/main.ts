@@ -28,7 +28,7 @@
  * - VITE_SENTRY_DSN: Error monitoring service DSN
  * - VITE_ENVIRONMENT: Runtime environment (development/production)
  * 
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @version 1.1.0
  * @since 1.0.0
  */

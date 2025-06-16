@@ -165,6 +165,7 @@ accessibility improvements, and production-ready security features
               kind="primary" 
               :disabled="loading || !username || !password"
               class="login-button"
+              style="width: 100% !important; display: block !important; min-width: 100% !important;"
               aria-describedby="login-help"
             >
               {{ loading ? 'Signing in...' : 'Sign in' }}

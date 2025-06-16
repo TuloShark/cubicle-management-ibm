@@ -7,7 +7,7 @@
 # with security hardening, health monitoring, and enterprise deployment features.
 #
 # @version 2.0.0
-# @author Cubicle Management System - IBM Space Optimization
+# @author IBM Space Optimization Developer - Wander Jimenez Calvo
 # @since 1.0.0
 #
 # Container Specifications:

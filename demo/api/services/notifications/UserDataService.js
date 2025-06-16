@@ -5,7 +5,7 @@
  * statistical calculations, and data aggregation with performance optimization.
  * 
  * @version 2.0.0
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @since 2.0.0
  * 
  * @module UserDataService

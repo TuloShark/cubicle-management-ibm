@@ -6,7 +6,7 @@
  * detection, and secure logout functionality with comprehensive error handling and token 
  * validation.
  * 
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @version 2.1.0
  * @since 1.0.0
  */

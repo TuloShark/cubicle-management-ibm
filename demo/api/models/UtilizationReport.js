@@ -5,7 +5,7 @@
  * Provides comprehensive analytics data storage with proper validation, indexing, and audit trails
  * for business intelligence, reporting, and performance monitoring capabilities.
  * 
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @version 2.1.0
  * @since 1.0.0
  */

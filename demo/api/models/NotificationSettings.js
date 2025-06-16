@@ -5,7 +5,7 @@
  * Stores and manages user notification settings across multiple channels (email, Slack) with proper
  * validation, audit trail, and enterprise security features.
  * 
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @version 2.1.0
  * @since 1.0.0
  */

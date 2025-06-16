@@ -1,4 +1,16 @@
 /* ===========================================
+   LOGIN VIEW - SIMPLIFIED & CLEAN
+   IBM Carbon Design System Compliant
+   =========================================== */
+
+/* Main Layout */
+.login-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f4f4f4;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+/* ===========================================
    ACCESSIBILITY UTILITIES
    =========================================== */
 
@@ -12,19 +24,6 @@
   clip: rect(0, 0, 0, 0) !important;
   white-space: nowrap !important;
   border: 0 !important;
-}
-
-/* ===========================================
-   LOGIN VIEW - SIMPLIFIED & CLEAN
-   IBM Carbon Design System Compliant
-   =========================================== */
-
-/* Main Layout */
-.login-layout {
-  display: flex;
-  min-height: 100vh;
-  background: #f4f4f4;
-  font-family: 'IBM Plex Sans', sans-serif;
 }
 
 /* ===========================================

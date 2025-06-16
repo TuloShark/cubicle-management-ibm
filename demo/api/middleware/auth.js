@@ -4,7 +4,7 @@
  * comprehensive error handling, security enhancements, and performance optimizations
  * 
  * @version 2.1.0
- * @author Cubicle Management System - IBM Space Optimization
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @since 1.0.0
  * 
  * @module AuthMiddleware

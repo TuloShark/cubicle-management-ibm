@@ -5,7 +5,7 @@
  * Optimization application. Provides type safety and IDE autocomplete for
  * environment-specific configuration.
  * 
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @version 1.1.0
  * @since 1.0.0
  * 

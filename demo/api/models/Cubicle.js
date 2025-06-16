@@ -5,7 +5,7 @@
  * Provides comprehensive cubicle tracking, grid management, status control, and 
  * business intelligence capabilities with proper validation, indexing, and audit trails.
  * 
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @version 2.1.0
  * @since 1.0.0
  */

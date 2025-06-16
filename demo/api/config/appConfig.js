@@ -4,7 +4,7 @@
  * Contains all configurable values, constants, and environment-specific settings.
  * 
  * @version 1.0.0
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @since 1.0.0
  * 
  * @module AppConfig

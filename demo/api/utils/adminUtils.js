@@ -4,7 +4,7 @@
  * in the Cubicle Management System. Provides consistent admin UID parsing and validation.
  * 
  * @version 1.1.0
- * @author Cubicle Management System - IBM Space Optimization
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @since 1.0.0
  * 
  * @module AdminUtils

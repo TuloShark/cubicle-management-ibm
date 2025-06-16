@@ -6,7 +6,7 @@
  * integration, and reactive date state with comprehensive initialization protection and
  * circular watcher prevention.
  * 
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @version 2.0.0
  * @since 1.0.0
  * 

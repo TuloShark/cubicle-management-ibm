@@ -4,7 +4,7 @@
  * log rotation, structured formatting, and comprehensive error handling.
  * 
  * @version 2.0.0
- * @author IBM Space Optimization Team
+ * @author IBM Space Optimization Developer - Wander Jimenez Calvo
  * @since 1.0.0
  * 
  * @module Logger
