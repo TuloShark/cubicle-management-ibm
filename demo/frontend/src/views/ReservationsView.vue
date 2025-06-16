@@ -114,9 +114,20 @@
           <div class="error-container">
             <cv-inline-notification
               kind="error"
-              :title="error"
+              title="Reservation Error"
+              :subtitle="error"
               @close="error = null"
-            />
+            >
+              <template #action>
+                <cv-button
+                  kind="tertiary"
+                  size="sm"
+                  @click="error = null"
+                >
+                  Dismiss
+                </cv-button>
+              </template>
+            </cv-inline-notification>
           </div>
         </cv-column>
       </cv-row>
@@ -169,6 +180,8 @@ import DateCubicleGrid from '../components/DateCubicleGrid.vue';
 import PageHeader from '../components/PageHeader.vue';
 import useAuth from '../composables/useAuth';
 import { useDateStore } from '../composables/useDateStore';
+import { getApiBaseUrl } from '../utils/envUtils';
+import './styles/ReservationsViewStyles.css';
 
 export default {
   name: 'ReservationsView',
@@ -179,7 +192,7 @@ export default {
   setup() {
     const router = useRouter();
     const route = useRoute();
-    const { token } = useAuth();
+    const { token, authError, clearError, refreshToken } = useAuth();
     
     // Use global date store instead of local state
     const {
@@ -243,12 +256,8 @@ export default {
       error.value = null;
       
       try {
-        // Get authentication token with fallback to localStorage
-        let idToken = token.value;
-        if (!idToken) {
-          idToken = localStorage.getItem('auth_token');
-        }
-        
+        // Get authentication token from centralized auth management
+        const idToken = token.value;
         if (!idToken) {
           console.error('No authentication token available');
           error.value = 'Authentication required';
@@ -261,7 +270,7 @@ export default {
         const day = String(date.getDate()).padStart(2, '0');
         const dateString = `${year}-${month}-${day}`;
         
-        const response = await axios.get(`/api/cubicles/date/${dateString}`, {
+        const response = await axios.get(`${getApiBaseUrl()}/api/cubicles/date/${dateString}`, {
           headers: {
             Authorization: `Bearer ${idToken}`
           }
@@ -270,7 +279,7 @@ export default {
         cubicles.value = response.data.cubicles;
         
         // Fetch statistics for the date
-        const statsResponse = await axios.get(`/api/cubicles/stats/date/${dateString}`, {
+        const statsResponse = await axios.get(`${getApiBaseUrl()}/api/cubicles/stats/date/${dateString}`, {
           headers: {
             Authorization: `Bearer ${idToken}`
           }
@@ -281,8 +290,32 @@ export default {
       } catch (err) {
         console.error('Error fetching cubicles for date:', err);
         
+        // Handle authentication errors with token refresh
+        if (err.response?.status === 401) {
+          try {
+            await refreshToken();
+            // Retry the request with the new token
+            const retryResponse = await axios.get(`${getApiBaseUrl()}/api/cubicles/date/${dateString}`, {
+              headers: {
+                Authorization: `Bearer ${token.value}`
+              }
+            });
+            cubicles.value = retryResponse.data.cubicles;
+            
+            const retryStatsResponse = await axios.get(`${getApiBaseUrl()}/api/cubicles/stats/date/${dateString}`, {
+              headers: {
+                Authorization: `Bearer ${token.value}`
+              }
+            });
+            dateStats.value = retryStatsResponse.data;
+            return;
+          } catch (refreshErr) {
+            console.error('Token refresh failed:', refreshErr);
+            error.value = 'Authentication failed. Please log in again.';
+          }
+        }
         // Handle rate limiting specifically
-        if (err.response?.status === 429) {
+        else if (err.response?.status === 429) {
           error.value = 'Too many requests. Please wait a moment and try again.';
           // Retry after 2 seconds for rate limit errors
           setTimeout(() => {
@@ -299,12 +332,8 @@ export default {
     // Silent refresh function that doesn't show loading state
     const refreshDataSilently = async (date = selectedDate.value) => {
       try {
-        // Get authentication token with fallback to localStorage
-        let idToken = token.value;
-        if (!idToken) {
-          idToken = localStorage.getItem('auth_token');
-        }
-        
+        // Get authentication token from centralized auth management
+        const idToken = token.value;
         if (!idToken) {
           console.error('No authentication token available');
           return;
@@ -318,14 +347,14 @@ export default {
         
         // Add delay between requests to avoid rate limiting
         const [response, statsResponse] = await Promise.all([
-          axios.get(`/api/cubicles/date/${dateString}`, {
+          axios.get(`${getApiBaseUrl()}/api/cubicles/date/${dateString}`, {
             headers: {
               Authorization: `Bearer ${idToken}`
             }
           }),
           // Add a small delay for the stats request
           new Promise(resolve => setTimeout(resolve, 100)).then(() =>
-            axios.get(`/api/cubicles/stats/date/${dateString}`, {
+            axios.get(`${getApiBaseUrl()}/api/cubicles/stats/date/${dateString}`, {
               headers: {
                 Authorization: `Bearer ${idToken}`
               }
@@ -414,12 +443,8 @@ export default {
       const scrollLeft = scrollContainer?.scrollLeft || 0;
       
       try {
-        // Get authentication token with fallback to localStorage
-        let idToken = token.value;
-        if (!idToken) {
-          idToken = localStorage.getItem('auth_token');
-        }
-        
+        // Get authentication token from centralized auth management
+        const idToken = token.value;
         if (!idToken) {
           console.error('No authentication token available');
           error.value = 'Authentication required';
@@ -447,7 +472,7 @@ export default {
         const day = String(selectedDate.value.getDate()).padStart(2, '0');
         const dateString = `${year}-${month}-${day}`;
         
-        await axios.post(`/api/cubicles/reserve/date/${dateString}`, {
+        await axios.post(`${getApiBaseUrl()}/api/cubicles/reserve/date/${dateString}`, {
           cubicleId
         }, {
           headers: {
@@ -475,8 +500,29 @@ export default {
           };
         }
         
+        // Enhanced error handling and logging
         console.error('Error reserving cubicle:', err);
-        error.value = err.response?.data?.error || 'Failed to reserve cubicle';
+        console.error('Error response:', err.response);
+        console.error('Error data:', err.response?.data);
+        
+        // Extract and display meaningful error message
+        let errorMessage = 'Failed to reserve cubicle';
+        
+        if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.response?.status === 400) {
+          errorMessage = 'Invalid reservation request. Please check your selection and try again.';
+        } else if (err.response?.status === 401) {
+          errorMessage = 'Authentication required. Please log in and try again.';
+        } else if (err.response?.status === 403) {
+          errorMessage = 'Access denied. You do not have permission to make this reservation.';
+        } else if (err.response?.status === 409) {
+          errorMessage = 'This cubicle is already reserved for the selected date.';
+        } else if (err.response?.status >= 500) {
+          errorMessage = 'Server error. Please try again later or contact support.';
+        }
+        
+        error.value = errorMessage;
       }
     };
 
@@ -487,12 +533,8 @@ export default {
       const scrollLeft = scrollContainer?.scrollLeft || 0;
       
       try {
-        // Get authentication token with fallback to localStorage
-        let idToken = token.value;
-        if (!idToken) {
-          idToken = localStorage.getItem('auth_token');
-        }
-        
+        // Get authentication token from centralized auth management
+        const idToken = token.value;
         if (!idToken) {
           console.error('No authentication token available');
           error.value = 'Authentication required';
@@ -512,7 +554,7 @@ export default {
           };
         }
         
-        await axios.delete(`/api/cubicles/reservation/${reservationId}`, {
+        await axios.delete(`${getApiBaseUrl()}/api/cubicles/reservation/${reservationId}`, {
           headers: {
             Authorization: `Bearer ${idToken}`
           }
@@ -539,8 +581,29 @@ export default {
           await refreshDataSilently();
         }
         
+        // Enhanced error handling and logging
         console.error('Error cancelling reservation:', err);
-        error.value = err.response?.data?.error || 'Failed to cancel reservation';
+        console.error('Error response:', err.response);
+        console.error('Error data:', err.response?.data);
+        
+        // Extract and display meaningful error message
+        let errorMessage = 'Failed to cancel reservation';
+        
+        if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.response?.status === 400) {
+          errorMessage = 'Invalid cancellation request. Please refresh and try again.';
+        } else if (err.response?.status === 401) {
+          errorMessage = 'Authentication required. Please log in and try again.';
+        } else if (err.response?.status === 403) {
+          errorMessage = 'Access denied. You can only cancel your own reservations.';
+        } else if (err.response?.status === 404) {
+          errorMessage = 'Reservation not found. It may have already been cancelled.';
+        } else if (err.response?.status >= 500) {
+          errorMessage = 'Server error. Please try again later or contact support.';
+        }
+        
+        error.value = errorMessage;
       }
     };
 
@@ -569,8 +632,8 @@ export default {
     let socketUpdateTimeout = null;
 
     const setupSocket = () => {
-      // Use environment variable or default to localhost:3000
-      const apiUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+      // Use centralized environment utility for API URL
+      const apiUrl = getApiBaseUrl();
       socket.value = io(apiUrl, {
         transports: ['websocket', 'polling'],
         upgrade: true,
@@ -607,7 +670,7 @@ export default {
       // Initialize from route parameter if available, otherwise use global date store
       if (route.params.date && typeof route.params.date === 'string') {
         console.log('ReservationsView - initializing from route date:', route.params.date);
-        initializeFromRoute(route.params.date);
+        await initializeFromRoute(route.params.date);
       } else {
         console.log('ReservationsView - using current global date:', selectedDate.value);
       }
@@ -623,13 +686,8 @@ export default {
       }
     });
 
-    // Watch for global date changes and refetch data
-    watch(selectedDate, async (newDate) => {
-      console.log('ReservationsView - selectedDate changed to:', newDate);
-      await refreshDataSilently(newDate);
-    });
-
     // Watch for global date string changes and refetch data
+    // FIXED: Removed duplicate selectedDate watcher to prevent double API calls
     watch(selectedDateString, async (newDateString) => {
       console.log('ReservationsView - selectedDateString changed to:', newDateString);
       await fetchCubiclesForDate(selectedDate.value);
@@ -643,12 +701,8 @@ export default {
       const scrollLeft = scrollContainer?.scrollLeft || 0;
       
       try {
-        // Get authentication token with fallback to localStorage
-        let idToken = token.value;
-        if (!idToken) {
-          idToken = localStorage.getItem('auth_token');
-        }
-        
+        // Get authentication token from centralized auth management
+        const idToken = token.value;
         if (!idToken) {
           console.error('No authentication token available');
           error.value = 'Authentication required';
@@ -656,7 +710,7 @@ export default {
         }
         
         // Update global cubicle status (e.g., for error state)
-        await axios.put(`/api/cubicles/${cubicle._id}`, { 
+        await axios.put(`${getApiBaseUrl()}/api/cubicles/${cubicle._id}`, { 
           status: cubicle.status 
         }, {
           headers: {
@@ -712,809 +766,11 @@ export default {
       toggleLegendCounts,
       goToStatistics,
       onDateChanged,
+      // Auth error management
+      authError,
+      clearError,
+      refreshToken
     };
   }
 };
 </script>
-
-<style scoped>
-/* Main Layout Styles */
-.reservations-container {
-  min-height: 100vh;
-  background: #f4f4f4;
-  padding: 0;
-  margin: 0;
-  margin-top: 48px;
-}
-
-.reservations-grid {
-  max-width: 1584px;
-  margin: 0 auto;
-  padding: 0;
-}
-
-.actions-row {
-  margin-bottom: 1rem;
-}
-
-.content-row {
-  margin-bottom: 1rem;
-}
-
-.loading-row,
-.error-row,
-.summary-row {
-  margin-bottom: 1rem;
-}
-
-/* Carbon Design System Overrides - Clean and Consistent */
-:deep(.bx--grid) {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-:deep(.bx--row) {
-  margin-left: 0;
-  margin-right: 0;
-}
-
-:deep(.bx--col) {
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-
-:deep(.bx--tile) {
-  border-radius: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  min-height: auto !important;
-  max-width: none !important;
-  max-height: none !important;
-}
-
-:deep(.bx--btn) {
-  border-radius: 0 !important;
-  font-weight: 400 !important;
-  text-transform: none !important;
-  letter-spacing: 0.16px !important;
-  transition: all 0.15s ease !important;
-  box-shadow: none !important;
-}
-
-:deep(.bx--btn--primary) {
-  background: #0f62fe !important;
-  border-color: #0f62fe !important;
-}
-
-:deep(.bx--btn--primary:hover) {
-  background: #0353e9 !important;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-:deep(.bx--btn--secondary) {
-  background: #393939 !important;
-  border-color: #393939 !important;
-  color: #ffffff !important;
-}
-
-:deep(.bx--btn--secondary:hover) {
-  background: #4c4c4c !important;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-:deep(.bx--btn--tertiary) {
-  background: transparent !important;
-  border-color: #0f62fe !important;
-  color: #0f62fe !important;
-}
-
-:deep(.bx--btn--tertiary:hover) {
-  background: rgba(15, 98, 254, 0.1) !important;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-/* Cubicle Grid Specific Overrides */
-:deep(.cubicle-container) {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-:deep(.section-wrapper) {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-:deep(.cubicle-grid) {
-  margin: 0 !important;
-  padding: 0 !important;
-  padding-right: 0;
-  box-sizing: border-box;
-}
-
-:deep(.left-grid), 
-:deep(.middle-grid), 
-:deep(.right-grid) {
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-/* Grid Container Styles - Fully responsive without media queries */
-.grid-container {
-  background: transparent;
-  border-radius: 0;
-  padding: clamp(0.5rem, 2vw, 0.75rem);
-  box-shadow: none;
-  border: none;
-  width: 100%;
-  /* Smart overflow handling - auto adjusts based on content */
-  overflow: auto;
-  /* Responsive height that adapts to viewport */
-  max-height: clamp(60vh, 80vh, 85vh);
-  margin-top: clamp(0.25rem, 1vw, 0.5rem);
-  box-sizing: border-box;
-  position: relative;
-  /* Smooth scrolling for better UX */
-  scroll-behavior: smooth;
-}
-
-/* Responsive scrollbar styling - works across all devices */
-.grid-container::-webkit-scrollbar {
-  width: clamp(4px, 1vw, 8px);
-  height: clamp(4px, 1vw, 8px);
-}
-
-.grid-container::-webkit-scrollbar-track {
-  background: #f4f4f4;
-  border-radius: 0;
-}
-
-.grid-container::-webkit-scrollbar-thumb {
-  background: #c6c6c6;
-  border-radius: 0;
-}
-
-.grid-container::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
-}
-
-/* Firefox scrollbar styling */
-.grid-container {
-  scrollbar-width: thin;
-  scrollbar-color: #c6c6c6 #f4f4f4;
-}
-
-.grid-content-wrapper {
-  transition: opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
-  will-change: opacity, transform;
-}
-
-.grid-content-wrapper.loading-state {
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-/* Smooth Transitions - Carbon Design System */
-.fade-slide-enter-active,
-.fade-slide-leave-active {
-  transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
-}
-
-.fade-slide-enter-from {
-  opacity: 0;
-  transform: translateY(8px);
-}
-
-.fade-slide-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-
-.stats-fade-enter-active,
-.stats-fade-leave-active {
-  transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
-}
-
-.stats-fade-enter-from {
-  opacity: 0;
-  transform: translateX(4px);
-}
-
-.stats-fade-leave-to {
-  opacity: 0;
-  transform: translateX(-4px);
-}
-
-.count-fade-enter-active,
-.count-fade-leave-active {
-  transition: all 0.1s cubic-bezier(0.2, 0, 0.38, 0.9);
-}
-
-.count-fade-enter-from {
-  opacity: 0;
-  transform: scale(0.8);
-}
-
-.count-fade-leave-to {
-  opacity: 0;
-  transform: scale(0.8);
-}
-
-.stats-content {
-  display: flex;
-  gap: 2rem;
-  align-items: center;
-}
-
-/* Loading Overlay */
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(244, 244, 244, 0.8);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
-}
-
-.loading-overlay.visible {
-  opacity: 1;
-  visibility: visible;
-}
-
-.loading-indicator {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  padding: 2rem;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #e0e0e0;
-  border-radius: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.loading-spinner {
-  width: 32px;
-  height: 32px;
-  border: 2px solid #e0e0e0;
-  border-top: 2px solid #0f62fe;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.loading-text {
-  font-size: 0.875rem;
-  color: #525252;
-  font-weight: 400;
-  letter-spacing: 0.16px;
-}
-
-
-
-/* Loading and Error States */
-.loading-container,
-.error-container {
-  padding: 2rem;
-  text-align: center;
-}
-
-/* Actions Panel Styles */
-.actions-panel {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(16px);
-  border: none !important;
-  border-radius: 0;
-  box-shadow: none;
-  padding: 1rem;
-  position: relative;
-  overflow: visible !important;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.panel-header {
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(224, 224, 224, 0.2);
-}
-
-.panel-title {
-  font-size: 1.75rem;
-  font-weight: 400;
-  margin: 0 0 0.5rem 0;
-  color: #161616;
-  letter-spacing: 0;
-}
-
-.panel-subtitle {
-  font-size: 0.875rem;
-  color: #525252;
-  margin: 0;
-  font-weight: 400;
-}
-
-/* Date Selection Styles */
-.date-selection-container {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #e0e0e0;
-  border-radius: 0;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.date-selector-group {
-  display: flex;
-  align-items: stretch;
-  gap: clamp(0.5rem, 2vw, 1rem);
-  margin-bottom: 1rem;
-  min-height: clamp(48px, 8vh, 60px);
-  flex-wrap: wrap;
-  /* Smart responsive behavior without media queries */
-  flex-direction: row;
-  /* Will auto-wrap when space is too tight */
-}
-
-.date-label {
-  font-size: clamp(0.8rem, 2vw, 0.875rem);
-  font-weight: 600;
-  color: #161616;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  /* Responsive min-width that adapts to content */
-  min-width: fit-content;
-  /* Will take more space when available */
-  flex: 0 1 auto;
-}
-
-.date-input {
-  /* Smart flexible sizing - grows and shrinks as needed */
-  flex: 1 1 clamp(160px, 30vw, 250px);
-  min-width: clamp(120px, 25vw, 160px);
-  padding: clamp(0.4rem, 1vw, 0.5rem);
-  border: 1px solid #8d8d8d;
-  border-radius: 0;
-  font-size: clamp(0.8rem, 2vw, 0.875rem);
-  background: #ffffff;
-  color: #161616;
-  transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
-  height: 100%;
-  box-sizing: border-box;
-  position: relative;
-}
-
-.date-input:focus {
-  outline: 2px solid #0f62fe;
-  outline-offset: -2px;
-  border-color: #0f62fe;
-  box-shadow: inset 0 0 0 1px #0f62fe;
-}
-
-.date-input:hover:not(:focus) {
-  border-color: #393939;
-}
-
-.today-button {
-  /* Smart button sizing that adapts */
-  flex: 0 1 auto;
-  min-width: clamp(80px, 15vw, 120px);
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(0.25rem, 1vw, 0.5rem);
-  font-weight: 400;
-  font-size: clamp(0.8rem, 2vw, 0.875rem);
-  border-radius: 0;
-  transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
-  letter-spacing: 0.16px;
-  margin: 0;
-  padding: clamp(0.75rem, 2vw, 1rem);
-  text-transform: none;
-  position: relative;
-  /* Will shrink when space is tight */
-  flex-shrink: 1;
-  overflow: hidden;
-}
-
-.action-button.today-button {
-  background: #0f62fe;
-  border-color: #0f62fe;
-  color: #ffffff;
-}
-
-.action-button.today-button:hover:not(:disabled) {
-  background: #0353e9;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(15, 98, 254, 0.3);
-}
-
-.action-button.today-button:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(15, 98, 254, 0.3);
-}
-
-.action-button.today-button:disabled {
-  background: #8d8d8d;
-  border-color: #8d8d8d;
-  color: #c6c6c6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.date-stats {
-  display: flex;
-  gap: 2rem;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.stat-label {
-  font-size: 0.75rem;
-  color: #525252;
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.32px;
-}
-
-.stat-value {
-  font-size: 1.25rem;
-  color: #161616;
-  font-weight: 600;
-}
-
-.actions-content {
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
-  align-items: stretch;
-  margin-bottom: 0;
-  width: 100%;
-  overflow: visible !important;
-  box-sizing: border-box;
-  min-height: 60px;
-  flex-wrap: wrap;
-}
-
-.action-container {
-  display: flex;
-  flex-direction: row;
-  flex: 1 1 300px;
-  min-width: 280px;
-  border: 1px solid #e0e0e0;
-  border-radius: 0;
-  overflow: hidden;
-  box-shadow: none;
-  background: #ffffff;
-  transition: all 0.15s ease;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-.action-container:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
-}
-
-.action-info-card {
-  padding: 1rem 1.5rem;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 1 1 auto;
-  min-width: 180px;
-  border-right: 1px solid #e0e0e0;
-  justify-content: center;
-  height: 100%;
-  box-sizing: border-box;
-}
-
-.action-label {
-  font-weight: 600;
-  color: #161616;
-  font-size: 1rem;
-  line-height: 1.375;
-}
-
-.action-description {
-  font-size: 0.75rem;
-  color: #525252;
-  line-height: 1.34;
-}
-
-.action-button {
-  flex: 0 0 auto;
-  width: auto;
-  min-width: 100px;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-weight: 400;
-  font-size: 0.875rem;
-  border-radius: 0;
-  border-left: none;
-  transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
-  letter-spacing: 0.16px;
-  margin: 0;
-  padding: 1rem;
-  text-transform: none;
-  position: relative;
-  overflow: hidden;
-}
-
-.action-button.refresh-button {
-  background: #0f62fe;
-  border-color: #0f62fe;
-  color: #ffffff;
-}
-
-.action-button.refresh-button:hover:not(:disabled) {
-  background: #0353e9;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(15, 98, 254, 0.3);
-}
-
-.action-button.refresh-button:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(15, 98, 254, 0.3);
-}
-
-.action-button.refresh-button:disabled {
-  background: #8d8d8d;
-  border-color: #8d8d8d;
-  color: #c6c6c6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.action-button.statistics-button {
-  background: #393939;
-  border-color: #393939;
-  color: #ffffff;
-}
-
-.action-button.statistics-button:hover:not(:disabled) {
-  background: #4c4c4c;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(57, 57, 57, 0.3);
-}
-
-.action-button.statistics-button:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(57, 57, 57, 0.3);
-}
-
-/* Legend Container */
-.legend-container {
-  position: relative;
-  width: 100%;
-  margin-top: 0.5rem;
-}
-
-/* Status Legend Styles */
-.status-legend {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #e0e0e0;
-  border-radius: 0;
-  padding: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.15s ease;
-  width: 100%;
-  max-width: none;
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  box-sizing: border-box;
-}
-
-.status-legend:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  background: rgba(255, 255, 255, 1);
-  transform: translateY(-1px);
-}
-
-.status-legend.show-counts {
-  background: rgba(15, 98, 254, 0.05);
-  border-color: #0f62fe;
-}
-
-.legend-title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0;
-  color: #161616;
-  letter-spacing: 0.16px;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-.legend-items {
-  display: flex;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-
-.legend-indicator {
-  width: 12px;
-  height: 12px;
-  border-radius: 0;
-  border: none;
-  flex-shrink: 0;
-}
-
-.legend-indicator.available {
-  background-color: #2962ff;
-}
-
-.legend-indicator.reserved {
-  background-color: #3c3c3c;
-}
-
-.legend-indicator.error {
-  background-color: #d32f2f;
-}
-
-.legend-label {
-  font-size: 0.875rem;
-  color: #161616;
-  font-weight: 400;
-  line-height: 1.34;
-  white-space: nowrap;
-}
-
-.legend-count {
-  font-weight: 600;
-  color: #0f62fe;
-  margin-left: 0.5rem;
-  background: rgba(15, 98, 254, 0.1);
-  padding: 0.125rem 0.5rem;
-  border-radius: 0;
-  font-size: 0.75rem;
-  animation: fadeIn 0.3s ease;
-}
-
-/* Reservation Summary Panel */
-.reservation-summary-panel {
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #e0e0e0;
-  border-radius: 0;
-  padding: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  margin-top: 0.5rem;
-}
-
-.summary-title {
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 1rem 0;
-  color: #161616;
-  letter-spacing: 0.16px;
-  text-transform: uppercase;
-}
-
-.user-reservations {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 0.5rem;
-}
-
-.user-reservation-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem;
-  background: rgba(15, 98, 254, 0.05);
-  border-left: 3px solid #0f62fe;
-}
-
-.user-name {
-  font-weight: 500;
-  color: #161616;
-}
-
-.user-count {
-  font-size: 0.75rem;
-  color: #525252;
-  font-weight: 400;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Modern Flexbox Responsive Design - No Media Queries Needed! */
-.actions-content {
-  /* Auto-stacking when space is tight */
-  flex-direction: column;
-  height: auto;
-  gap: clamp(0.5rem, 1vw, 1rem);
-  /* Will arrange horizontally when there's enough space */
-  flex-wrap: wrap;
-}
-
-.action-container {
-  height: clamp(50px, 8vh, 70px);
-  /* Flexible sizing */
-  flex: 1 1 auto;
-}
-
-/* Date selector group already improved above */
-
-.date-stats {
-  /* Smart responsive layout */
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: clamp(0.5rem, 2vw, 1rem);
-  justify-content: space-between;
-  align-items: center;
-}
-
-.legend-items {
-  /* Auto-wrapping layout */
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: clamp(0.5rem, 2vw, 1rem);
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.status-legend {
-  /* Smart responsive layout */
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: clamp(0.75rem, 2vw, 1.5rem);
-  justify-content: space-between;
-}
-
-.user-reservations {
-  /* Responsive grid using auto-fit */
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: clamp(1rem, 2vw, 1.5rem);
-}
-</style>

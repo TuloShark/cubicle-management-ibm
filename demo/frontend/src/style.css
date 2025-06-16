@@ -1,4 +1,22 @@
-@import '@carbon/vue/dist/carbon-vue.css';
+/* ===================================================================
+   GLOBAL STYLES - Cubicle Management System
+   ===================================================================
+   This file contains global styles that apply across the entire application:
+   - IBM Carbon Design System imports and variables
+   - Base HTML element styles
+   - Global utilities and layout fixes
+   - Framework-specific overrides
+   
+   View-specific styles are located in: src/views/styles/
+   Component-specific styles are located within each component file
+   =================================================================== */
+
+/* IBM Carbon Design System - Base Import */
+@import '@carbon/vue/dist/carbon-vue-3.css';
+
+/* ===================================================================
+   DESIGN TOKENS & CSS VARIABLES
+   =================================================================== */
 
 :root {
   /* IBM Carbon Design System Color Tokens */
@@ -36,6 +54,10 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* ===================================================================
+   BASE ELEMENT STYLES
+   =================================================================== */
+
 a {
   font-weight: 500;
   color: #646cff;
@@ -53,6 +75,10 @@ html, body {
   overflow-x: hidden; /* Prevent horizontal scroll */
   /* Remove height: 100% that can cause double scrollbar */
 }
+
+/* ===================================================================
+   GLOBAL LAYOUT & APP CONTAINER
+   =================================================================== */
 
 h1 {
   font-size: 3.2em;
@@ -88,6 +114,10 @@ button:focus-visible {
   position: relative;
 }
 
+/* ===================================================================
+   RESPONSIVE & ACCESSIBILITY
+   =================================================================== */
+
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
@@ -100,6 +130,10 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* ===================================================================
+   CARBON DESIGN SYSTEM OVERRIDES & FIXES
+   =================================================================== */
 
 /* Fix double scrollbar issues caused by Carbon Design System */
 html {

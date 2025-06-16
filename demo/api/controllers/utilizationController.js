@@ -99,6 +99,13 @@ const CHANGE_DETECTION_FIELDS = [
 function generateCubicleCodeSequence(reservations) {
   if (!reservations || reservations.length === 0) return '';
   
+  // Helper function to convert full serial to simple code
+  const getSimpleCode = (serial) => {
+    // Convert "A1-CUB1" to "A1"
+    const match = serial.match(/^([A-Z]\d+)-CUB\d+$/);
+    return match ? match[1] : serial;
+  };
+  
   // Sort reservations by date and cubicle serial
   const sortedReservations = reservations
     .filter(r => r.cubicle && r.cubicle.serial)
@@ -117,7 +124,8 @@ function generateCubicleCodeSequence(reservations) {
     if (!dateGroups[dateStr]) {
       dateGroups[dateStr] = [];
     }
-    dateGroups[dateStr].push(r.cubicle.serial);
+    // Convert to simple code format for sequence processing
+    dateGroups[dateStr].push(getSimpleCode(r.cubicle.serial));
   });
   
   const allCodes = [];
@@ -474,9 +482,9 @@ function generateAdvancedAnalytics(avgUtilization, totalCubicles, totalReservati
   return {
     peakHours,
     trendAnalysis: {
-      weekOverWeekChange: 0, // Would need previous week data
+      dayOverDayChange: 0, // Would need previous day data
       utilizationTrend: 'stable',
-      predictedNextWeek: Math.round(avgUtilization)
+      predictedTomorrow: Math.round(avgUtilization)
     },
     efficiency: {
       spaceTurnover: totalReservations > 0 ? +(totalCubicles / totalReservations).toFixed(2) : 0,
@@ -620,7 +628,7 @@ router.get('/:id', validarUsuario, [
  * @route POST /api/utilization-reports/generate
  * @access Protected (admin)
  * @param {Object} req.query - Query parameters
- * @param {string} req.query.weekStart - Target date in ISO format (YYYY-MM-DD)
+ * @param {string} req.query.targetDate - Target date in ISO format (YYYY-MM-DD)
  */
 router.post('/generate', ...rateLimiterCombinations.reportGeneration, validarUsuario, validarAdmin, [
   query('weekStart').isISO8601().withMessage('Date must be in ISO format (YYYY-MM-DD)')
@@ -638,21 +646,35 @@ router.post('/generate', ...rateLimiterCombinations.reportGeneration, validarUsu
     }
 
     const inputDateString = req.query.weekStart;
-    const inputDate = new Date(inputDateString + 'T00:00:00.000Z');
+    
+    // Validate the input date string format
+    if (!inputDateString || !/^\d{4}-\d{2}-\d{2}$/.test(inputDateString)) {
+      logger.error('Invalid date format received:', inputDateString);
+      return res.status(400).json({ 
+        success: false,
+        message: 'Invalid date format',
+        error: 'Date must be in YYYY-MM-DD format'
+      });
+    }
     
     // Create start and end of day in UTC to avoid timezone conversions
     const dayStart = new Date(inputDateString + 'T00:00:00.000Z');
     const dayEnd = new Date(inputDateString + 'T23:59:59.999Z');
+    
+    // For current day reports, don't set end time in the future
+    const now = new Date();
+    const isToday = inputDateString === now.toISOString().split('T')[0];
+    const finalDayEnd = isToday && dayEnd > now ? now : dayEnd;
 
     logger.info(`Generating utilization report for date: ${inputDateString}`);
 
     // Generate report data
-    const reportData = await generateReportData(dayStart, dayEnd);
+    const reportData = await generateReportData(dayStart, finalDayEnd);
 
     // Check if report already exists for this day to detect changes
     const existingReport = await UtilizationReport.findOne({
       reportStartDate: dayStart,
-      reportEndDate: dayEnd
+      reportEndDate: finalDayEnd
     });
 
     let report;
@@ -666,7 +688,7 @@ router.post('/generate', ...rateLimiterCombinations.reportGeneration, validarUsu
       // Create new report if no existing report or if there are changes
       report = new UtilizationReport({
         reportStartDate: dayStart,
-        reportEndDate: dayEnd,
+        reportEndDate: finalDayEnd,
         ...reportData
       });
       await report.save();
@@ -709,16 +731,19 @@ router.post('/generate-current', ...rateLimiterCombinations.reportGeneration, va
     // Create start and end of day in UTC to avoid timezone conversions
     const dayStart = new Date(currentDateString + 'T00:00:00.000Z');
     const dayEnd = new Date(currentDateString + 'T23:59:59.999Z');
+    
+    // For current day, ensure end time is not in the future
+    const finalDayEnd = dayEnd > now ? now : dayEnd;
 
     logger.info(`Generating current day utilization report for: ${currentDateString}`);
 
     // Generate report data
-    const reportData = await generateReportData(dayStart, dayEnd);
+    const reportData = await generateReportData(dayStart, finalDayEnd);
 
     // Check if report already exists for this day to detect changes
     const existingReport = await UtilizationReport.findOne({
       reportStartDate: dayStart,
-      reportEndDate: dayEnd
+      reportEndDate: finalDayEnd
     });
 
     let report;
@@ -732,7 +757,7 @@ router.post('/generate-current', ...rateLimiterCombinations.reportGeneration, va
       // Create new report if no existing report or if there are changes
       report = new UtilizationReport({
         reportStartDate: dayStart,
-        reportEndDate: dayEnd,
+        reportEndDate: finalDayEnd,
         ...reportData
       });
       await report.save();
@@ -898,9 +923,9 @@ router.get('/:id/export', ...rateLimiterCombinations.authenticatedExport, valida
     // Advanced Analytics Sheet - Simplified to only show Trend Analysis
     const advancedData = [
       ['Trend Analysis'],
-      ['Week-over-Week Change', `${report.advanced.trendAnalysis.weekOverWeekChange}%`],
+      ['Day-over-Day Change', `${report.advanced.trendAnalysis.dayOverDayChange}%`],
       ['Utilization Trend', report.advanced.trendAnalysis.utilizationTrend],
-      ['Predicted Next Week', `${report.advanced.trendAnalysis.predictedNextWeek}%`]
+      ['Predicted Tomorrow', `${report.advanced.trendAnalysis.predictedTomorrow}%`]
     ];
     const advancedSheet = XLSX.utils.aoa_to_sheet(advancedData);
     XLSX.utils.book_append_sheet(workbook, advancedSheet, 'Advanced Analytics');

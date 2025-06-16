@@ -1,0 +1,458 @@
+/* ===========================================
+   UTILIZATION VIEW - SIMPLIFIED & CLEAN
+   IBM Carbon Design System Compliant
+   =========================================== */
+
+/* Main Container */
+.utilization-container {
+  padding: 0;
+  margin-top: 48px;
+  background: #f4f4f4;
+  flex: 1;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* Grid Layout */
+.utilization-grid {
+  padding: 1.5rem;
+  max-width: 1584px;
+  margin: 0 auto;
+}
+
+/* Row Layouts */
+.top-row {
+  margin-bottom: 2rem;
+}
+
+.reports-row {
+  margin-bottom: 1.5rem;
+}
+
+/* ===========================================
+   TILES - CONSISTENT DESIGN
+   =========================================== */
+
+.controls-tile,
+.quick-stats-tile,
+.reports-tile {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  height: 100%;
+}
+
+/* Tile Headers */
+.tile-header {
+  padding: 1.5rem 1.5rem 1rem 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tile-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+}
+
+.tile-subtitle {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+}
+
+/* ===========================================
+   CONTROLS SECTION
+   =========================================== */
+
+.controls-content {
+  padding: 1.5rem;
+}
+
+.horizontal-controls {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.control-item {
+  flex: 1;
+  min-width: 200px;
+}
+
+.control-button-consistent {
+  width: 100%;
+  min-height: 48px;
+}
+
+/* ===========================================
+   QUICK STATS SECTION
+   =========================================== */
+
+.quick-stats-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Stats Carousel */
+.stats-carousel {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.carousel-container {
+  width: 100%;
+}
+
+.stat-card-single {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f7f7f7;
+  border-radius: 4px;
+  border-left: 4px solid #0f62fe;
+}
+
+.stat-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.stat-indicator.good { background: #42be65; }
+.stat-indicator.warning { background: #f1c21b; }
+.stat-indicator.danger { background: #da1e28; }
+
+.stat-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #161616;
+}
+
+/* Download Button */
+.quick-stats-download {
+  margin-top: auto;
+}
+
+.download-button-centered {
+  width: 100%;
+}
+
+/* ===========================================
+   REPORTS SECTION
+   =========================================== */
+
+.reports-container {
+  padding: 1.5rem;
+}
+
+/* Pagination */
+.pagination-controls {
+  padding: 0 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+/* Reports Grid */
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+/* Report Cards */
+.report-card {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.report-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-color: #0f62fe;
+}
+
+.report-card.latest-report {
+  border-color: #42be65;
+  border-width: 2px;
+}
+
+/* Report Header */
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.report-period .week-label {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.25rem 0;
+}
+
+.generated-date {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+}
+
+.latest-badge {
+  display: inline-block;
+  background: #42be65;
+  color: #ffffff;
+  font-size: 0.625rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  margin-top: 0.5rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+/* Utilization Circle */
+.utilization-circle {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #ffffff;
+}
+
+.utilization-circle.high { background: #42be65; }
+.utilization-circle.medium { background: #f1c21b; }
+.utilization-circle.low { background: #da1e28; }
+
+/* Report Stats */
+.report-stats {
+  margin-bottom: 1rem;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.stat-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.stat-item-mini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.mini-label {
+  font-size: 0.6875rem;
+  color: #6f6f6f;
+  text-transform: uppercase;
+}
+
+.mini-value {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #161616;
+}
+
+.error-count.has-errors {
+  color: #da1e28;
+}
+
+/* Utilization Bar */
+.utilization-bar-container {
+  margin-bottom: 1rem;
+}
+
+.utilization-bar {
+  width: 100%;
+  height: 8px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.utilization-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.utilization-fill.high { background: #42be65; }
+.utilization-fill.medium { background: #f1c21b; }
+.utilization-fill.low { background: #da1e28; }
+
+.utilization-range {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #6f6f6f;
+}
+
+/* Report Actions */
+.report-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.report-action-btn {
+  min-width: auto;
+}
+
+/* ===========================================
+   EMPTY STATES
+   =========================================== */
+
+.no-data-state {
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.empty-state-content {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.empty-state-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state-description {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+}
+
+/* ===========================================
+   LOADING STATES
+   =========================================== */
+
+.table-loading {
+  padding: 2rem 1.5rem;
+}
+
+/* ===========================================
+   MODAL STYLES
+   =========================================== */
+
+.report-details {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.report-section {
+  margin-bottom: 2rem;
+}
+
+.section-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summary-label {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+  text-transform: uppercase;
+}
+
+.summary-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+}
+
+/* ===========================================
+   TRANSITIONS
+   =========================================== */
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+  .utilization-grid {
+    padding: 1rem;
+  }
+  
+  .horizontal-controls {
+    flex-direction: column;
+  }
+  
+  .control-item {
+    min-width: auto;
+  }
+  
+  .reports-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-row {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .report-actions {
+    flex-direction: column;
+  }
+}

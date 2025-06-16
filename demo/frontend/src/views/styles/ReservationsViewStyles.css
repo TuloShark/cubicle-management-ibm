@@ -1,0 +1,431 @@
+/* ===========================================
+   RESERVATIONS VIEW - SIMPLIFIED & CLEAN
+   IBM Carbon Design System Compliant
+   =========================================== */
+
+/* Main Container */
+.reservations-container {
+  padding: 0;
+  margin-top: 48px;
+  background: #f4f4f4;
+  flex: 1;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* Grid Layout */
+.reservations-grid {
+  padding: 1.5rem;
+  max-width: 1584px;
+  margin: 0 auto;
+}
+
+/* Row Layouts */
+.actions-row,
+.content-row {
+  margin-bottom: 2rem;
+}
+
+/* ===========================================
+   CLEAN GRID CONTAINER
+   =========================================== */
+
+.grid-container {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 1rem;
+  max-height: 70vh;
+  overflow: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.grid-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.grid-container::-webkit-scrollbar-track {
+  background: #f4f4f4;
+}
+
+.grid-container::-webkit-scrollbar-thumb {
+  background: #c6c6c6;
+}
+
+.grid-container::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* ===========================================
+   PANELS & CONTENT
+   =========================================== */
+
+.actions-panel {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.panel-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.panel-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.panel-subtitle {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+}
+
+/* ===========================================
+   DATE SELECTION
+   =========================================== */
+
+.date-selection-container {
+  background: #f7f7f7;
+  border: 1px solid #e0e0e0;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.date-selector-group {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.date-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #161616;
+  min-width: fit-content;
+}
+
+.date-input {
+  flex: 1;
+  min-width: 160px;
+  padding: 0.5rem;
+  border: 1px solid #8d8d8d;
+  background: #ffffff;
+  color: #161616;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
+}
+
+.date-input:focus {
+  outline: 2px solid #0f62fe;
+  outline-offset: -2px;
+  border-color: #0f62fe;
+}
+
+.date-input:hover:not(:focus) {
+  border-color: #393939;
+}
+
+.action-button {
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 400;
+  transition: all 0.15s ease;
+  border: none;
+  cursor: pointer;
+}
+
+.today-button {
+  background: #0f62fe;
+  color: #ffffff;
+  min-width: 80px;
+}
+
+.today-button:hover:not(:disabled) {
+  background: #0353e9;
+}
+
+.today-button:disabled {
+  background: #8d8d8d;
+  color: #c6c6c6;
+  cursor: not-allowed;
+}
+
+/* ===========================================
+   STATISTICS & LEGEND
+   =========================================== */
+
+.date-stats {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.32px;
+}
+
+.stat-value {
+  font-size: 1.25rem;
+  color: #161616;
+  font-weight: 600;
+}
+
+.status-legend {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.status-legend:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.status-legend.show-counts {
+  background: rgba(15, 98, 254, 0.05);
+  border-color: #0f62fe;
+}
+
+.legend-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.16px;
+  flex-shrink: 0;
+}
+
+.legend-items {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.legend-indicator {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
+
+.legend-indicator.available {
+  background-color: #2962ff;
+}
+
+.legend-indicator.reserved {
+  background-color: #3c3c3c;
+}
+
+.legend-indicator.error {
+  background-color: #d32f2f;
+}
+
+.legend-label {
+  font-size: 0.875rem;
+  color: #161616;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.legend-count {
+  font-weight: 600;
+  color: #0f62fe;
+  margin-left: 0.5rem;
+  background: rgba(15, 98, 254, 0.1);
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+/* ===========================================
+   RESERVATION SUMMARY & LOADING
+   =========================================== */
+
+.reservation-summary-panel {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 1rem;
+}
+
+.summary-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.16px;
+}
+
+.user-reservations {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 0.5rem;
+}
+
+.user-reservation-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background: rgba(15, 98, 254, 0.05);
+  border-left: 3px solid #0f62fe;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #161616;
+}
+
+.user-count {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+  font-weight: 400;
+}
+
+.loading-container,
+.error-container {
+  padding: 2rem;
+  text-align: center;
+}
+
+/* ===========================================
+   TRANSITIONS & ANIMATIONS
+   =========================================== */
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.15s ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.stats-fade-enter-active,
+.stats-fade-leave-active {
+  transition: all 0.15s ease;
+}
+
+.stats-fade-enter-from {
+  opacity: 0;
+  transform: translateX(4px);
+}
+
+.stats-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-4px);
+}
+
+.count-fade-enter-active,
+.count-fade-leave-active {
+  transition: all 0.1s ease;
+}
+
+.count-fade-enter-from,
+.count-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.stats-content {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+  .reservations-grid {
+    padding: 1rem;
+  }
+  
+  .date-selector-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  
+  .date-input {
+    min-width: auto;
+  }
+  
+  .today-button {
+    min-width: auto;
+  }
+  
+  .date-stats {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .legend-items {
+    gap: 1rem;
+  }
+  
+  .status-legend {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .user-reservations {
+    grid-template-columns: 1fr;
+  }
+}

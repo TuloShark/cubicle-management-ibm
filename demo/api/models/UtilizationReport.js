@@ -578,9 +578,10 @@ const utilizationReportSchema = new mongoose.Schema({
         validator: function(sequence) {
           // Allow empty string or validate cubicle sequence format
           if (!sequence) return true;
+          // Expected format: "A1", "A1-A5", "A1, B3", "A1-A5, B3, C7-C9"
           return /^[A-F]\d+(-[A-F]\d+)?(,\s*[A-F]\d+(-[A-F]\d+)?)*$/i.test(sequence);
         },
-        message: 'Invalid cubicle sequence format'
+        message: 'Invalid cubicle sequence format. Expected format: "A1", "A1-A5", "A1, B3", or "A1-A5, B3, C7-C9"'
       }
     }
   }],

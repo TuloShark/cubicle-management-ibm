@@ -1,3 +1,44 @@
+<!--
+===================================================================
+COMPONENT: DateCubicleGrid
+===================================================================
+PURPOSE: 
+Main cubicle grid display component that renders a 6x9 grid of cubicle tiles 
+for a specific date. Handles cubicle reservations, cancellations, and state management
+with role-based permissions and modal interactions.
+
+FEATURES:
+- 6x9 responsive grid layout for 54 cubicles
+- Date-specific cubicle status display (available/reserved/error)
+- Role-based permissions (admin vs regular users)
+- Modal dialogs for cubicle details and state changes
+- Reservation management with user validation
+- Smooth animations and transitions
+- Mobile-responsive design with scrolling support
+
+INTEGRATION:
+- Used in: ReservationsView.vue as primary cubicle interface
+- Child component: DateCubicleTile.vue for individual cubicle display
+- Events: 'reserve', 'cancel', 'update-cubicle-state'
+- Auth integration: useAuth composable for user permissions
+
+DEPENDENCIES:
+- Vue 3 Composition API
+- @carbon/vue (cv-modal component)
+- DateCubicleTile component
+- useAuth composable
+- axios (imported but not used - potential cleanup needed)
+
+ACCESSIBILITY:
+- Modal dialogs with proper ARIA attributes
+- Keyboard navigation support
+- Screen reader friendly status information
+- Focus management for modal interactions
+
+LAST UPDATED: June 2025
+===================================================================
+-->
+
 <template>
   <div class="cubicle-container">
     <!-- Single 6x9 Grid Layout -->
@@ -43,7 +84,7 @@
         <p><strong>Date:</strong> {{ formatDate(selectedDate) }}</p>
         <p><strong>Current Status:</strong> {{ currentDateStatus }}</p>
         <p v-if="selectedCubicle?.status === 'error'">
-          <strong>Global Status:</strong> <span style="color: #d32f2f; font-weight: 600;">ERROR/MAINTENANCE</span>
+          <strong>Global Status:</strong> <span class="error-status">ERROR/MAINTENANCE</span>
         </p>
         <p v-if="currentDateStatus === 'reserved'">
           <strong>Reserved By: </strong>
@@ -89,10 +130,27 @@
 </template>
 
 <script>
+/**
+ * DateCubicleGrid Component
+ * 
+ * Displays a 6x9 grid of cubicles for a specific date with reservation management.
+ * Handles user permissions, modal interactions, and state changes.
+ * 
+ * @component
+ * @example
+ * <DateCubicleGrid 
+ *   :cubicles="cubicleArray" 
+ *   :selected-date="dateString"
+ *   :date-stats="statsObject"
+ *   @reserve="handleReserve"
+ *   @cancel="handleCancel"
+ *   @update-cubicle-state="updateState"
+ * />
+ */
 import { computed, ref } from 'vue';
 import DateCubicleTile from './DateCubicleTile.vue';
 import useAuth from '../composables/useAuth';
-import axios from 'axios';
+import { isAdminUid } from '../utils/envUtils';
 
 export default {
   name: 'DateCubicleGrid',
@@ -100,37 +158,84 @@ export default {
     DateCubicleTile
   },
   props: {
+    /**
+     * Array of cubicle objects with status and reservation information
+     */
     cubicles: {
       type: Array,
-      default: () => []
+      default: () => [],
+      validator: (cubicles) => {
+        return cubicles.every(cubicle => 
+          cubicle._id && 
+          typeof cubicle.row === 'number' && 
+          typeof cubicle.col === 'number'
+        );
+      }
     },
+    /**
+     * Selected date in YYYY-MM-DD format
+     */
     selectedDate: {
       type: String,
-      required: true
+      required: true,
+      validator: (date) => {
+        return /^\d{4}-\d{2}-\d{2}$/.test(date);
+      }
     },
+    /**
+     * Optional statistics for the selected date
+     */
     dateStats: {
       type: Object,
       default: null
     }
   },
-  emits: ['reserve', 'cancel', 'update-cubicle-state'],
+  emits: [
+    /**
+     * Emitted when a cubicle is reserved
+     * @param {string} cubicleId - The ID of the cubicle to reserve
+     */
+    'reserve',
+    /**
+     * Emitted when a reservation is cancelled
+     * @param {string} reservationId - The ID of the reservation to cancel
+     */
+    'cancel',
+    /**
+     * Emitted when a cubicle's global state needs to be updated
+     * @param {Object} cubicle - The cubicle object with updated status
+     */
+    'update-cubicle-state'
+  ],
   setup(props, { emit }) {
     const { currentUser, token } = useAuth();
     
-    // Modal state
+    // Modal state management
     const showModal = ref(false);
     const showNotYourReservationModal = ref(false);
     const selectedCubicle = ref(null);
     const reservationUser = ref(null);
 
-    // Check if user is admin using VITE_ADMIN_UIDS
+    /**
+     * Determines if the current user has admin privileges
+     * Uses centralized environment utility for consistent admin checking
+     * @returns {boolean} True if user is admin
+     */
     const isAdminUser = computed(() => {
       if (!currentUser.value) return false;
-      const adminUids = (import.meta.env.VITE_ADMIN_UIDS || '').split(',').map(u => u.trim());
-      return adminUids.includes(currentUser.value.uid);
+      
+      try {
+        return isAdminUid(currentUser.value.uid);
+      } catch (error) {
+        console.warn('DateCubicleGrid: Error checking admin status:', error);
+        return false;
+      }
     });
 
-    // Get current date status for selected cubicle
+    /**
+     * Gets the current date-specific status for the selected cubicle
+     * @returns {string|null} Status: 'available', 'reserved', 'error', or null
+     */
     const currentDateStatus = computed(() => {
       if (!selectedCubicle.value) return null;
       
@@ -142,7 +247,10 @@ export default {
       return selectedCubicle.value.dateStatus || selectedCubicle.value.status;
     });
 
-    // Check if current user can modify the selected cubicle
+    /**
+     * Determines if the current user can modify the selected cubicle
+     * @returns {boolean} True if user can modify the cubicle
+     */
     const canModifyCubicle = computed(() => {
       if (!selectedCubicle.value || !currentUser.value) return false;
       
@@ -161,134 +269,204 @@ export default {
       return currentDateStatus.value === 'available';
     });
 
-    // Check if current user can change cubicle to error state
+    /**
+     * Determines if the current user can set cubicles to error state
+     * @returns {boolean} True if user can set error state (admin only)
+     */
     const canChangeToError = computed(() => {
-      // Admin can always set error state (global cubicle state, not date-specific)
       return isAdminUser.value;
     });
 
-    // Computed properties for sorted cubicles in sequential grid layout
+    /**
+     * Sorts cubicles in sequential grid layout (row by row, then column by column)
+     * @returns {Array} Sorted array of cubicle objects
+     */
     const sortedCubicles = computed(() => {
-      // Sort cubicles by row first, then by column for sequential layout
-      return [...props.cubicles].sort((a, b) => {
-        if (a.row !== b.row) {
-          return a.row - b.row;
-        }
-        return a.col - b.col;
-      });
+      try {
+        return [...props.cubicles].sort((a, b) => {
+          if (a.row !== b.row) {
+            return a.row - b.row;
+          }
+          return a.col - b.col;
+        });
+      } catch (error) {
+        console.error('DateCubicleGrid: Error sorting cubicles:', error);
+        return props.cubicles;
+      }
     });
 
-    // Modal methods
+    /**
+     * Opens the cubicle details modal or access denied modal
+     * @param {Object} cubicle - The cubicle object to display
+     */
     const openModal = (cubicle) => {
-      selectedCubicle.value = cubicle;
-      reservationUser.value = null;
-      
-      // If cubicle is reserved for this date, set reservation info
-      if (currentDateStatus.value === 'reserved') {
-        // Try reservationInfo first (new format), then fall back to reservedByUser (old format)
-        const userInfo = cubicle.reservationInfo?.user || cubicle.reservedByUser;
-        
-        if (userInfo) {
-          // Check if this is not the user's reservation
-          if (currentUser.value && userInfo.uid !== currentUser.value.uid) {
-            // Set reservation user info for the modal and show "not your reservation" modal
-            reservationUser.value = userInfo;
-            showNotYourReservationModal.value = true;
-            return;
-          }
-          
-          // For own reservations, set reservation info
-          reservationUser.value = userInfo;
+      try {
+        if (!cubicle || !cubicle._id) {
+          console.warn('DateCubicleGrid: Invalid cubicle object provided to openModal');
+          return;
         }
+
+        selectedCubicle.value = cubicle;
+        reservationUser.value = null;
+        
+        // If cubicle is reserved for this date, handle reservation info
+        if (currentDateStatus.value === 'reserved') {
+          // Try reservationInfo first (new format), then fall back to reservedByUser (old format)
+          const userInfo = cubicle.reservationInfo?.user || cubicle.reservedByUser;
+          
+          if (userInfo) {
+            // Check if this is not the user's reservation
+            if (currentUser.value && userInfo.uid !== currentUser.value.uid) {
+              // Set reservation user info and show "not your reservation" modal
+              reservationUser.value = userInfo;
+              showNotYourReservationModal.value = true;
+              return;
+            }
+            
+            // For own reservations, set reservation info
+            reservationUser.value = userInfo;
+          }
+        }
+        
+        // Show regular modal for available cubicles or own reservations
+        showModal.value = true;
+      } catch (error) {
+        console.error('DateCubicleGrid: Error opening modal:', error);
       }
-      
-      // Show regular modal for available cubicles or own reservations
-      showModal.value = true;
     };
 
+    /**
+     * Closes the main cubicle details modal and resets state
+     */
     const closeModal = () => {
       showModal.value = false;
       selectedCubicle.value = null;
       reservationUser.value = null;
     };
 
+    /**
+     * Closes the "not your reservation" modal and resets state
+     */
     const closeNotYourReservationModal = () => {
       showNotYourReservationModal.value = false;
       selectedCubicle.value = null;
       reservationUser.value = null;
     };
 
+    /**
+     * Handles cubicle state changes with permission validation
+     * @param {string} newState - The new state: 'available', 'reserved', or 'error'
+     */
     const changeState = (newState) => {
-      if (!selectedCubicle.value) return;
-      
-      // Special handling for error state - admin can always set error state
-      if (newState === 'error') {
-        if (!isAdminUser.value) {
-          console.warn('Only administrators can set cubicles to error state');
+      try {
+        if (!selectedCubicle.value) {
+          console.warn('DateCubicleGrid: No cubicle selected for state change');
+          return;
+        }
+        
+        // Special handling for error state - admin only
+        if (newState === 'error') {
+          if (!isAdminUser.value) {
+            console.warn('DateCubicleGrid: Only administrators can set cubicles to error state');
+            closeModal();
+            return;
+          }
+          // For error state, update the global cubicle status
+          emit('update-cubicle-state', { ...selectedCubicle.value, status: newState });
           closeModal();
           return;
         }
-        // For error state, we need to update the global cubicle status
-        // This should be handled by the parent component
-        emit('update-cubicle-state', { ...selectedCubicle.value, status: newState });
-        closeModal();
-        return;
-      }
-      
-      // Check permissions before allowing other state changes
-      if (!canModifyCubicle.value) {
-        console.warn('User does not have permission to modify this cubicle');
-        closeModal();
-        return;
-      }
-      
-      // Handle reservation/cancellation for date-specific actions
-      if (newState === 'reserved') {
-        emit('reserve', selectedCubicle.value._id);
-      } else if (newState === 'available') {
-        if (currentDateStatus.value === 'reserved') {
-          // Cancel reservation
-          if (selectedCubicle.value.reservationInfo) {
-            emit('cancel', selectedCubicle.value.reservationInfo._id);
-          }
-        } else if (selectedCubicle.value.status === 'error') {
-          // Change from error state to available - update global status
-          emit('update-cubicle-state', { ...selectedCubicle.value, status: newState });
+        
+        // Check permissions before allowing other state changes
+        if (!canModifyCubicle.value) {
+          console.warn('DateCubicleGrid: User does not have permission to modify this cubicle');
+          closeModal();
+          return;
         }
+        
+        // Handle reservation/cancellation for date-specific actions
+        if (newState === 'reserved') {
+          emit('reserve', selectedCubicle.value._id);
+        } else if (newState === 'available') {
+          if (currentDateStatus.value === 'reserved') {
+            // Cancel reservation
+            if (selectedCubicle.value.reservationInfo) {
+              emit('cancel', selectedCubicle.value.reservationInfo._id);
+            } else {
+              console.warn('DateCubicleGrid: No reservation info found for cancellation');
+            }
+          } else if (selectedCubicle.value.status === 'error') {
+            // Change from error state to available - update global status
+            emit('update-cubicle-state', { ...selectedCubicle.value, status: newState });
+          }
+        }
+        
+        closeModal();
+      } catch (error) {
+        console.error('DateCubicleGrid: Error changing cubicle state:', error);
+        closeModal();
       }
-      
-      closeModal();
     };
 
-    // Event handlers
+    /**
+     * Handles cubicle reservation events from child components
+     * @param {string} cubicleId - The ID of the cubicle to reserve
+     */
     const handleReserve = (cubicleId) => {
+      if (!cubicleId) {
+        console.warn('DateCubicleGrid: Invalid cubicle ID for reservation');
+        return;
+      }
       emit('reserve', cubicleId);
     };
 
+    /**
+     * Handles reservation cancellation events from child components
+     * @param {string} reservationId - The ID of the reservation to cancel
+     */
     const handleCancel = (reservationId) => {
+      if (!reservationId) {
+        console.warn('DateCubicleGrid: Invalid reservation ID for cancellation');
+        return;
+      }
       emit('cancel', reservationId);
     };
 
+    /**
+     * Formats a date string for display in modals and UI
+     * Handles timezone issues by treating YYYY-MM-DD as local date
+     * @param {string} dateString - Date in YYYY-MM-DD format
+     * @returns {string} Formatted date string
+     */
     const formatDate = (dateString) => {
-      // Handle YYYY-MM-DD format to avoid timezone issues
-      if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        const [year, month, day] = dateString.split('-').map(Number);
-        const date = new Date(year, month - 1, day); // Create local date
-        return date.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
-      } else {
-        // Handle other date formats or Date objects
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-          weekday: 'long',
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
-        });
+      try {
+        // Handle YYYY-MM-DD format to avoid timezone issues
+        if (typeof dateString === 'string' && dateString.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          const [year, month, day] = dateString.split('-').map(Number);
+          const date = new Date(year, month - 1, day); // Create local date
+          return date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        } else {
+          // Handle other date formats or Date objects
+          const date = new Date(dateString);
+          if (isNaN(date.getTime())) {
+            console.warn('DateCubicleGrid: Invalid date provided:', dateString);
+            return 'Invalid Date';
+          }
+          return date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          });
+        }
+      } catch (error) {
+        console.error('DateCubicleGrid: Error formatting date:', error);
+        return 'Invalid Date';
       }
     };
 
@@ -315,27 +493,21 @@ export default {
 </script>
 
 <style scoped>
-/* Main container - single grid layout */
+/* ===========================================
+   DATE CUBICLE GRID - SIMPLIFIED & CLEAN
+   IBM Carbon Design System Compliant
+   =========================================== */
+
+/* Main Container - Clean Flexbox Layout */
 .cubicle-container {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
   width: 100%;
-  min-height: 100%;
-  overflow: hidden; /* Hidden by default for large screens */
-  box-sizing: border-box;
   padding: 1rem;
-  margin: 0;
+  overflow-x: auto; /* Simple horizontal scroll when needed */
 }
 
-/* Enable scrolling on mobile/tablet when needed */
-@media (max-width: 768px) {
-  .cubicle-container {
-    overflow: auto;
-  }
-}
-
-/* Unified 6x9 grid */
+/* 6x9 Grid Layout - Simplified */
 .unified-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -343,18 +515,14 @@ export default {
   gap: 4px;
   width: 100%;
   max-width: 900px;
-  height: fit-content;
-  justify-content: center;
-  align-items: center;
-  box-sizing: border-box;
-  padding: 8px;
+  padding: 0.5rem;
 }
 
 .tile-container {
   display: contents;
 }
 
-/* Smooth tile transitions following Carbon Design motion */
+/* Clean Tile Transitions - IBM Carbon Motion */
 .tile-stagger-enter-active,
 .tile-stagger-leave-active {
   transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
@@ -363,190 +531,65 @@ export default {
 
 .tile-stagger-enter-from {
   opacity: 0;
-  transform: scale(0.95) translateY(4px);
+  transform: translateY(4px);
 }
 
 .tile-stagger-leave-to {
   opacity: 0;
-  transform: scale(0.95) translateY(-4px);
+  transform: translateY(-4px);
 }
 
-.tile-stagger-move {
-  transition: transform 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
-}
-
-/* Cubicle tiles - optimized for 6x9 grid */
+/* Simplified Cubicle Tile Styles */
 :deep(.cubicle-tile) {
-  background-color: #ffffff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  height: 70px;
+  cursor: pointer;
+  transition: all 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 70px;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  min-width: 80px;
-  transform-origin: center;
 }
 
 :deep(.cubicle-tile:hover) {
-  transform: scale(1.01); /* Reduced scale to prevent overflow */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  z-index: 1; /* Ensure hover tile stays on top */
+  border-color: #0f62fe;
+  box-shadow: 0 2px 6px rgba(15, 98, 254, 0.2);
 }
 
-/* Reservation Summary - enhanced styling */
-.reservation-summary {
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #e0e0e0;
-  border-radius: 0;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  max-width: 300px;
-  z-index: 10;
-}
-
-.reservation-summary h4 {
-  margin: 0 0 0.75rem 0;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #161616;
-  text-transform: uppercase;
-  letter-spacing: 0.16px;
-}
-
-.user-reservations {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.user-reservation-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.375rem 0.5rem;
-  background: rgba(15, 98, 254, 0.05);
-  border-left: 3px solid #0f62fe;
-  font-size: 0.75rem;
-}
-
-.user-name {
-  font-weight: 500;
-  color: #161616;
-}
-
-.user-count {
-  color: #525252;
-  font-weight: 400;
-}
-
-/* Responsive design for unified grid */
-@media (max-width: 768px) {
-  .cubicle-container {
-    padding: 0.5rem;
-    overflow: auto; /* Allow scrolling on tablets */
-  }
-  
-  .unified-grid {
-    gap: 2px;
-    max-width: 100%;
-  }
-  
-  :deep(.cubicle-tile) {
-    height: 60px;
-    min-width: 60px;
-  }
-}
-
-@media (max-width: 480px) {
-  .cubicle-container {
-    padding: 0.25rem;
-    overflow: auto; /* Allow scrolling on mobile */
-  }
-  
-  .unified-grid {
-    gap: 1px;
-  }
-  
-  :deep(.cubicle-tile) {
-    height: 50px;
-    min-width: 50px;
-  }
-}
-
-@media (max-width: 360px) {
-  .cubicle-container {
-    overflow: auto; /* Ensure scrolling on very small screens */
-  }
-  
-  .unified-grid {
-    gap: 0.5px;
-  }
-  
-  :deep(.cubicle-tile) {
-    height: 45px;
-    min-width: 45px;
-  }
-}
-
-/* Permission notice styling */
+/* Permission Notice - IBM Carbon Notification Style */
 .permission-notice {
   margin-top: 1rem;
   padding: 0.75rem;
-  background-color: #fef7cd;
-  border: 1px solid #f1c21b;
-  border-radius: 4px;
-  border-left: 4px solid #f1c21b;
+  background: #fef7cd;
+  border-left: 3px solid #f1c21b;
+  border-radius: 0;
 }
 
 .permission-notice p {
   margin: 0;
   font-size: 0.875rem;
   color: #8d6e00;
-  font-weight: 500;
 }
 
-/* Clean modal implementation without layout shifts */
-:deep(.bx--modal),
-:deep(.cv-modal) {
-  /* Ensure modal doesn't affect background scrolling */
-  position: fixed;
-  z-index: 9999;
+/* Error Status Text */
+.error-status {
+  color: #da1e28;
+  font-weight: 600;
 }
 
-/* Clean scrollbar styling for mobile/tablet */
+/* Clean Responsive Design - Single Breakpoint */
 @media (max-width: 768px) {
-  .cubicle-container::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  .cubicle-container::-webkit-scrollbar-track {
-    background: #f4f4f4;
-    border-radius: 3px;
-  }
-
-  .cubicle-container::-webkit-scrollbar-thumb {
-    background: #c6c6c6;
-    border-radius: 3px;
-  }
-
-  .cubicle-container::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-  }
-
-  /* Firefox scrollbar styling */
   .cubicle-container {
-    scrollbar-width: thin;
-    scrollbar-color: #c6c6c6 #f4f4f4;
+    padding: 0.5rem;
+  }
+  
+  .unified-grid {
+    gap: 2px;
+    padding: 0.25rem;
+  }
+  
+  :deep(.cubicle-tile) {
+    height: 55px;
   }
 }
 </style>

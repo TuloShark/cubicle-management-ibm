@@ -1,0 +1,447 @@
+/* ===========================================
+   STATISTICS VIEW - SIMPLIFIED & CLEAN
+   IBM Carbon Design System Compliant
+   =========================================== */
+
+/* Main Container */
+.statistics-container {
+  padding: 0;
+  margin-top: 48px;
+  background: #f4f4f4;
+  flex: 1;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* Grid Layout */
+.statistics-grid {
+  padding: 1.5rem;
+  max-width: 1584px;
+  margin: 0 auto;
+}
+
+/* Content Wrapper */
+.statistics-content-wrapper {
+  padding-bottom: 1rem;
+}
+
+/* Row Layouts */
+.top-stats-row,
+.stats-row,
+.user-metrics-row,
+.analytics-trend-row {
+  margin-bottom: 2rem;
+}
+
+/* ===========================================
+   TILES - CONSISTENT DESIGN
+   =========================================== */
+
+.overview-tile,
+.data-tile,
+.chart-tile,
+.analytics-tile {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  height: 100%;
+  transition: all 0.2s ease;
+}
+
+.overview-tile:hover,
+.data-tile:hover,
+.chart-tile:hover,
+.analytics-tile:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-color: #0f62fe;
+}
+
+/* Tile Modifiers */
+.formatted-tile {
+  border-width: 2px;
+  position: relative;
+}
+
+.formatted-tile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0f62fe, #0043ce);
+}
+
+.transparent-tile {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.transparent-tile:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(15, 98, 254, 0.3);
+}
+
+/* ===========================================
+   TILE HEADERS
+   =========================================== */
+
+.tile-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tile-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.tile-subtitle {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+}
+
+/* Enhanced General Usage Metrics Formatting */
+.stats-metrics {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-height: 200px;
+  position: relative;
+  z-index: 2;
+}
+
+.metric-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(248, 249, 250, 0.8);
+  border: 1px solid rgba(224, 224, 224, 0.4);
+  border-radius: 0; /* Sharp edges */
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transition: all 0.15s ease;
+}
+
+.metric-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(15, 98, 254, 0.3);
+  transform: translateX(2px);
+}
+
+.metric-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #161616;
+  text-transform: uppercase;
+  letter-spacing: 0.16px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  min-width: 80px;
+}
+
+.metric-value-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  justify-content: flex-end;
+  max-width: 200px;
+}
+
+.metric-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #161616;
+  font-family: 'IBM Plex Mono', monospace;
+  letter-spacing: 0.32px;
+  min-width: 50px;
+  text-align: right;
+}
+
+/* Color-coded metric values */
+.reserved-value {
+  color: #0f62fe;
+}
+
+.available-value {
+  color: #198038;
+}
+
+.error-value {
+  color: #da1e28;
+}
+
+/* Color-coded left borders for metric items */
+.metric-item:nth-child(1)::before {
+  background: #0f62fe;
+}
+
+.metric-item:nth-child(2)::before {
+  background: #198038;
+}
+
+.metric-item:nth-child(3)::before {
+  background: #da1e28;
+}
+
+/* ===========================================
+   CHARTS SECTION
+   =========================================== */
+
+.chart-container {
+  position: relative;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-canvas {
+  max-width: 100%;
+  max-height: 400px;
+}
+
+.chart-loading {
+  padding: 2rem;
+  width: 100%;
+}
+
+/* ===========================================
+   USER STATS SECTION
+   =========================================== */
+
+.data-table-container {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.user-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f7f7f7;
+  border-radius: 4px;
+  border-left: 4px solid #0f62fe;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #161616;
+}
+
+.user-email {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+}
+
+.user-stats {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-stat-value {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #0f62fe;
+}
+
+.user-stat-label {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+  text-transform: uppercase;
+}
+
+/* ===========================================
+   KEY METRICS SECTION
+   =========================================== */
+
+.key-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.metric-card {
+  text-align: center;
+  padding: 1rem;
+  background: #f7f7f7;
+  border-radius: 4px;
+}
+
+.metric-number {
+  font-size: 2rem;
+  font-weight: 600;
+  color: #161616;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.metric-title {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* ===========================================
+   ANALYTICS SECTION - USING COMPONENT
+   =========================================== */
+
+.analytics-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.analytics-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Simple container for AnalyticsCarousel component */
+.analytics-carousel-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+}
+
+/* ===========================================
+   EMPTY STATES
+   =========================================== */
+
+.no-data {
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.empty-state-content {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.empty-state-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+}
+
+.empty-state-description {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+}
+
+/* ===========================================
+   LOADING STATES
+   =========================================== */
+
+.loading-container {
+  padding: 2rem;
+  text-align: center;
+}
+
+/* ===========================================
+   TRANSITIONS
+   =========================================== */
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.slide-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+  .statistics-grid {
+    padding: 1rem;
+  }
+  
+  .metric-value-container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .user-stat-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .user-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .analytics-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .key-metrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .chart-container {
+    min-height: 250px;
+  }
+}
+

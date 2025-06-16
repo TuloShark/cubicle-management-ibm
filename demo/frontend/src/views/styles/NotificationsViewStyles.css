@@ -1,0 +1,321 @@
+/* ===========================================
+   NOTIFICATIONS VIEW - SIMPLIFIED & CLEAN
+   IBM Carbon Design System Compliant
+   =========================================== */
+
+/* Main Container */
+.notifications-container {
+  padding: 0;
+  margin-top: 48px;
+  background: #f4f4f4;
+  flex: 1;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* Grid Layout */
+.notifications-grid {
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ===========================================
+   NOTIFICATION TILE
+   =========================================== */
+
+.notification-tile {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 0;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.15s ease;
+}
+
+.notification-tile:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.tile-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f7f7f7;
+}
+
+.header-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.header-icon {
+  width: 40px;
+  height: 40px;
+  background: #0f62fe;
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.header-text {
+  flex: 1;
+}
+
+.tile-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.tile-subtitle {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+}
+
+.notification-content {
+  padding: 1.5rem;
+}
+
+/* ===========================================
+   INPUT & STATUS SECTIONS
+   =========================================== */
+
+.input-section {
+  margin-bottom: 1.5rem;
+}
+
+.email-input {
+  max-width: 400px;
+}
+
+.status-section {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f7f7f7;
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid #e0e0e0;
+  transition: border-color 0.15s ease;
+}
+
+.status-section.status-ready {
+  border-left-color: #198038;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.status-icon {
+  flex-shrink: 0;
+  color: #6f6f6f;
+}
+
+.status-indicator.status-ready .status-icon {
+  color: #198038;
+}
+
+.status-indicator.status-pending .status-icon {
+  color: #f1c21b;
+}
+
+.status-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #161616;
+}
+
+/* ===========================================
+   ACTION SECTION
+   =========================================== */
+
+.action-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.send-button {
+  min-width: 240px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.send-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(15, 98, 254, 0.3);
+}
+
+.loading-spinner {
+  width: 16px !important;
+  height: 16px !important;
+  margin-right: 8px;
+}
+
+/* ===========================================
+   INFORMATION TILE
+   =========================================== */
+
+.info-tile {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: all 0.15s ease;
+}
+
+.info-tile:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.info-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.info-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.info-grid {
+  display: flex;
+  justify-content: center;
+}
+
+.info-grid.single-item {
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  background: #f7f7f7;
+  border: 1px solid #e0e0e0;
+  transition: all 0.15s ease;
+  width: 100%;
+}
+
+.info-item:hover {
+  background: #e8e8e8;
+}
+
+.info-item.centered {
+  max-width: 350px;
+}
+
+.info-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.email-icon {
+  background: #0f62fe;
+  color: #ffffff;
+}
+
+.info-text h5 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+}
+
+.info-text p {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+}
+
+/* ===========================================
+   TOAST NOTIFICATION
+   =========================================== */
+
+.toast-notification {
+  position: fixed;
+  top: 80px;
+  right: 1rem;
+  z-index: 9999;
+  max-width: 400px;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+  .notifications-grid {
+    padding: 1rem;
+  }
+  
+  .tile-header {
+    padding: 1rem;
+  }
+  
+  .header-content {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  
+  .notification-content {
+    padding: 1rem;
+  }
+  
+  .info-item {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  
+  .send-button {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .action-section {
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-icon {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .tile-title {
+    font-size: 1rem;
+  }
+  
+  .tile-subtitle {
+    font-size: 0.75rem;
+  }
+}

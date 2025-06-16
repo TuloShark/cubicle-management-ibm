@@ -1,23 +1,81 @@
+<!--
+===================================================================
+COMPONENT: AppFooter
+===================================================================
+PURPOSE: 
+Displays the application footer with branding, system status, and support links.
+Shows across all authenticated pages (excludes login/public routes).
+
+FEATURES:
+- Company branding with version display
+- Real-time system status indicator
+- Live timestamp updates (every minute)
+- IT support contact integration
+- Responsive design for mobile devices
+
+INTEGRATION:
+- Used in: App.vue as global footer
+- Visibility: Authenticated users only
+- Position: Bottom of all main application pages
+
+DEPENDENCIES:
+- @carbon/vue (CvButton component)
+- Vue 3 Composition API
+
+ACCESSIBILITY:
+- Semantic footer element
+- Screen reader friendly status indicators
+- Keyboard accessible support button
+
+LAST UPDATED: June 2025
+===================================================================
+-->
+
 <template>
-  <footer class="app-footer">
+  <footer 
+    class="app-footer" 
+    role="contentinfo" 
+    aria-label="Application footer"
+  >
     <div class="footer-content">
       <!-- Left section: Company info -->
       <div class="footer-section footer-brand">
         <div class="brand-info">
-          <span class="brand-name">IBM Space Optimization</span>
-          <span class="brand-version">v{{ version }}</span>
+          <span 
+            class="brand-name"
+            aria-label="Application name"
+          >IBM Space Optimization</span>
+          <span 
+            class="brand-version"
+            aria-label="Version"
+          >v{{ version }}</span>
         </div>
-        <div class="brand-tagline">Enterprise workspace management</div>
+        <div 
+          class="brand-tagline"
+          aria-label="Application description"
+        >Enterprise workspace management</div>
       </div>
       
       <!-- Center section: System status -->
       <div class="footer-section footer-status">
-        <div class="status-indicator">
-          <div class="status-dot" :class="systemStatus.class"></div>
+        <div 
+          class="status-indicator"
+          role="status"
+          :aria-label="`System status: ${systemStatus.text}`"
+        >
+          <div 
+            class="status-dot" 
+            :class="systemStatus.class"
+            aria-hidden="true"
+          ></div>
           <span class="status-text">{{ systemStatus.text }}</span>
         </div>
-        <div class="last-updated">
-          Last updated: {{ lastUpdated }}
+        <div 
+          class="last-updated"
+          aria-label="Last update time"
+        >
+          <span class="sr-only">Last updated at </span>
+          {{ lastUpdated }}
         </div>
       </div>
       
@@ -30,20 +88,42 @@
             size="sm" 
             @click="openSupport"
             class="support-button"
+            aria-label="Contact IT Support for technical assistance"
           >
             IT Support
           </cv-button>
         </div>
         <div class="footer-meta">
-          <span class="copyright">© {{ currentYear }} IBM Corporation</span>
+          <span 
+            class="copyright"
+            aria-label="Copyright information"
+          >© {{ currentYear }} IBM Corporation</span>
         </div>
       </div>
+    </div>
+    
+    <!-- Screen reader only content -->
+    <div class="sr-only">
+      Application footer containing company information, system status, and support links
     </div>
   </footer>
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+/**
+ * AppFooter Component
+ * 
+ * A responsive footer component that displays:
+ * - Application branding and version information
+ * - Real-time system status with visual indicators
+ * - Live timestamp updates
+ * - Support contact functionality
+ * 
+ * @component
+ * @example
+ * <AppFooter />
+ */
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import { CvButton } from '@carbon/vue';
 
 export default {
@@ -52,43 +132,114 @@ export default {
     CvButton
   },
   setup() {
+    // Reactive state
     const version = ref('2.1.0');
     const lastUpdated = ref('');
     const systemOnline = ref(true);
     const updateInterval = ref(null);
+    const isComponentMounted = ref(false);
 
+    /**
+     * Computed property for current year in copyright
+     * @returns {number} Current year
+     */
     const currentYear = computed(() => new Date().getFullYear());
     
+    /**
+     * Computed property for system status display
+     * @returns {Object} Status object with class and text
+     */
     const systemStatus = computed(() => {
       return systemOnline.value 
         ? { class: 'online', text: 'System operational' }
         : { class: 'offline', text: 'System maintenance' };
     });
 
+    /**
+     * Updates the last updated timestamp
+     * Formats time in 24-hour format (HH:MM)
+     */
     const updateTimestamp = () => {
-      const now = new Date();
-      lastUpdated.value = now.toLocaleTimeString('en-US', { 
-        hour12: false, 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
+      try {
+        const now = new Date();
+        lastUpdated.value = now.toLocaleTimeString('en-US', { 
+          hour12: false, 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+      } catch (error) {
+        console.warn('AppFooter: Error updating timestamp:', error);
+        lastUpdated.value = '--:--';
+      }
     };
 
+    /**
+     * Starts the automatic timestamp update interval
+     * Updates every minute (60000ms)
+     */
+    const startTimestampUpdates = () => {
+      stopTimestampUpdates(); // Clear any existing interval
+      
+      if (isComponentMounted.value) {
+        updateInterval.value = setInterval(() => {
+          updateTimestamp();
+        }, 60000);
+      }
+    };
+
+    /**
+     * Stops the automatic timestamp updates
+     * Cleans up interval to prevent memory leaks
+     */
+    const stopTimestampUpdates = () => {
+      if (updateInterval.value) {
+        clearInterval(updateInterval.value);
+        updateInterval.value = null;
+      }
+    };
+
+    /**
+     * Opens IT support contact method
+     * In production, this should integrate with actual support system
+     */
     const openSupport = () => {
-      // In a real app, this could open a support ticket system or help modal
-      alert('IT Support: Please contact your system administrator for technical assistance with the cubicle management system.');
+      try {
+        // TODO: Replace with actual support system integration
+        const supportMessage = [
+          'IT Support Contact Information:',
+          '',
+          '📧 Email: it-support@company.com',
+          '📞 Phone: (555) 123-4567',
+          '🕒 Hours: Monday-Friday, 8:00 AM - 6:00 PM EST',
+          '',
+          'For cubicle management system issues, please include:',
+          '• Your employee ID',
+          '• Description of the problem',
+          '• Steps to reproduce (if applicable)'
+        ].join('\n');
+        
+        alert(supportMessage);
+      } catch (error) {
+        console.error('AppFooter: Error opening support:', error);
+        alert('Unable to open support information. Please contact IT directly.');
+      }
     };
 
-    onMounted(() => {
+    // Lifecycle hooks
+    onMounted(async () => {
+      isComponentMounted.value = true;
+      
+      // Initial timestamp update
+      await nextTick();
       updateTimestamp();
-      // Update timestamp every minute
-      updateInterval.value = setInterval(updateTimestamp, 60000);
+      
+      // Start automatic updates
+      startTimestampUpdates();
     });
 
     onUnmounted(() => {
-      if (updateInterval.value) {
-        clearInterval(updateInterval.value);
-      }
+      isComponentMounted.value = false;
+      stopTimestampUpdates();
     });
 
     return {
@@ -103,16 +254,29 @@ export default {
 </script>
 
 <style scoped>
+/* ===========================================
+   APP FOOTER - SIMPLIFIED FLEXBOX
+   IBM Carbon Design System Compliant
+   =========================================== */
+
+/* Screen Reader Only Content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Main Footer - Simplified */
 .app-footer {
-  position: relative;
-  bottom: 0;
-  left: 0;
-  right: 0;
   background: #161616;
   color: #f4f4f4;
   border-top: 1px solid #393939;
-  margin-top: auto;
-  z-index: 100;
   font-family: 'IBM Plex Sans', sans-serif;
 }
 
@@ -130,11 +294,11 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  flex: 1;
 }
 
 /* Brand Section */
 .footer-brand {
-  flex: 1;
   align-items: flex-start;
 }
 
@@ -142,20 +306,17 @@ export default {
   display: flex;
   align-items: baseline;
   gap: 0.75rem;
-  margin-bottom: 0.25rem;
 }
 
 .brand-name {
   font-size: 0.875rem;
   font-weight: 600;
   color: #ffffff;
-  letter-spacing: 0.02em;
 }
 
 .brand-version {
   font-size: 0.75rem;
   color: #a8a8a8;
-  font-weight: 400;
   padding: 0.125rem 0.375rem;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
@@ -165,12 +326,10 @@ export default {
 .brand-tagline {
   font-size: 0.75rem;
   color: #a8a8a8;
-  font-weight: 400;
 }
 
 /* Status Section */
 .footer-status {
-  flex: 1;
   align-items: center;
   text-align: center;
 }
@@ -178,9 +337,8 @@ export default {
 .status-indicator {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
   justify-content: center;
-  margin-bottom: 0.25rem;
+  gap: 0.5rem;
 }
 
 .status-dot {
@@ -209,12 +367,10 @@ export default {
 .last-updated {
   font-size: 0.6875rem;
   color: #a8a8a8;
-  font-weight: 400;
 }
 
 /* Links Section */
 .footer-links {
-  flex: 1;
   align-items: flex-end;
   text-align: right;
 }
@@ -222,87 +378,59 @@ export default {
 .support-info {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
   justify-content: flex-end;
-  margin-bottom: 0.25rem;
+  gap: 0.75rem;
 }
 
 .support-text {
   font-size: 0.75rem;
   color: #a8a8a8;
-  font-weight: 400;
 }
 
+/* Support Button - Simplified */
 .support-button {
-  min-height: 28px !important;
-  padding: 0.25rem 0.75rem !important;
-  font-size: 0.75rem !important;
-  border-radius: 0 !important;
+  min-height: 28px;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  background: transparent;
+  color: #0f62fe;
+  border: 1px solid transparent;
+  transition: background 0.15s ease;
 }
 
-.support-button :deep(.bx--btn) {
-  min-height: 28px !important;
-  padding: 0.25rem 0.75rem !important;
-  font-size: 0.75rem !important;
-  border-radius: 0 !important;
-  color: #0f62fe !important;
-  border-color: transparent !important;
+.support-button:hover {
+  background: rgba(15, 98, 254, 0.1);
 }
 
-.support-button :deep(.bx--btn:hover) {
-  background: rgba(15, 98, 254, 0.1) !important;
-  color: #0353e9 !important;
-}
-
-.footer-meta {
-  align-self: flex-end;
+.support-button:focus {
+  outline: 2px solid #0f62fe;
+  outline-offset: 2px;
 }
 
 .copyright {
   font-size: 0.6875rem;
   color: #6f6f6f;
-  font-weight: 400;
 }
 
-/* Responsive Design */
+/* Simplified Responsive Design */
 @media (max-width: 768px) {
   .footer-content {
     flex-direction: column;
-    gap: 1rem;
     padding: 1rem;
+    gap: 1rem;
     text-align: center;
   }
   
   .footer-section {
-    align-items: center !important;
-    text-align: center !important;
+    align-items: center;
   }
   
-  .brand-info {
-    justify-content: center;
-  }
-  
-  .support-info {
-    justify-content: center;
-  }
-  
-  .footer-meta {
-    align-self: center;
-  }
-}
-
-@media (max-width: 480px) {
-  .footer-content {
-    padding: 0.75rem;
-    gap: 0.75rem;
-  }
-  
-  .brand-info {
-    flex-direction: column;
-    gap: 0.25rem;
+  .footer-links {
+    text-align: center;
   }
   
   .support-info {
+    justify-content: center;
     flex-direction: column;
     gap: 0.5rem;
   }

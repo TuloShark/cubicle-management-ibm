@@ -1,3 +1,39 @@
+<!--
+===================================================================
+COMPONENT: DateCubicleTile
+===================================================================
+PURPOSE: 
+Individual cubicle tile component that displays a single cubicle's status,
+serial number, and reservation information. Handles user interactions and
+visual state representation within the DateCubicleGrid layout.
+
+FEATURES:
+- Visual status representation (available/reserved/error)
+- Click and hover interactions
+- User reservation display with name extraction
+- Responsive text sizing
+- IBM Carbon Design System color compliance
+- Smooth animations and state transitions
+
+INTEGRATION:
+- Used in: DateCubicleGrid.vue as child component
+- Parent events: 'click', 'reserve', 'cancel', 'hoverCubicle'
+- Auth integration: useAuth composable for user permissions
+
+DEPENDENCIES:
+- Vue 3 Composition API
+- @carbon/vue (cv-tile component)
+- useAuth composable
+
+ACCESSIBILITY:
+- Clickable tile with proper cursor states
+- Visual status indicators with color coding
+- Hover states for better user feedback
+
+LAST UPDATED: June 2025
+===================================================================
+-->
+
 <template>
   <cv-tile
     class="cubicle-tile"
@@ -7,9 +43,9 @@
     @mouseleave="clearDetails"
   >
     <div class="cubicle-content">
-      <div class="serial">{{ cubicle.serial }}</div>
-      <div v-if="showName" class="name">{{ cubicle.name }}</div>
-      <div v-if="isReserved && cubicle.reservationInfo" class="reserved-by">
+      <div class="serial">{{ cubicle?.serial || 'N/A' }}</div>
+      <div v-if="showName && cubicle?.name" class="name">{{ cubicle.name }}</div>
+      <div v-if="isReserved && cubicle?.reservationInfo" class="reserved-by">
         {{ getDisplayName(cubicle.reservationInfo.user) }}
       </div>
     </div>
@@ -41,79 +77,104 @@ export default {
     const { currentUser } = useAuth();
 
     // Computed properties
+    /**
+     * Determines the CSS classes for the tile based on cubicle status
+     * Prioritizes global error state over date-specific status
+     * @returns {Object} Object with boolean values for each status class
+     */
     const statusClass = computed(() => {
-      // Error state is global and takes priority over date-specific status
+      // Global error state takes priority
       if (props.cubicle.status === 'error') {
-        return {
-          available: false,
-          reserved: false,
-          error: true,
-        };
+        return { available: false, reserved: false, error: true };
       }
       
-      // Use dateStatus if available, otherwise fall back to regular status
-      const status = props.cubicle.dateStatus || props.cubicle.status;
+      // Use date-specific status if available, fallback to general status
+      const currentStatus = props.cubicle.dateStatus || props.cubicle.status;
       return {
-        available: status === 'available',
-        reserved: status === 'reserved',
-        error: status === 'error',
+        available: currentStatus === 'available',
+        reserved: currentStatus === 'reserved',
+        error: currentStatus === 'error',
       };
     });
 
+    /**
+     * Determines if the cubicle is currently reserved
+     * Excludes global error state from reservation consideration
+     * @returns {boolean} True if cubicle is reserved and has reservation info
+     */
     const isReserved = computed(() => {
-      // If cubicle is in global error state, it's not considered reserved for UI purposes
+      // Global error state overrides reservation status
       if (props.cubicle.status === 'error') return false;
       
-      const status = props.cubicle.dateStatus || props.cubicle.status;
-      return status === 'reserved' && props.cubicle.reservationInfo;
+      const currentStatus = props.cubicle.dateStatus || props.cubicle.status;
+      return currentStatus === 'reserved' && !!props.cubicle.reservationInfo;
     });
 
+    /**
+     * Checks if the current reservation belongs to the logged-in user
+     * @returns {boolean} True if current user owns this reservation
+     */
     const isMyReservation = computed(() => {
       if (!isReserved.value || !currentUser.value || !props.cubicle.reservationInfo) return false;
       return props.cubicle.reservationInfo.user?.uid === currentUser.value.uid;
     });
 
-    const canReserve = computed(() => {
-      // Cannot reserve if cubicle is in global error state
-      if (props.cubicle.status === 'error') return false;
-      
-      const status = props.cubicle.dateStatus || props.cubicle.status;
-      return status === 'available' && currentUser.value;
-    });
-
-    const canCancel = computed(() => {
-      return isMyReservation.value;
-    });
-
     // Methods
+    /**
+     * Handles tile click events and emits to parent component
+     * Delegates action handling to parent (DateCubicleGrid)
+     */
     const handleTileClick = () => {
       emit('click', props.cubicle);
     };
 
+    /**
+     * Emits hover event to show cubicle details in parent
+     * @param {Event} event - Mouse hover event
+     */
     const hoverDetails = () => {
       emit('hoverCubicle', props.cubicle);
     };
 
+    /**
+     * Clears hover details by emitting null to parent
+     */
     const clearDetails = () => {
       emit('hoverCubicle', null);
     };
 
+    /**
+     * Extracts and formats a user's display name from their profile data
+     * Prioritizes first name extraction from email, with fallbacks
+     * @param {Object} user - User object containing email, displayName, or uid
+     * @returns {string} Formatted display name
+     */
     const getDisplayName = (user) => {
       if (!user) return '';
-      // Extract first name from email if available, otherwise use email
-      if (user.email) {
-        const firstName = user.email.split('@')[0].split('.')[0];
-        return firstName.charAt(0).toUpperCase() + firstName.slice(1);
+      
+      // Try to extract first name from email
+      if (user.email && typeof user.email === 'string') {
+        try {
+          const emailParts = user.email.split('@')[0];
+          const nameParts = emailParts.split('.');
+          const firstName = nameParts[0];
+          
+          if (firstName && firstName.length > 0) {
+            return firstName.charAt(0).toUpperCase() + firstName.slice(1).toLowerCase();
+          }
+        } catch (error) {
+          console.warn('Error parsing email for display name:', error);
+        }
       }
-      return user.displayName || user.uid || '';
+      
+      // Fallback to displayName or uid
+      return user.displayName || user.uid || 'Unknown User';
     };
 
     return {
       statusClass,
       isReserved,
       isMyReservation,
-      canReserve,
-      canCancel,
       handleTileClick,
       hoverDetails,
       clearDetails,
@@ -124,14 +185,15 @@ export default {
 </script>
 
 <style scoped>
+/* ===========================================
+   DATE CUBICLE TILE - SIMPLIFIED & CLEAN
+   IBM Carbon Design System Compliant
+   =========================================== */
+
+/* Base Tile Styles - Clean Carbon Implementation */
 .cubicle-tile {
-  text-align: center;
   border: 1px solid #e0e0e0;
-  color: #e0e0e0;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  border-radius: 0;
+  color: #ffffff;
   width: 100%;
   height: 100%;
   display: flex;
@@ -139,38 +201,48 @@ export default {
   justify-content: center;
   transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
   cursor: pointer;
-  position: relative;
-  overflow: hidden;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  min-height: auto;
 }
 
-.cubicle-tile::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(255, 255, 255, 0.1);
-  opacity: 0;
-  transition: opacity 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
-  pointer-events: none;
+/* Status Colors - IBM Carbon Design System */
+.cubicle-tile.available {
+  background: #0f62fe;
+  border-color: #0043ce;
 }
 
-.cubicle-tile:hover::before {
-  opacity: 1;
+.cubicle-tile.reserved {
+  background: #393939;
+  border-color: #262626;
 }
 
+.cubicle-tile.error {
+  background: #da1e28;
+  border-color: #a2191f;
+}
+
+/* Clean Hover States */
 .cubicle-tile:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transform: scale(1.02) translateY(-1px);
-  z-index: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
-.cubicle-tile:active {
-  transform: scale(0.98);
-  transition-duration: 0.1s;
+.cubicle-tile.available:hover {
+  background: #0353e9;
 }
 
+.cubicle-tile.reserved:hover {
+  background: #525252;
+}
+
+.cubicle-tile.error:hover {
+  background: #b81922;
+}
+
+/* Content Layout */
 .cubicle-content {
   display: flex;
   flex-direction: column;
@@ -178,82 +250,31 @@ export default {
   justify-content: center;
   width: 100%;
   height: 100%;
-  gap: 1px;
+  gap: 2px;
 }
 
-/* Remove Carbon Design margins and padding completely */
-:deep(.bx--tile) {
-  margin: 0 !important;  
-  padding: 0 !important;
-  border-radius: 0 !important;
-  box-sizing: border-box !important;
-  width: 100% !important;
-  height: 100% !important;
-  min-height: auto !important;
-  max-width: none !important;
-  max-height: none !important;
-}
-
-.cubicle-tile.available {
-  background-color: #2962ff;
-  border-color: #1f4fd4;
-}
-
-.cubicle-tile.reserved {
-  background-color: #3c3c3c;
-  border-color: #2d2d2d;
-}
-
-.cubicle-tile.error {
-  background-color: #d32f2f;
-  border-color: #b71c1c;
-}
-
-.cubicle-tile:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  filter: brightness(1.1);
-  transform: scale(1.03) translateY(-2px);
-}
-
-.cubicle-tile.available:hover {
-  box-shadow: 0 4px 12px rgba(41, 98, 255, 0.4);
-}
-
-.cubicle-tile.reserved:hover {
-  box-shadow: 0 4px 12px rgba(60, 60, 60, 0.4);
-}
-
-.cubicle-tile.error:hover {
-  box-shadow: 0 4px 12px rgba(211, 47, 47, 0.4);
-}
-
+/* Text Styles */
 .serial {
-  font-weight: bold;
+  font-weight: 600;
   font-size: 0.75rem;
   line-height: 1;
-  margin: 0;
-  padding: 0;
 }
 
 .name {
   font-size: 0.625rem;
   line-height: 1;
-  margin: 0;
-  padding: 0;
 }
 
 .reserved-by {
   font-size: 0.5rem;
   line-height: 1;
-  margin: 0;
-  padding: 0;
-  opacity: 0.8;
+  opacity: 0.9;
   font-weight: 500;
   text-transform: capitalize;
 }
 
-/* Strategic responsive text sizing - only for very small screens */
-@media (max-width: 480px) {
+/* Simple Responsive Design - Single Breakpoint */
+@media (max-width: 768px) {
   .serial {
     font-size: 0.6875rem;
   }
@@ -264,20 +285,6 @@ export default {
   
   .reserved-by {
     font-size: 0.4375rem;
-  }
-}
-
-@media (max-width: 360px) {
-  .serial {
-    font-size: 0.625rem;
-  }
-  
-  .name {
-    font-size: 0.5rem;
-  }
-  
-  .reserved-by {
-    font-size: 0.375rem;
   }
 }
 </style>

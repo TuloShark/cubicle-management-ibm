@@ -36,6 +36,11 @@ export default {
 </script>
 
 <style>
+/* ===========================================
+   APP LAYOUT - SIMPLIFIED FLEXBOX
+   Clean functional layout structure
+   =========================================== */
+
 .app-layout {
   display: flex;
   flex-direction: column;
@@ -43,7 +48,7 @@ export default {
 }
 
 .app-main {
-  flex: none; /* Remove flex: 1 to prevent competition with footer */
+  flex: 1;
   display: flex;
   flex-direction: column;
 }
@@ -54,6 +59,7 @@ export default {
   justify-content: center;
   height: 100vh;
   font-size: 1.5rem;
+  color: #161616;
 }
 </style>
 

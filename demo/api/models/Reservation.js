@@ -266,15 +266,9 @@ const ReservationSchema = new mongoose.Schema({
           return false;
         }
         
-        // Business hours validation (6 AM to 10 PM)
-        const hour = checkedInAt.getHours();
-        if (hour < 6 || hour >= 22) {
-          return false;
-        }
-        
         return true;
       },
-      message: 'Check-in time must be after reservation time, not in the future, on the same date as reservation, and during business hours (6 AM - 10 PM)'
+      message: 'Check-in time must be after reservation time, not in the future, and on the same date as reservation'
     }
   },
 
@@ -318,17 +312,9 @@ const ReservationSchema = new mongoose.Schema({
           return false;
         }
         
-        // Business hours validation for same-day checkout (allow 24/7 for next-day)
-        if (checkoutDate.getTime() === reservationDate.getTime()) {
-          const hour = checkedOutAt.getHours();
-          if (hour < 6 || hour >= 22) {
-            return false;
-          }
-        }
-        
         return true;
       },
-      message: 'Check-out time must be after check-in time, not in the future, within one day of reservation, and during business hours for same-day checkout (6 AM - 10 PM)'
+      message: 'Check-out time must be after check-in time, not in the future, and within one day of reservation'
     }
   },
 
@@ -785,23 +771,6 @@ ReservationSchema.statics.normalizeDate = function(date) {
   return normalized;
 };
 
-/**
- * Validate Business Hours
- * 
- * Checks if a given time falls within business hours (6 AM - 10 PM).
- * Used for check-in/check-out validation.
- * 
- * @param {Date} time - Time to validate
- * @returns {Boolean} True if within business hours
- * 
- * @example
- * const isValid = ReservationSchema.statics.isBusinessHours(new Date());
- */
-ReservationSchema.statics.isBusinessHours = function(time) {
-  const hour = time.getHours();
-  return hour >= 6 && hour < 22;
-};
-
 // ====================================
 // INSTANCE METHODS FOR BUSINESS LOGIC
 // ====================================
@@ -846,11 +815,6 @@ ReservationSchema.methods.checkIn = async function(checkInTime = new Date()) {
   
   if (checkInDate.getTime() !== reservationDate.getTime()) {
     throw new Error(`Check-in must be on the same date as reservation (${reservationDate.toDateString()})`);
-  }
-  
-  // Validate business hours
-  if (!this.constructor.isBusinessHours(checkInTime)) {
-    throw new Error('Check-in must be during business hours (6:00 AM - 10:00 PM)');
   }
   
   // Update status and timestamp
@@ -926,11 +890,6 @@ ReservationSchema.methods.checkOut = async function(checkOutTime = new Date()) {
   
   if (!isSameDay && !isNextDay) {
     throw new Error('Check-out must be on the same date as reservation or the following day');
-  }
-  
-  // Validate business hours for same-day checkout
-  if (isSameDay && !this.constructor.isBusinessHours(checkOutTime)) {
-    throw new Error('Same-day check-out must be during business hours (6:00 AM - 10:00 PM)');
   }
   
   // Calculate duration and validate reasonable limits
@@ -1593,19 +1552,6 @@ ReservationSchema.pre('validate', function(next) {
       
       if (this.date > maxAdvanceDate) {
         throw new Error('Cannot create reservations more than 90 days in advance');
-      }
-      
-      // Validate reservation is not for today if it's past business hours
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const reservationDate = new Date(this.date);
-      reservationDate.setHours(0, 0, 0, 0);
-      
-      if (reservationDate.getTime() === today.getTime()) {
-        const now = new Date();
-        if (now.getHours() >= 22) { // After 10 PM
-          throw new Error('Cannot create same-day reservations after 10:00 PM');
-        }
       }
     }
     

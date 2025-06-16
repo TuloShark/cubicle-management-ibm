@@ -1,0 +1,283 @@
+/* ===========================================
+   LOGIN VIEW - SIMPLIFIED & CLEAN
+   IBM Carbon Design System Compliant
+   =========================================== */
+
+/* Main Layout */
+.login-layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f4f4f4;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* ===========================================
+   BRAND PANEL
+   =========================================== */
+
+.login-brand-panel {
+  flex: 1;
+  min-width: 300px;
+  background: linear-gradient(135deg, #0f62fe 0%, #001d6c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  position: relative;
+}
+
+.login-brand-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--zserv-bg-image) center/cover;
+  opacity: 0.1;
+  z-index: 1;
+}
+
+.brand-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  color: #ffffff;
+  max-width: 400px;
+}
+
+.brand-logo-container {
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.brand-logo {
+  width: 120px;
+  height: 120px;
+  background: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  position: relative;
+  z-index: 10;
+}
+
+.brand-image {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+/* Bee Animation - Positioned inside logo container borders */
+.bee-element {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  z-index: 15;
+}
+
+.bee-1 {
+  top: 8px;
+  right: 8px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.bee-2 {
+  bottom: 8px;
+  left: 8px;
+  animation: float 3s ease-in-out infinite reverse;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+.bee-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
+}
+
+.brand-title {
+  font-size: 2rem;
+  font-weight: 400;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.02em;
+}
+
+.brand-subtitle {
+  font-size: 1.125rem;
+  margin: 0 0 1.5rem 0;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.brand-description {
+  font-size: 1rem;
+  line-height: 1.6;
+  opacity: 0.8;
+  margin: 0;
+}
+
+/* ===========================================
+   FORM PANEL
+   =========================================== */
+
+.login-form-panel {
+  flex: 1;
+  min-width: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  background: #ffffff;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-header {
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.form-title {
+  font-size: 1.75rem;
+  font-weight: 400;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.01em;
+}
+
+.form-subtitle {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+}
+
+.login-form {
+  width: 100%;
+}
+
+.input-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-input {
+  width: 100%;
+}
+
+.login-button {
+  width: 100%;
+  margin-bottom: 1.5rem;
+  min-height: 48px;
+}
+
+/* Toast notification positioning for login */
+.toast-notification {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 9999;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+  .login-layout {
+    flex-direction: column;
+  }
+  
+  .login-brand-panel,
+  .login-form-panel {
+    flex: none;
+    min-width: auto;
+    padding: 2rem 1rem;
+  }
+  
+  .login-brand-panel {
+    min-height: 50vh;
+  }
+  
+  .brand-logo {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .brand-image {
+    width: 70px;
+    height: 70px;
+  }
+  
+  /* Adjust bee positioning for smaller logo */
+  .bee-element {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .bee-1 {
+    top: 6px;
+    right: 6px;
+  }
+  
+  .bee-2 {
+    bottom: 6px;
+    left: 6px;
+  }
+  
+  .brand-title {
+    font-size: 1.5rem;
+  }
+  
+  .brand-subtitle {
+    font-size: 1rem;
+  }
+  
+  .form-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-brand-panel,
+  .login-form-panel {
+    padding: 1.5rem;
+  }
+  
+  .brand-logo {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .brand-image {
+    width: 60px;
+    height: 60px;
+  }
+  
+  /* Further adjust bee positioning for smallest screens */
+  .bee-element {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .bee-1 {
+    top: 5px;
+    right: 5px;
+  }
+  
+  .bee-2 {
+    bottom: 5px;
+    left: 5px;
+  }
+}

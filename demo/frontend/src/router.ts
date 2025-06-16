@@ -22,10 +22,21 @@ const router = createRouter({
 });
 
 // Navigation guard for authentication
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const publicPages = ['/']; // Only root is public, /login removed
   const authRequired = !publicPages.includes(to.path);
-  const { token } = useAuth();
+  const { token, loading } = useAuth();
+  
+  // Wait for auth to load to prevent race conditions
+  if (loading.value) {
+    // Wait a bit for auth to initialize
+    await new Promise(resolve => setTimeout(resolve, 100));
+    if (loading.value) {
+      // If still loading after delay, allow navigation but let components handle auth
+      return next();
+    }
+  }
+  
   if (authRequired && !token.value) {
     return next('/');
   }
