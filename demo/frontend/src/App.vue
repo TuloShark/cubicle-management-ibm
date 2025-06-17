@@ -3,7 +3,7 @@
     <!-- Only show NavBar if not on login or root page -->
     <NavBar v-if="isLoggedIn && !loading && !isPublicRoute" />
     <main class="app-main">
-      <transition name="view-transition" mode="out-in">
+      <transition :name="transitionName" mode="out-in">
         <router-view v-if="!loading && (isLoggedIn || isPublicRoute)" :key="$route.fullPath" />
         <div v-else-if="loading" class="loading-spinner">
           Loading...
@@ -19,7 +19,7 @@
 import NavBar from './components/NavBar.vue';
 import AppFooter from './components/AppFooter.vue';
 import useAuth from './composables/useAuth';
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 export default {
@@ -31,8 +31,18 @@ export default {
     const route = useRoute();
     const publicPages = ['/']; // Only root is public, /login removed
     const isPublicRoute = computed(() => publicPages.includes(route.path));
-    // Removed watcher for login redirect; router guard handles this
-    return { isLoggedIn, loading, isPublicRoute };
+    
+    // Use different transitions based on route
+    const transitionName = computed(() => {
+      // Use fast fade for login page to avoid weird logout transitions
+      if (isPublicRoute.value) {
+        return 'fast-fade';
+      }
+      // Use elegant transitions for authenticated pages
+      return 'view-transition';
+    });
+    
+    return { isLoggedIn, loading, isPublicRoute, transitionName };
   }
 }
 </script>
@@ -108,6 +118,26 @@ export default {
   height: 100%;
   will-change: transform, opacity, filter;
   backface-visibility: hidden;
+}
+
+/* ===========================================
+   FAST FADE TRANSITION - FOR LOGIN PAGE
+   Quick simple fade to avoid weird logout effects
+   =========================================== */
+
+.fast-fade-enter-active,
+.fast-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fast-fade-enter-from,
+.fast-fade-leave-to {
+  opacity: 0;
+}
+
+.fast-fade-enter-to,
+.fast-fade-leave-from {
+  opacity: 1;
 }
 </style>
 

@@ -73,7 +73,7 @@ LAST UPDATED: June 2025
       >
         <cv-side-nav-items>            <cv-side-nav-menu-item 
               href="javascript:void(0)" 
-              :active="$route.name === 'reservations'" 
+              :active="$route.name === 'reservations' || $route.name === 'reservations-with-date'" 
               @click="navigate('reservations')"
               aria-label="View and manage cubicle reservations"
             >
@@ -81,7 +81,7 @@ LAST UPDATED: June 2025
             </cv-side-nav-menu-item>
             <cv-side-nav-menu-item 
               href="javascript:void(0)" 
-              :active="$route.name === 'statistics'" 
+              :active="$route.name === 'statistics' || $route.name === 'statistics-with-date'" 
               @click="navigate('statistics')"
               aria-label="View cubicle usage statistics"
             >
@@ -89,7 +89,7 @@ LAST UPDATED: June 2025
             </cv-side-nav-menu-item>
             <cv-side-nav-menu-item 
               href="javascript:void(0)" 
-              :active="$route.name === 'utilization'" 
+              :active="$route.name === 'utilization' || $route.name === 'utilization-with-date'" 
               @click="navigate('utilization')"
               aria-label="View utilization reports"
             >
@@ -392,11 +392,17 @@ export default {
      * Confirms logout and redirects to login page
      */
     const confirmLogout = () => {
-      logout();
-      localStorage.removeItem('auth_token');
-      router.push({ path: '/' });
+      // Immediately close sidebar and modals
+      expandedSideNav.value = false;
       showUserModal.value = false;
       showLogoutModal.value = false;
+      
+      // Small delay to ensure UI cleanup before logout
+      setTimeout(() => {
+        logout();
+        localStorage.removeItem('auth_token');
+        router.push({ path: '/' });
+      }, 100);
     };
 
     return {

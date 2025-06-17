@@ -193,10 +193,10 @@ performance optimizations, and production-ready improvements
             >
               <template #action>
                 <cv-button
-                  kind="tertiary"
-                  size="sm"
+                    kind="tertiary"
+                    size="sm"
                   @click="error = null"
-                >
+                  >
                   Dismiss
                 </cv-button>
               </template>
