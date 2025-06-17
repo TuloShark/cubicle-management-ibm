@@ -11,6 +11,7 @@
  */
 
 const mongoose = require('mongoose');
+const logger = require('../logger');
 
 /**
  * Reservation Schema
@@ -482,6 +483,25 @@ const ReservationSchema = new mongoose.Schema({
         message: 'Integration data must be JSON-serializable'
       }
     }
+  },
+
+  /**
+   * Assigned Email for Notifications
+   * 
+   * Optional email address to notify when the reservation is completed.
+   * This allows assigning a cubicle to someone other than the person making the reservation.
+   * 
+   * @type {String}
+   * @optional
+   * @format email
+   * @index For email-based queries
+   */
+  assignedEmail: {
+    type: String,
+    trim: true,
+    lowercase: true,
+    index: true,
+    default: null
   }
 }, {
   // Schema Options for Production Optimization
@@ -1603,10 +1623,106 @@ ReservationSchema.post('save', async function(doc) {
         duration: doc.durationHours
       });
     }
+    
+    // Handle email notifications for new reservations with assigned emails
+    if (doc.assignedEmail && doc._wasNew) {
+      const EmailNotificationService = require('../services/notifications/EmailNotificationService');
+      
+      // Populate cubicle information for the notification
+      await doc.populate('cubicle', 'section row col serial name');
+      
+      const emailService = new EmailNotificationService();
+      
+      if (emailService.isConfigured()) {
+        // Create a notification email for cubicle assignment
+        const subject = 'Cubicle Reserved for You - IBM Space Optimization';
+        const cubicleInfo = `${doc.cubicle.name} (${doc.cubicle.serial})`;
+        const dateInfo = new Date(doc.date).toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        
+        // HTML email content
+        const htmlContent = `
+          <div style="font-family: 'IBM Plex Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #0f62fe; color: white; padding: 20px; text-align: center;">
+              <h1 style="margin: 0; font-size: 24px;">Cubicle Reserved for You</h1>
+            </div>
+            <div style="padding: 30px; background: #f4f4f4;">
+              <p style="font-size: 16px; line-height: 1.6; color: #161616;">
+                Hello,
+              </p>
+              <p style="font-size: 16px; line-height: 1.6; color: #161616;">
+                A cubicle has been reserved for you in the IBM Space Optimization system.
+              </p>
+              <div style="background: white; padding: 20px; border-left: 4px solid #0f62fe; margin: 20px 0;">
+                <h3 style="margin-top: 0; color: #0f62fe;">Reservation Details:</h3>
+                <p style="margin: 5px 0;"><strong>Cubicle:</strong> ${cubicleInfo}</p>
+                <p style="margin: 5px 0;"><strong>Date:</strong> ${dateInfo}</p>
+                <p style="margin: 5px 0;"><strong>Reserved by:</strong> ${doc.user.email}</p>
+                <p style="margin: 5px 0;"><strong>Reserved for:</strong> ${doc.assignedEmail}</p>
+                <p style="margin: 5px 0;"><strong>Reserved at:</strong> ${new Date(doc.reservedAt || doc.createdAt).toLocaleString()}</p>
+              </div>
+              <p style="font-size: 16px; line-height: 1.6; color: #161616;">
+                Please make sure to use the cubicle on the specified date. Thank you for using the IBM Space Optimization system.
+              </p>
+              <p style="font-size: 14px; color: #6f6f6f; margin-top: 30px;">
+                This is an automated notification from the IBM Space Optimization platform.
+              </p>
+            </div>
+          </div>
+        `;
+        
+        // Text fallback
+        const textContent = `
+Cubicle Reserved for You
+
+Hello,
+
+A cubicle has been reserved for you in the IBM Space Optimization system.
+
+Reservation Details:
+- Cubicle: ${cubicleInfo}
+- Date: ${dateInfo}
+- Reserved by: ${doc.user.email}
+- Reserved for: ${doc.assignedEmail}
+- Reserved at: ${new Date(doc.reservedAt || doc.createdAt).toLocaleString()}
+
+Please make sure to use the cubicle on the specified date. Thank you for using the IBM Space Optimization system.
+
+This is an automated notification from the IBM Space Optimization platform.
+        `;
+        
+        // Send email using nodemailer directly
+        await emailService.emailTransporter.sendMail({
+          from: process.env.SMTP_USER,
+          to: doc.assignedEmail,
+          subject: subject,
+          text: textContent,
+          html: htmlContent
+        });
+        
+        logger.info(`Email notification sent to assigned email: ${doc.assignedEmail} for new reservation ${doc._id}`);
+      } else {
+        logger.warn(`Email service not configured - notification not sent to: ${doc.assignedEmail} for reservation ${doc._id}`);
+      }
+    }
   } catch (error) {
     // Don't throw errors in post-save to avoid breaking the save operation
-    console.error('Error in Reservation post-save middleware:', error);
+    logger.error('Error in Reservation post-save middleware:', error);
   }
+});
+
+/**
+ * Pre-save middleware to track new documents
+ */
+ReservationSchema.pre('save', function(next) {
+  if (this.isNew) {
+    this._wasNew = true;
+  }
+  next();
 });
 
 // ====================================

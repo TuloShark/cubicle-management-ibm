@@ -222,7 +222,8 @@ router.get('/date/:date', [
         reservationMap.set(reservation.cubicle._id.toString(), {
           user: reservation.user,
           reservationId: reservation._id,
-          date: reservation.date
+          date: reservation.date,
+          assignedEmail: reservation.assignedEmail
         });
       }
     });
@@ -245,7 +246,8 @@ router.get('/date/:date', [
         reservationInfo: reservation ? {
           _id: reservation.reservationId,
           user: reservation.user,
-          date: reservation.date
+          date: reservation.date,
+          assignedEmail: reservation.assignedEmail
         } : null
       };
     });
@@ -353,6 +355,7 @@ router.post('/reserve/date/:date', [
     return true;
   }),
   body('cubicleId').isMongoId().withMessage('Invalid cubicle ID'),
+  body('assignedEmail').optional().isEmail().withMessage('Invalid assigned email format'),
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -360,7 +363,7 @@ router.post('/reserve/date/:date', [
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { cubicleId } = req.body;
+    const { cubicleId, assignedEmail } = req.body;
     const targetDate = req.params.date;
     const { startOfDay, endOfDay } = createDateRange(targetDate);
 
@@ -401,7 +404,8 @@ router.post('/reserve/date/:date', [
     const reservation = new Reservation({
       cubicle: cubicleId,
       user: userInfo,
-      date: reservationDate
+      date: reservationDate,
+      assignedEmail: assignedEmail || null
     });
 
     await reservation.save();
@@ -431,7 +435,8 @@ router.post('/reserve/date/:date', [
         id: reservation._id,
         cubicle: reservation.cubicle,
         user: userInfo,
-        date: formatDateString(targetDate)
+        date: formatDateString(targetDate),
+        assignedEmail: reservation.assignedEmail
       }
     });
 

@@ -559,7 +559,9 @@ export default {
      * 
      * @async
      * @function handleReserve
-     * @param {string} cubicleId - The ID of the cubicle to reserve
+     * @param {string|Object} reservationData - The cubicle ID or reservation data object
+     * @param {string} reservationData.cubicleId - The ID of the cubicle to reserve
+     * @param {string} [reservationData.assignedEmail] - Optional email to assign for notifications
      * @returns {Promise<void>}
      * 
      * @features
@@ -567,11 +569,22 @@ export default {
      * - Automatic rollback on operation failure
      * - Scroll position preservation during updates
      * - Comprehensive error handling with user notifications
+     * - Support for email assignment notifications
      */
-    const handleReserve = async (cubicleId) => {
+    const handleReserve = async (reservationData) => {
       loading.value.reserve = true;
       
       try {
+        // Handle both old (string) and new (object) parameter formats
+        let cubicleId, assignedEmail;
+        if (typeof reservationData === 'string') {
+          cubicleId = reservationData;
+          assignedEmail = null;
+        } else {
+          cubicleId = reservationData.cubicleId;
+          assignedEmail = reservationData.assignedEmail;
+        }
+        
         // Get authentication token from centralized auth management
         const idToken = token.value;
         if (!idToken) {
@@ -589,7 +602,8 @@ export default {
               user: {
                 uid: 'current-user', // Will be updated with real data
                 email: 'Current User'
-              }
+              },
+              assignedEmail: assignedEmail
             }
           };
         }
@@ -600,9 +614,13 @@ export default {
         const day = String(selectedDate.value.getDate()).padStart(2, '0');
         const dateString = `${year}-${month}-${day}`;
         
-        await axios.post(`${getApiBaseUrl()}/api/cubicles/reserve/date/${dateString}`, {
-          cubicleId
-        }, {
+        // Prepare request body
+        const requestBody = { cubicleId };
+        if (assignedEmail) {
+          requestBody.assignedEmail = assignedEmail;
+        }
+        
+        await axios.post(`${getApiBaseUrl()}/api/cubicles/reserve/date/${dateString}`, requestBody, {
           headers: {
             Authorization: `Bearer ${idToken}`
           }
@@ -610,6 +628,16 @@ export default {
         
         // Silently refresh data without loading state
         await refreshDataSilently();
+        
+        // Show success notification if email assignment was used
+        if (assignedEmail) {
+          showNotification(
+            'success',
+            'Reservation Successful',
+            `Cubicle reserved with email assignment to ${assignedEmail}. They will be notified when the reservation is completed.`,
+            7000
+          );
+        }
         
       } catch (err) {
         // Revert optimistic update on error

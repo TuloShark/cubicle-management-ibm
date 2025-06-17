@@ -11,6 +11,7 @@
  */
 
 const mongoose = require('mongoose');
+const logger = require('../logger');
 const { getAdminUids } = require('../utils/adminUtils');
 
 /**
@@ -643,7 +644,7 @@ CubicleSchema.post('save', async function(doc) {
   try {
     // Log important status changes for monitoring
     if (this.isModified('status')) {
-      console.log(`Cubicle status changed: ${doc._id}`, {
+      logger.info(`Cubicle status changed: ${doc._id}`, {
         serial: doc.serial,
         section: doc.section,
         position: `${doc.row}-${doc.col}`,
@@ -654,7 +655,7 @@ CubicleSchema.post('save', async function(doc) {
     
     // Log new cubicle creation
     if (this.isNew) {
-      console.log(`New cubicle created: ${doc.serial}`, {
+      logger.info(`New cubicle created: ${doc.serial}`, {
         section: doc.section,
         position: `${doc.row}-${doc.col}`,
         createdBy: doc.createdBy
@@ -662,7 +663,7 @@ CubicleSchema.post('save', async function(doc) {
     }
   } catch (error) {
     // Don't throw errors in post-save to avoid breaking the save operation
-    console.error('Error in Cubicle post-save middleware:', error);
+    logger.error('Error in Cubicle post-save middleware:', error);
   }
 });
 

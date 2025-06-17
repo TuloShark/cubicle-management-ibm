@@ -93,7 +93,7 @@ class EmailNotificationService {
     // Initialize email transporter with error handling
     if (this.emailConfig.auth.user && this.emailConfig.auth.pass) {
       try {
-        this.emailTransporter = nodemailer.createTransporter(this.emailConfig);
+        this.emailTransporter = nodemailer.createTransport(this.emailConfig);
         logger.info('Email transporter initialized successfully');
       } catch (error) {
         logger.error('Failed to initialize email transporter:', error.message);
@@ -370,7 +370,7 @@ Generated on ${new Date().toLocaleString()}
    * @param {string} message - Custom message content
    */
   async sendCustomEmail(user, message) {
-    if (!this.transporter) {
+    if (!this.emailTransporter) {
       throw new Error('Email service not configured');
     }
 
@@ -430,14 +430,14 @@ Generated on ${new Date().toLocaleString()}
     `;
 
     const mailOptions = {
-      from: `"IBM Space Optimization" <${this.config.auth.user}>`,
+      from: `"IBM Space Optimization" <${this.emailConfig.auth.user}>`,
       to: user.email,
       subject: subject,
       text: textContent,
       html: htmlContent
     };
 
-    await this.transporter.sendMail(mailOptions);
+    await this.emailTransporter.sendMail(mailOptions);
     logger.info(`Custom email sent successfully to ${user.email}`);
   }
 

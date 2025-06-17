@@ -64,7 +64,7 @@ LAST UPDATED: June 2025
     <cv-modal
       :visible="showModal"
       kind="default"
-      size="sm"
+      size="lg"
       :autoHideOff="true"
       :primaryButtonDisabled="!canModifyCubicle"
       :disableTeleport="false"
@@ -72,39 +72,97 @@ LAST UPDATED: June 2025
       @primary-click="changeState('available')"
       @secondary-click="changeState('reserved')"
       @other-btn-click="changeState('error')"
+      class="cubicle-details-modal"
     >
       <template v-slot:label>Details</template>
       <template v-slot:title>Cubicle Information - {{ formatDate(selectedDate) }}</template>
       <template v-slot:content>
-        <p><strong>Section:</strong> {{ selectedCubicle?.section }}</p>
-        <p><strong>Row:</strong> {{ selectedCubicle?.row }}</p>
-        <p><strong>Column:</strong> {{ selectedCubicle?.col }}</p>
-        <p><strong>Code:</strong> {{ selectedCubicle?.serial }}</p>
-        <p><strong>Name:</strong> {{ selectedCubicle?.name }}</p>
-        <p><strong>Date:</strong> {{ formatDate(selectedDate) }}</p>
-        <p><strong>Current Status:</strong> {{ currentDateStatus }}</p>
-        <p v-if="selectedCubicle?.status === 'error'">
-          <strong>Global Status:</strong> <span class="error-status">ERROR/MAINTENANCE</span>
-        </p>
-        <p v-if="currentDateStatus === 'reserved'">
-          <strong>Reserved By: </strong>
-          <span v-if="reservationUser">
-            {{ reservationUser.email }}
-          </span>
-          <span v-else>Loading...</span>
-        </p>
-        <div v-if="isHistorical" class="permission-notice historical-notice">
-          <p><strong>Historical View:</strong> This is a past date. Editing is disabled for historical data.</p>
-        </div>
-        <div v-else-if="!canModifyCubicle && currentDateStatus === 'reserved'" class="permission-notice">
-          <p><strong>Notice:</strong> This cubicle is reserved by another user for this date and cannot be modified.</p>
-        </div>
-        <div v-if="!isAdminUser && selectedCubicle?.status === 'error'" class="permission-notice">
-          <p><strong>Notice:</strong> Only administrators can modify cubicles in error state.</p>
+        <div class="cubicle-details-content">
+          <!-- Basic Information Grid -->
+          <div class="details-grid">
+            <div class="detail-row">
+              <span class="detail-label">Section:</span>
+              <span class="detail-value">{{ selectedCubicle?.section }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Position:</span>
+              <span class="detail-value">Row {{ selectedCubicle?.row }}, Column {{ selectedCubicle?.col }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Code:</span>
+              <span class="detail-value">{{ selectedCubicle?.serial }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Name:</span>
+              <span class="detail-value">{{ selectedCubicle?.name }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Date:</span>
+              <span class="detail-value">{{ formatDate(selectedDate) }}</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Current Status:</span>
+              <span class="detail-value">{{ currentDateStatus }}</span>
+            </div>
+            <div v-if="selectedCubicle?.status === 'error'" class="detail-row">
+              <span class="detail-label">Global Status:</span>
+              <span class="detail-value error-status">ERROR/MAINTENANCE</span>
+            </div>
+            <div v-if="currentDateStatus === 'reserved'" class="detail-row">
+              <span class="detail-label">Reserved by:</span>
+              <span class="detail-value">
+                <span v-if="reservationUser">{{ reservationUser.email }}</span>
+                <span v-else>Loading...</span>
+              </span>
+            </div>
+            <div v-if="currentDateStatus === 'reserved' && selectedCubicle?.reservationInfo?.assignedEmail" class="detail-row">
+              <span class="detail-label">Reserved for:</span>
+              <span class="detail-value assigned-email">{{ selectedCubicle.reservationInfo.assignedEmail }}</span>
+            </div>
+          </div>
+          
+          <!-- Email Assignment Section - Only show for available cubicles when making new reservations -->
+          <div v-if="canModifyCubicle && !isHistorical && currentDateStatus === 'available'" class="email-assignment-section">
+            <div class="email-assignment-toggle">
+              <cv-toggle 
+                v-model="isEmailAssignmentMode"
+                :label="isEmailAssignmentMode ? 'Email Assignment Enabled' : 'Enable Email Assignment'"
+                @change="toggleEmailAssignment"
+              />
+            </div>
+            
+            <div v-if="isEmailAssignmentMode" class="email-assignment-form">
+              <cv-text-input 
+                v-model="assignedEmail"
+                label="Assign Email for Notifications"
+                placeholder="Enter email address..."
+                type="email"
+                :invalid="!!emailValidationError"
+                :invalidMessage="emailValidationError"
+                @input="validateEmail"
+              />
+              <div class="email-assignment-help">
+                <p class="help-text">This email will receive a notification when the reservation is completed.</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Notice Messages -->
+          <div v-if="isHistorical" class="permission-notice historical-notice">
+            <p><strong>Historical View:</strong> This is a past date. Editing is disabled for historical data.</p>
+          </div>
+          <div v-else-if="!canModifyCubicle && currentDateStatus === 'reserved'" class="permission-notice">
+            <p><strong>Notice:</strong> This cubicle is reserved by another user for this date and cannot be modified.</p>
+          </div>
+          <div v-if="!isAdminUser && selectedCubicle?.status === 'error'" class="permission-notice">
+            <p><strong>Notice:</strong> Only administrators can modify cubicles in error state.</p>
+          </div>
         </div>
       </template>
       <template v-slot:other-button v-if="canChangeToError">Error</template>
-      <template v-slot:secondary-button v-if="canModifyCubicle && selectedCubicle?.status !== 'error'">Reserve</template>
+      <template v-slot:secondary-button v-if="canModifyCubicle && selectedCubicle?.status !== 'error'">
+        {{ isEmailAssignmentMode && assignedEmail ? 'Reserve with Email' : 'Reserve' }}
+      </template>
       <template v-slot:primary-button v-if="canModifyCubicle && currentDateStatus === 'reserved'">Cancel Reservation</template>
       <template v-slot:primary-button v-else-if="canModifyCubicle">Available</template>
     </cv-modal>
@@ -225,6 +283,11 @@ export default {
     const showNotYourReservationModal = ref(false);
     const selectedCubicle = ref(null);
     const reservationUser = ref(null);
+    
+    // Email assignment state
+    const assignedEmail = ref('');
+    const emailValidationError = ref('');
+    const isEmailAssignmentMode = ref(false);
 
     /**
      * Determines if the current user has admin privileges
@@ -322,10 +385,21 @@ export default {
         selectedCubicle.value = cubicle;
         reservationUser.value = null;
         
+        // Reset email assignment state
+        assignedEmail.value = '';
+        emailValidationError.value = '';
+        isEmailAssignmentMode.value = false;
+        
         // If cubicle is reserved for this date, handle reservation info
         if (currentDateStatus.value === 'reserved') {
           // Try reservationInfo first (new format), then fall back to reservedByUser (old format)
           const userInfo = cubicle.reservationInfo?.user || cubicle.reservedByUser;
+          
+          // Load existing assigned email if available
+          if (cubicle.reservationInfo?.assignedEmail) {
+            assignedEmail.value = cubicle.reservationInfo.assignedEmail;
+            isEmailAssignmentMode.value = true;
+          }
           
           if (userInfo) {
             // Check if this is not the user's reservation
@@ -355,6 +429,10 @@ export default {
       showModal.value = false;
       selectedCubicle.value = null;
       reservationUser.value = null;
+      // Reset email assignment state
+      assignedEmail.value = '';
+      emailValidationError.value = '';
+      isEmailAssignmentMode.value = false;
     };
 
     /**
@@ -364,6 +442,39 @@ export default {
       showNotYourReservationModal.value = false;
       selectedCubicle.value = null;
       reservationUser.value = null;
+      // Reset email assignment state
+      assignedEmail.value = '';
+      emailValidationError.value = '';
+      isEmailAssignmentMode.value = false;
+    };
+
+    /**
+     * Validates the assigned email format
+     */
+    const validateEmail = () => {
+      if (!assignedEmail.value) {
+        emailValidationError.value = '';
+        return true;
+      }
+      
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(assignedEmail.value)) {
+        emailValidationError.value = 'Please enter a valid email address';
+        return false;
+      }
+      
+      emailValidationError.value = '';
+      return true;
+    };
+
+    /**
+     * Toggles email assignment mode and clears form when disabled
+     */
+    const toggleEmailAssignment = () => {
+      if (!isEmailAssignmentMode.value) {
+        assignedEmail.value = '';
+        emailValidationError.value = '';
+      }
     };
 
     /**
@@ -399,7 +510,23 @@ export default {
         
         // Handle reservation/cancellation for date-specific actions
         if (newState === 'reserved') {
-          emit('reserve', selectedCubicle.value._id);
+          // Validate email if assignment mode is enabled
+          if (isEmailAssignmentMode.value && !validateEmail()) {
+            return; // Don't close modal if email validation fails
+          }
+          
+          // Emit reservation with optional email assignment
+          const reservationData = {
+            cubicleId: selectedCubicle.value._id,
+            assignedEmail: isEmailAssignmentMode.value && assignedEmail.value ? assignedEmail.value : null
+          };
+          
+          emit('reserve', reservationData);
+          
+          // Clear email input after successful reservation
+          if (assignedEmail.value) {
+            assignedEmail.value = '';
+          }
         } else if (newState === 'available') {
           if (currentDateStatus.value === 'reserved') {
             // Cancel reservation
@@ -493,13 +620,20 @@ export default {
       isAdminUser,
       canModifyCubicle,
       canChangeToError,
+      // Email assignment state
+      assignedEmail,
+      emailValidationError,
+      isEmailAssignmentMode,
+      // Methods
       openModal,
       closeModal,
       closeNotYourReservationModal,
       changeState,
       handleReserve,
       handleCancel,
-      formatDate
+      formatDate,
+      validateEmail,
+      toggleEmailAssignment
     };
   }
 };
@@ -606,6 +740,128 @@ export default {
 .error-status {
   color: #da1e28;
   font-weight: 600;
+}
+
+/* Email Assignment Styles */
+.assigned-email {
+  color: #0f62fe;
+  font-weight: 600;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.email-assignment-section {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f4f4f4;
+  border-radius: 4px;
+  border-left: 3px solid #0f62fe;
+}
+
+.email-assignment-toggle {
+  margin-bottom: 0.75rem;
+}
+
+.email-assignment-form {
+  margin-top: 0.75rem;
+}
+
+.email-assignment-help {
+  margin-top: 0.5rem;
+}
+
+.help-text {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+  font-style: italic;
+}
+
+/* Modal Customization for Better Content Fit */
+.cubicle-details-modal :deep(.bx--modal-container) {
+  max-width: 650px;
+  width: 90vw;
+  max-height: 90vh;
+}
+
+.cubicle-details-modal :deep(.bx--modal-content) {
+  padding: 1.5rem;
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+/* Compact Details Grid Layout */
+.cubicle-details-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.details-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.detail-row:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #161616;
+  min-width: 120px;
+  font-size: 0.875rem;
+}
+
+.detail-value {
+  color: #525252;
+  text-align: right;
+  font-size: 0.875rem;
+  word-break: break-word;
+}
+
+/* Ensure email assignment section has proper spacing */
+.cubicle-details-modal .email-assignment-section {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.cubicle-details-modal .permission-notice {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+}
+
+/* Responsive Design for Mobile */
+@media (max-width: 768px) {
+  .cubicle-details-modal :deep(.bx--modal-container) {
+    max-width: 95vw;
+    max-height: 95vh;
+  }
+  
+  .detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    padding: 0.75rem 0;
+  }
+  
+  .detail-label {
+    min-width: auto;
+    margin-bottom: 0.25rem;
+  }
+  
+  .detail-value {
+    text-align: left;
+    width: 100%;
+  }
 }
 
 /* Clean Responsive Design - Smooth Transitions */
