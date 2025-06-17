@@ -93,7 +93,10 @@ LAST UPDATED: June 2025
           </span>
           <span v-else>Loading...</span>
         </p>
-        <div v-if="!canModifyCubicle && currentDateStatus === 'reserved'" class="permission-notice">
+        <div v-if="isHistorical" class="permission-notice historical-notice">
+          <p><strong>Historical View:</strong> This is a past date. Editing is disabled for historical data.</p>
+        </div>
+        <div v-else-if="!canModifyCubicle && currentDateStatus === 'reserved'" class="permission-notice">
           <p><strong>Notice:</strong> This cubicle is reserved by another user for this date and cannot be modified.</p>
         </div>
         <div v-if="!isAdminUser && selectedCubicle?.status === 'error'" class="permission-notice">
@@ -188,6 +191,13 @@ export default {
     dateStats: {
       type: Object,
       default: null
+    },
+    /**
+     * Whether the selected date is in the past (historical viewing mode)
+     */
+    isHistorical: {
+      type: Boolean,
+      default: false
     }
   },
   emits: [
@@ -254,7 +264,10 @@ export default {
     const canModifyCubicle = computed(() => {
       if (!selectedCubicle.value || !currentUser.value) return false;
       
-      // Admin can modify any cubicle
+      // Historical dates cannot be modified
+      if (props.isHistorical) return false;
+      
+      // Admin can modify any cubicle (except historical dates)
       if (isAdminUser.value) return true;
       
       // For error state cubicles, only admin can modify
@@ -562,6 +575,16 @@ export default {
 :deep(.cubicle-tile:hover) {
   border-color: #0f62fe;
   box-shadow: 0 2px 6px rgba(15, 98, 254, 0.2);
+}
+
+/* Historical Notice - Info Style */
+.permission-notice.historical-notice {
+  background: #d0e2ff;
+  border-left: 3px solid #0f62fe;
+}
+
+.permission-notice.historical-notice p {
+  color: #002d9c;
 }
 
 /* Permission Notice - IBM Carbon Notification Style */

@@ -218,6 +218,7 @@ performance optimizations, and production-ready improvements
                   :cubicles="cubicles" 
                   :selected-date="selectedDateString"
                   :date-stats="dateStats"
+                  :is-historical="isHistoricalDate"
                   @reserve="handleReserve"
                   @cancel="handleCancel"
                   @update-cubicle-state="updateCubicleState"
@@ -288,10 +289,11 @@ export default {
 
     // Computed properties - matching original (keeping the ones not in date store)
     const minDate = computed(() => {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30); // 30 days back for historical viewing
+      const year = thirtyDaysAgo.getFullYear();
+      const month = String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0');
+      const day = String(thirtyDaysAgo.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     });
 
@@ -302,6 +304,15 @@ export default {
       const month = String(futureDate.getMonth() + 1).padStart(2, '0');
       const day = String(futureDate.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
+    });
+
+    // Check if selected date is in the past (for historical viewing mode)
+    const isHistoricalDate = computed(() => {
+      const today = new Date();
+      const selectedDate = new Date(selectedDateString.value + 'T00:00:00');
+      today.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
+      selectedDate.setHours(0, 0, 0, 0);
+      return selectedDate < today;
     });
 
     // Format display date function to match the header
@@ -954,6 +965,7 @@ export default {
       showCounts,
       minDate,
       maxDate,
+      isHistoricalDate,
       gridContainer,
       formatDisplayDate,
       fetchCubiclesForDate,
