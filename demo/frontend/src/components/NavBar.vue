@@ -70,6 +70,9 @@ LAST UPDATED: June 2025
         :rail="true" 
         :fixed="useFixed"
         aria-label="Primary navigation"
+        @mouseenter="handleSideNavMouseEnter"
+        @mouseleave="handleSideNavMouseLeave"
+        :class="{ 'is-toggling': isToggling }"
       >
         <cv-side-nav-items>            <cv-side-nav-menu-item 
               href="javascript:void(0)" 
@@ -250,7 +253,7 @@ LAST UPDATED: June 2025
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { User16 } from '@carbon/icons-vue';
 import { updatePassword } from 'firebase/auth';
@@ -277,6 +280,10 @@ export default {
     const showUserModal = ref(false);
     const showLogoutModal = ref(false);
     
+    // Sidebar interaction state to prevent conflict with hover behaviors
+    const isToggling = ref(false);
+    const toggleTimeout = ref(null);
+    
     // Password change state
     const newPassword = ref('');
     const confirmPassword = ref('');
@@ -298,10 +305,48 @@ export default {
 
     // Methods
     /**
-     * Toggles the side navigation panel
+     * Toggles the side navigation panel with debouncing to prevent conflicts
+     * with hover behaviors and multiple rapid clicks
      */
     const toggleSideNav = () => {
+      // Clear any existing timeout
+      if (toggleTimeout.value) {
+        clearTimeout(toggleTimeout.value);
+      }
+      
+      // Set toggling state to prevent interference
+      isToggling.value = true;
+      
+      // Toggle the sidebar
       expandedSideNav.value = !expandedSideNav.value;
+      
+      // Use nextTick to ensure DOM updates, then add debouncing
+      nextTick(() => {
+        toggleTimeout.value = setTimeout(() => {
+          isToggling.value = false;
+          toggleTimeout.value = null;
+        }, 300); // 300ms debounce to match CSS transition duration
+      });
+    };
+
+    /**
+     * Handles sidebar mouse enter - prevents auto-expansion during manual toggle
+     */
+    const handleSideNavMouseEnter = () => {
+      // If we're in the middle of a manual toggle, ignore hover behavior
+      if (isToggling.value) {
+        return;
+      }
+    };
+
+    /**
+     * Handles sidebar mouse leave - prevents auto-collapse during manual toggle
+     */
+    const handleSideNavMouseLeave = () => {
+      // If we're in the middle of a manual toggle, ignore hover behavior
+      if (isToggling.value) {
+        return;
+      }
     };
 
     /**
@@ -324,8 +369,20 @@ export default {
         router.push({ name: routeName });
       }
       
-      // Close sidebar after navigation
+      // Close sidebar after navigation with debouncing
+      if (toggleTimeout.value) {
+        clearTimeout(toggleTimeout.value);
+      }
+      
+      isToggling.value = true;
       expandedSideNav.value = false;
+      
+      nextTick(() => {
+        toggleTimeout.value = setTimeout(() => {
+          isToggling.value = false;
+          toggleTimeout.value = null;
+        }, 300);
+      });
     };
 
     /**
@@ -392,7 +449,12 @@ export default {
      * Confirms logout and redirects to login page
      */
     const confirmLogout = () => {
-      // Immediately close sidebar and modals
+      // Immediately close sidebar and modals with debouncing
+      if (toggleTimeout.value) {
+        clearTimeout(toggleTimeout.value);
+      }
+      
+      isToggling.value = true;
       expandedSideNav.value = false;
       showUserModal.value = false;
       showLogoutModal.value = false;
@@ -402,6 +464,9 @@ export default {
         logout();
         localStorage.removeItem('auth_token');
         router.push({ path: '/' });
+        
+        // Reset toggling state
+        isToggling.value = false;
       }, 100);
     };
 
@@ -412,6 +477,7 @@ export default {
       showJwtModal,
       showUserModal,
       showLogoutModal,
+      isToggling,
       newPassword,
       confirmPassword,
       passwordChangeMessage,
@@ -424,6 +490,8 @@ export default {
       
       // Methods
       toggleSideNav,
+      handleSideNavMouseEnter,
+      handleSideNavMouseLeave,
       navigate,
       handleChangePassword,
       confirmLogout,
@@ -468,6 +536,33 @@ export default {
 
 :deep(.bx--side-nav--rail:not(.bx--side-nav--expanded)) .bx--side-nav__menu-item {
   transition: opacity 0.2s ease;
+}
+
+/* Prevent hover conflicts during manual toggle */
+:deep(.bx--side-nav.is-toggling) {
+  pointer-events: none;
+}
+
+:deep(.bx--side-nav.is-toggling) * {
+  pointer-events: none;
+}
+
+/* Re-enable pointer events after transition */
+:deep(.bx--side-nav) {
+  pointer-events: auto;
+}
+
+:deep(.bx--side-nav) * {
+  pointer-events: auto;
+}
+
+/* Override Carbon hover behaviors during toggle */
+:deep(.bx--side-nav--rail.is-toggling:hover) {
+  width: 3rem !important;
+}
+
+:deep(.bx--side-nav--rail.is-toggling:hover .bx--side-nav__menu-item) {
+  opacity: 0 !important;
 }
 
 /* Modal Content Styling */

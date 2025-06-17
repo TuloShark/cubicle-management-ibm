@@ -358,5 +358,3 @@ export default {
   }
 };
 </script>
-
-<style scoped src="./styles/LoginViewStyles.css"></style>
