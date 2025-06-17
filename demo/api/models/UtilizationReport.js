@@ -53,14 +53,7 @@ const utilizationReportSchema = new mongoose.Schema({
   reportStartDate: { 
     type: Date, 
     required: [true, 'Report start date is required'],
-    index: true,
-    validate: {
-      validator: function(date) {
-        // Ensure report start date is not in the future
-        return date <= new Date();
-      },
-      message: 'Report start date cannot be in the future'
-    }
+    index: true
   },
 
   /**
@@ -83,9 +76,9 @@ const utilizationReportSchema = new mongoose.Schema({
         if (this.reportStartDate && date < this.reportStartDate) {
           return false;
         }
-        return date <= new Date();
+        return true;
       },
-      message: 'Report end date must be after start date and not in the future'
+      message: 'Report end date must be after start date'
     }
   },
 

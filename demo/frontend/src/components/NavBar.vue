@@ -71,9 +71,7 @@ LAST UPDATED: June 2025
         :fixed="useFixed"
         aria-label="Primary navigation"
       >
-        <cv-side-nav-items>
-          <cv-side-nav-menu title="Spaces" aria-label="Space management navigation">
-            <cv-side-nav-menu-item 
+        <cv-side-nav-items>            <cv-side-nav-menu-item 
               href="javascript:void(0)" 
               :active="$route.name === 'reservations'" 
               @click="navigate('reservations')"
@@ -105,25 +103,24 @@ LAST UPDATED: June 2025
             >
               Notifications
             </cv-side-nav-menu-item>
-          </cv-side-nav-menu>
           
           <cv-side-nav-menu-divider/>
           
-          <cv-side-nav-menu title="User" aria-label="User account management">
-            <cv-side-nav-menu-item 
-              :active="showUserModal" 
-              @click="showUserModal = true"
-              aria-label="Change account password"
-            >
-              Change Password
-            </cv-side-nav-menu-item>
-            <cv-side-nav-menu-item 
-              @click="showLogoutModal = true"
-              aria-label="Logout from application"
-            >
-              Logout
-            </cv-side-nav-menu-item>
-          </cv-side-nav-menu>
+          <cv-side-nav-menu-item 
+            href="javascript:void(0)" 
+            :active="showUserModal" 
+            @click="showUserModal = true"
+            aria-label="Change account password"
+          >
+            Change Password
+          </cv-side-nav-menu-item>
+          <cv-side-nav-menu-item 
+            href="javascript:void(0)" 
+            @click="showLogoutModal = true"
+            aria-label="Logout from application"
+          >
+            Logout
+          </cv-side-nav-menu-item>
         </cv-side-nav-items>
       </cv-side-nav>
     </template>
@@ -327,6 +324,7 @@ export default {
         router.push({ name: routeName });
       }
       
+      // Close sidebar after navigation
       expandedSideNav.value = false;
     };
 
@@ -440,6 +438,30 @@ export default {
 /* User Info Button Styling */
 .user-info-button {
   margin-left: auto;
+}
+
+/* Smooth Sidebar Transitions */
+:deep(.bx--side-nav) {
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0.38, 0.9), 
+              width 0.3s cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+:deep(.bx--side-nav--expanded) {
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0.38, 0.9), 
+              width 0.3s cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+:deep(.bx--side-nav__overlay) {
+  transition: opacity 0.3s cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+:deep(.bx--side-nav__menu-item),
+:deep(.bx--side-nav__menu) {
+  transition: opacity 0.2s ease 0.1s;
+}
+
+:deep(.bx--side-nav--rail:not(.bx--side-nav--expanded)) .bx--side-nav__menu-item {
+  transition: opacity 0.2s ease;
 }
 
 /* Modal Content Styling */

@@ -92,7 +92,6 @@ performance optimizations, and production-ready improvements
             <!-- Date Selection Panel -->
             <div class="date-selection-container">
               <div class="date-selector-group">
-                <label class="date-label">Select Date:</label>
                 <input
                   type="date"
                   v-model="selectedDateInput"
@@ -100,21 +99,23 @@ performance optimizations, and production-ready improvements
                   :max="maxDate"
                   class="date-input"
                 />
-                <cv-button
-                  @click="goToToday"
-                  kind="primary"
-                  size="lg"
-                  class="action-button today-button"
-                  :disabled="loading.data || loading.reserve || loading.cancel || loading.update"
-                >
-                  {{ (loading.data || loading.reserve || loading.cancel || loading.update) ? 'Loading...' : 'Today' }}
-                </cv-button>
               </div>
               
               <!-- Date-specific Statistics -->
               <div class="date-stats" v-if="dateStats">
                 <transition name="stats-fade" mode="out-in">
                   <div :key="selectedDateString" class="stats-content">
+                    <div class="stat-item today-button-container">
+                      <cv-button
+                        @click="goToToday"
+                        kind="primary"
+                        size="lg"
+                        class="action-button today-button"
+                        :disabled="loading.data || loading.reserve || loading.cancel || loading.update"
+                      >
+                        {{ (loading.data || loading.reserve || loading.cancel || loading.update) ? 'Loading...' : 'Today' }}
+                      </cv-button>
+                    </div>
                     <div class="stat-item">
                       <span class="stat-label">Selected Date</span>
                       <span class="stat-value">{{ formatDisplayDate(selectedDateString) }}</span>
@@ -208,19 +209,8 @@ performance optimizations, and production-ready improvements
       <cv-row v-else class="content-row">
         <cv-column :sm="4" :md="16" :lg="16">
           <div class="grid-container" ref="gridContainer">
-            <div 
-              v-if="loading.data" 
-              class="loading-overlay"
-              :class="{ 'visible': loading.data }"
-            >
-              <div class="loading-indicator">
-                <div class="loading-spinner"></div>
-                <span class="loading-text">Loading cubicles...</span>
-              </div>
-            </div>
             <transition name="fade-slide" mode="out-in">
               <div 
-                :key="selectedDateString" 
                 class="grid-content-wrapper"
                 :class="{ 'loading-state': loading.data }"
               >
@@ -244,7 +234,7 @@ performance optimizations, and production-ready improvements
 </template>
 
 <script>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import axios from 'axios';
 import { io } from 'socket.io-client';
@@ -347,13 +337,18 @@ export default {
      * @throws {Error} Network errors with user-friendly messages
      */
     const fetchCubiclesForDate = async (date = selectedDate.value) => {
-      loading.value.data = true;
       error.value = null;
+      
+      // Add a small delay before showing loading state to prevent flicker on fast responses
+      const loadingTimeout = setTimeout(() => {
+        loading.value.data = true;
+      }, 150);
       
       try {
         // Get authentication token from centralized auth management
         const idToken = token.value;
         if (!idToken) {
+          clearTimeout(loadingTimeout);
           showErrorWithTimeout('Authentication required', 8000);
           return;
         }
@@ -413,6 +408,7 @@ export default {
           showErrorWithTimeout(err.response?.data?.error || 'Failed to load cubicles', 8000);
         }
       } finally {
+        clearTimeout(loadingTimeout);
         loading.value.data = false;
       }
     };
@@ -491,7 +487,10 @@ export default {
       // Use global date store to go to today
       goToTodayGlobal();
       
-      // Use smooth refresh instead of showing loading state
+      // Wait for the next tick to ensure the date has been updated
+      await nextTick();
+      
+      // Use smooth refresh with the updated date
       await refreshDataSilently(selectedDate.value);
       
       // Restore scroll position
@@ -592,11 +591,24 @@ export default {
           };
         }
         
-        // Enhanced error handling without debug logs
+        // Enhanced error handling with detailed logging
         let errorMessage = 'Failed to reserve cubicle';
+        
+        // Log the error for debugging
+        console.error('Reservation Error:', {
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+          data: err.response?.data,
+          message: err.message,
+          cubicleId
+        });
         
         if (err.response?.data?.error) {
           errorMessage = err.response.data.error;
+        } else if (err.response?.data?.errors) {
+          // Handle validation errors array
+          const validationErrors = err.response.data.errors.map(e => e.msg || e.message).join(', ');
+          errorMessage = `Validation error: ${validationErrors}`;
         } else if (err.response?.status === 400) {
           errorMessage = 'Invalid reservation request. Please check your selection and try again.';
         } else if (err.response?.status === 401) {

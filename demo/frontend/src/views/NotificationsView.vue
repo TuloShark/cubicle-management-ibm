@@ -94,8 +94,9 @@ production-ready improvements, and architectural consistency
     
     <!-- Main Content Area -->
     <cv-grid class="notifications-grid">
-      <!-- Main Notification Card -->
-      <cv-row class="main-row">
+      <!-- Main Content Row - Side by Side Layout -->
+      <cv-row class="main-content-row">
+        <!-- Send Notification Update - Left Side (Larger like Available Reports) -->
         <cv-column :sm="4" :md="12" :lg="12">
           <cv-tile class="notification-tile">
             <div class="tile-header">
@@ -176,14 +177,13 @@ production-ready improvements, and architectural consistency
             </div>
           </cv-tile>
         </cv-column>
-      </cv-row>
-      
-      <!-- Information Card -->
-      <cv-row class="info-row">
-        <cv-column :sm="4" :md="12" :lg="12">
+        
+        <!-- How Notifications Work - Right Side (Smaller like Quick Statistics) -->
+        <cv-column :sm="4" :md="4" :lg="4">
           <cv-tile class="info-tile">
             <div class="info-header">
-              <h4 class="info-title">How Notifications Work</h4>
+              <h3 class="info-title">How Notifications Work</h3>
+              <p class="info-subtitle">Understanding the notification system</p>
             </div>
             <div class="info-content">
               <div class="info-grid single-item">
@@ -236,12 +236,12 @@ export default {
     const notificationSettings = ref({
       emailEnabled: true,
       slackEnabled: false,
-      email: '',
+      email: currentUser.value?.email || '', // Initialize with current user email to prevent flicker
       frequency: 'daily'
     });
 
     const loading = ref({
-      settings: false,
+      settings: true, // Start with true to prevent flicker
       sending: false,
       updating: false
     });
@@ -421,7 +421,10 @@ export default {
           frequency: 'daily'
         };
       } finally {
-        loading.value.settings = false;
+        // Small delay to prevent flicker if the API call is very fast
+        setTimeout(() => {
+          loading.value.settings = false;
+        }, 100);
       }
     };
 

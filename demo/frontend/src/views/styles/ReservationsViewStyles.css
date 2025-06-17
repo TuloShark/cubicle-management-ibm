@@ -10,6 +10,15 @@
   background: #f4f4f4;
   flex: 1;
   font-family: 'IBM Plex Sans', sans-serif;
+  min-height: calc(100vh - 48px); /* Ensure container can grow */
+}
+
+/* Full container height for large screens */
+@media (min-width: 1200px) {
+  .reservations-container {
+    height: auto; /* Allow natural height growth */
+    min-height: calc(100vh - 48px);
+  }
 }
 
 /* Grid Layout */
@@ -33,9 +42,24 @@
   background: #ffffff;
   border: 1px solid #e0e0e0;
   padding: 1rem;
-  max-height: 70vh;
+  max-height: 70vh; /* Default for smaller screens */
   overflow: auto;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Full height grid for larger screens */
+@media (min-width: 1200px) {
+  .grid-container {
+    max-height: none; /* Remove height constraint */
+    overflow: visible; /* Remove scrollbars */
+  }
+}
+
+/* For medium-large screens, increase the max-height */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .grid-container {
+    max-height: 85vh; /* More space for medium-large screens */
+  }
 }
 
 .grid-container::-webkit-scrollbar {
@@ -143,22 +167,6 @@
   cursor: pointer;
 }
 
-.today-button {
-  background: #0f62fe;
-  color: #ffffff;
-  min-width: 80px;
-}
-
-.today-button:hover:not(:disabled) {
-  background: #0353e9;
-}
-
-.today-button:disabled {
-  background: #8d8d8d;
-  color: #c6c6c6;
-  cursor: not-allowed;
-}
-
 /* ===========================================
    STATISTICS & LEGEND
    =========================================== */
@@ -167,7 +175,8 @@
   display: flex;
   gap: 2rem;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  justify-content: space-between;
 }
 
 .stat-item {
@@ -404,10 +413,7 @@
   .date-input {
     min-width: auto;
   }
-  
-  .today-button {
-    min-width: auto;
-  }
+
   
   .date-stats {
     flex-direction: column;

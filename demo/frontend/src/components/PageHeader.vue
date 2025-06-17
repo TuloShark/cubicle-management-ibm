@@ -151,6 +151,7 @@ const formatDisplayDate = (dateStr: string): string => {
   border-left: 4px solid #0043ce;
   width: 100%;
   box-sizing: border-box;
+  flex-wrap: nowrap; /* Prevent wrapping */
 }
 
 .date-label {
@@ -159,6 +160,8 @@ const formatDisplayDate = (dateStr: string): string => {
   color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap; /* Prevent label from wrapping */
+  flex-shrink: 0; /* Prevent label from shrinking */
 }
 
 .date-value {
@@ -168,22 +171,30 @@ const formatDisplayDate = (dateStr: string): string => {
   padding: 0.25rem 0.75rem;
   background-color: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.2);
+  white-space: nowrap; /* Prevent date from wrapping */
+  overflow: hidden; /* Handle overflow gracefully */
+  text-overflow: ellipsis; /* Add ellipsis if needed */
 }
 
-/* Responsive Design - Single Clean Breakpoint */
-@media (max-width: 768px) {
+/* Responsive Design - Keep horizontal layout on most screens */
+@media (max-width: 480px) {
   .page-title {
     font-size: 1.75rem;
   }
   
   .date-info {
-    flex-direction: column;
-    align-items: flex-start;
     gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .date-label {
+    font-size: 0.8125rem;
   }
   
   .date-value {
-    text-align: left;
+    font-size: 1rem;
+    padding: 0.25rem 0.5rem;
+    max-width: 200px; /* Limit width but keep horizontal */
   }
 }
 

@@ -73,14 +73,14 @@
 }
 
 .transparent-tile {
-  background: transparent;
-  border: none;
-  box-shadow: none;
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .transparent-tile:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(15, 98, 254, 0.3);
+  background: #f9f9f9;
+  border-color: #c6c6c6;
 }
 
 /* ===========================================
@@ -290,6 +290,12 @@
    KEY METRICS SECTION
    =========================================== */
 
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
 .key-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -301,6 +307,30 @@
   padding: 1rem;
   background: #f7f7f7;
   border-radius: 4px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.2s ease;
+}
+
+.metric-card:hover {
+  background: #f0f0f0;
+  border-color: #d0d0d0;
+}
+
+.metric-card-label {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.metric-card-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #161616;
+  display: block;
 }
 
 .metric-number {
@@ -410,6 +440,7 @@
   z-index: 9999;
   min-width: 300px;
   max-width: 400px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Real-time connection indicator */
@@ -475,9 +506,122 @@
    RESPONSIVE DESIGN
    =========================================== */
 
+/* Intermediate breakpoint - fix stacking without full width around 1071px */
+@media (max-width: 1200px) {
+  /* Stack sections that need to be stacked (PER USER USAGE and KEY METRICS) */
+  .user-metrics-row .cv-column,
+  .top-stats-row .cv-column {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
+  }
+  
+  /* Keep ADVANCED ANALYTICS side by side with flexible layout */
+  .analytics-trend-row {
+    display: flex !important;
+    gap: 1.5rem;
+  }
+  
+  .analytics-trend-row .cv-column:first-child {
+    flex: 1;
+    min-width: 300px;
+    max-width: 40%;
+  }
+  
+  .analytics-trend-row .cv-column:last-child {
+    flex: 2;
+    min-width: 400px;
+  }
+  
+  /* Ensure tiles take full width when stacked */
+  .overview-tile,
+  .data-tile {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  /* Keep analytics tiles flexible */
+  .chart-tile,
+  .analytics-tile {
+    width: 100%;
+    box-sizing: border-box;
+    height: 100%;
+  }
+}
+
+/* Specific fix for the 1075px to 700px range where Carbon columns misbehave */
+@media (max-width: 1075px) and (min-width: 700px) {
+  /* Force full width for all stacked sections */
+  .user-metrics-row .cv-column,
+  .top-stats-row .cv-column {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .user-metrics-row .cv-column:last-child,
+  .top-stats-row .cv-column:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Fix ADVANCED ANALYTICS stacking issue */
+  .analytics-trend-row {
+    display: block !important;
+    gap: 0 !important;
+  }
+  
+  .analytics-trend-row .cv-column {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 100% !important;
+    min-width: auto !important;
+    margin-bottom: 1.5rem !important;
+  }
+  
+  .analytics-trend-row .cv-column:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* Override any Carbon grid constraints */
+  .statistics-grid .cv-row {
+    display: block !important;
+  }
+  
+  .statistics-grid .cv-row .cv-column {
+    display: block !important;
+    width: 100% !important;
+  }
+  
+  /* Ensure proper spacing between rows */
+  .top-stats-row,
+  .user-metrics-row,
+  .analytics-trend-row {
+    margin-bottom: 2rem;
+  }
+}
+
 @media (max-width: 768px) {
   .statistics-grid {
     padding: 1rem;
+  }
+  
+  /* Stack ADVANCED ANALYTICS on mobile */
+  .analytics-trend-row {
+    display: block !important;
+    gap: 0;
+  }
+  
+  .analytics-trend-row .cv-column {
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
+    min-width: auto !important;
+    margin-bottom: 1.5rem;
+  }
+  
+  .analytics-trend-row .cv-column:last-child {
+    margin-bottom: 0;
   }
   
   .metric-value-container {

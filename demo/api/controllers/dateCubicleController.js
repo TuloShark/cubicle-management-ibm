@@ -95,17 +95,20 @@ function formatDateString(date) {
 /**
  * Reservation date validation utility
  * Ensures reservations can only be made for today or future dates
+ * Now accounts for timezone differences by being more lenient
  * @param {Date} date - Date to validate for reservation eligibility
  * @returns {boolean} True if date is valid for new reservations
  * @example
- * isValidReservationDate(new Date('2025-06-13')); // false (if today is 2025-06-14)
- * isValidReservationDate(new Date('2025-06-14')); // true (today)
+ * isValidReservationDate(new Date('2025-06-13')); // false (if more than 1 day old)
+ * isValidReservationDate(new Date('2025-06-14')); // true (today or recent)
  * isValidReservationDate(new Date('2025-06-15')); // true (future)
  */
 function isValidReservationDate(date) {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return date >= today;
+  // Allow reservations up to 24 hours in the past to account for timezone differences
+  const cutoffTime = new Date(today.getTime() - (24 * 60 * 60 * 1000));
+  cutoffTime.setHours(0, 0, 0, 0);
+  return date >= cutoffTime;
 }
 
 /**

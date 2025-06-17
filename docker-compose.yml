@@ -21,6 +21,7 @@ services:
       - mongo
     environment:
       - MONGO_URI=mongodb://admin:password@mongo:27017/space_optimization?authSource=admin
+      - TZ=America/Costa_Rica
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
       interval: 10s

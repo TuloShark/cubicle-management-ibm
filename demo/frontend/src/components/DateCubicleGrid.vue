@@ -46,7 +46,7 @@ LAST UPDATED: June 2025
       <transition-group name="tile-stagger" tag="div" class="tile-container">
         <DateCubicleTile
           v-for="(cubicle, index) in sortedCubicles"
-          :key="`${cubicle._id}`"
+          :key="`${selectedDate}-${cubicle._id}`"
           :cubicle="cubicle"
           :selected-date="selectedDate"
           :showName="false"
@@ -522,21 +522,29 @@ export default {
   display: contents;
 }
 
-/* Clean Tile Transitions - IBM Carbon Motion */
+/* Subtle Tile Transitions for Smooth Date Changes */
 .tile-stagger-enter-active,
 .tile-stagger-leave-active {
-  transition: all 0.15s cubic-bezier(0.2, 0, 0.38, 0.9);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0.38, 0.9);
   transition-delay: var(--stagger-delay, 0s);
 }
 
 .tile-stagger-enter-from {
   opacity: 0;
-  transform: translateY(4px);
+  transform: scale(0.98);
 }
 
 .tile-stagger-leave-to {
   opacity: 0;
-  transform: translateY(-4px);
+  transform: scale(0.98);
+}
+
+.tile-stagger-move {
+  transition: all 0.2s cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+.unified-grid {
+  background: transparent;
 }
 
 /* Simplified Cubicle Tile Styles */
@@ -577,7 +585,23 @@ export default {
   font-weight: 600;
 }
 
-/* Clean Responsive Design - Single Breakpoint */
+/* Clean Responsive Design - Smooth Transitions */
+@media (max-width: 900px) {
+  .unified-grid {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 800px) {
+  .unified-grid {
+    gap: 3px;
+  }
+  
+  :deep(.cubicle-tile) {
+    height: 62px;
+  }
+}
+
 @media (max-width: 768px) {
   .cubicle-container {
     padding: 0.5rem;

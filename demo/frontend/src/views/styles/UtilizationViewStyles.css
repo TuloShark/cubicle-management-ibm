@@ -20,11 +20,11 @@
 }
 
 /* Row Layouts */
-.top-row {
-  margin-bottom: 2rem;
+.controls-row {
+  margin-bottom: 1.5rem;
 }
 
-.reports-row {
+.main-content-row {
   margin-bottom: 1.5rem;
 }
 
@@ -160,28 +160,58 @@
    REPORTS SECTION
    =========================================== */
 
-.reports-container {
-  padding: 1.5rem;
-}
-
 /* Pagination */
 .pagination-controls {
   padding: 0 1.5rem;
   border-bottom: 1px solid #e0e0e0;
 }
 
-/* Reports Grid */
+/* Reports Container - Horizontal Scrolling */
+.reports-container {
+  padding: 1.5rem;
+  padding-right: 1rem; /* Reduced right padding to accommodate fade effect */
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar styling for better UX */
+.reports-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.reports-container::-webkit-scrollbar-track {
+  background: #f4f4f4;
+  border-radius: 4px;
+}
+
+.reports-container::-webkit-scrollbar-thumb {
+  background: #c6c6c6;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.reports-container::-webkit-scrollbar-thumb:hover {
+  background: #8d8d8d;
+}
+
 .reports-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  display: flex;
   gap: 1.5rem;
+  padding: 0.5rem 0;
+  min-width: min-content;
+}
+
+.reports-grid .report-card {
+  flex: 0 0 350px;
+  min-width: 350px;
 }
 
 /* Report Cards */
 .report-card {
   background: #ffffff;
   border: 1px solid #e0e0e0;
-  border-radius: 4px;
   padding: 1.5rem;
   transition: all 0.2s ease;
 }
@@ -192,7 +222,7 @@
 }
 
 .report-card.latest-report {
-  border-color: #42be65;
+  border-color: #0f62fe;
   border-width: 2px;
 }
 
@@ -218,11 +248,10 @@
 
 .latest-badge {
   display: inline-block;
-  background: #42be65;
+  background: #0f62fe;
   color: #ffffff;
   font-size: 0.625rem;
   padding: 0.25rem 0.5rem;
-  border-radius: 12px;
   margin-top: 0.5rem;
   text-transform: uppercase;
   font-weight: 600;
@@ -430,9 +459,38 @@
    RESPONSIVE DESIGN
    =========================================== */
 
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   .utilization-grid {
     padding: 1rem;
+  }
+  
+  .controls-legend-layout {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .controls-buttons-section {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+  }
+  
+  .controls-buttons-section .control-item {
+    width: 100%;
+  }
+  
+  .controls-buttons-section .control-item .control-button-legend {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Make stacked sections full width on tablet and mobile */
+  .main-content-row .cv-column {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
   }
   
   .horizontal-controls {
@@ -443,8 +501,14 @@
     min-width: auto;
   }
   
-  .reports-grid {
-    grid-template-columns: 1fr;
+  .control-button-legend {
+    min-width: 100%;
+    width: 100%;
+  }
+  
+  .reports-grid .report-card {
+    flex: 0 0 280px;
+    min-width: 280px;
   }
   
   .stat-row {
@@ -455,4 +519,97 @@
   .report-actions {
     flex-direction: column;
   }
+}
+
+/* Scrollable indicator - fade effect on the right edge */
+.reports-tile {
+  position: relative;
+}
+
+.reports-tile::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 100%;
+  background: linear-gradient(to right, transparent, #ffffff);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 1;
+}
+
+.reports-tile:hover::after {
+  opacity: 1;
+}
+
+/* Ensure the fade effect works with the tile content */
+.reports-container {
+  position: relative;
+  z-index: 0;
+}
+
+/* ===========================================
+   STATUS LEGEND CONTROLS - TOP BAR
+   =========================================== */
+
+.controls-row {
+  margin-bottom: 1.5rem;
+}
+
+.controls-tile-legend {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-height: auto;
+}
+
+.controls-legend-layout {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  gap: 2rem;
+}
+
+.controls-title-section {
+  flex-shrink: 0;
+}
+
+.controls-legend-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.controls-buttons-section {
+  display: flex;
+  gap: 1rem;
+  flex: 1;
+  align-items: center;
+}
+
+.control-button-legend {
+  min-height: 40px;
+}
+
+/* ===========================================
+   MAIN CONTENT ROW LAYOUT
+   =========================================== */
+
+.main-content-row {
+  margin-bottom: 1.5rem;
+}
+
+/* ===========================================
+   NOTIFICATION POSITIONING FIX
+   =========================================== */
+
+/* Ensure notifications appear in the correct position */
+.utilization-container .notification {
+  max-width: 400px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

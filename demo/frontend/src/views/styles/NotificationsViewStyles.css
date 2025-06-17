@@ -15,24 +15,55 @@
 /* Grid Layout */
 .notifications-grid {
   padding: 1.5rem;
-  max-width: 1200px;
+  max-width: 1584px; /* Match other views */
   margin: 0 auto;
+}
+
+/* Main Content Row */
+.main-content-row {
+  margin-bottom: 2rem;
+}
+
+/* Override Carbon column constraints for full width */
+.main-content-row .cv-column {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Flexible side-by-side layout on larger screens */
+@media (min-width: 1201px) {
+  .main-content-row {
+    display: flex;
+    gap: 1.5rem;
+  }
+  
+  .main-content-row .cv-column:first-child {
+    flex: 2; /* Takes up 2/3 of the space */
+    width: auto !important;
+  }
+  
+  .main-content-row .cv-column:last-child {
+    flex: 1; /* Takes up 1/3 of the space */
+    width: auto !important;
+  }
 }
 
 /* ===========================================
    NOTIFICATION TILE
    =========================================== */
 
-.notification-tile {
+.notification-tile,
+.info-tile {
   background: #ffffff;
   border: 1px solid #e0e0e0;
-  padding: 0;
-  margin-bottom: 2rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  height: 100%;
+  margin-bottom: 0; /* Remove individual margins since row has margin */
   transition: all 0.15s ease;
 }
 
-.notification-tile:hover {
+.notification-tile:hover,
+.info-tile:hover {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
@@ -89,10 +120,34 @@
 
 .input-section {
   margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .email-input {
-  max-width: 400px;
+  flex: 1;
+  min-width: 0; /* Allow flex to work properly */
+  max-width: none;
+}
+
+.edit-email-button {
+  flex: 1;
+  min-width: 0; /* Allow flex to work properly */
+  height: 40px;
+  margin-top: 1.50rem; /* Align with input field center */
+}
+
+/* Responsive: Maintain 50/50 layout on all screen sizes */
+@media (max-width: 600px) {
+  .input-section {
+    gap: 0.75rem;
+  }
+  
+  .edit-email-button {
+    margin-top: 1.50rem; /* Keep same alignment */
+  }
 }
 
 .status-section {
@@ -153,6 +208,9 @@
   gap: 0.5rem;
   font-weight: 600;
   transition: all 0.15s ease;
+  width: 100% !important;
+  display: block !important;
+  min-width: 100% !important;
 }
 
 .send-button:hover:not(:disabled) {
@@ -170,31 +228,30 @@
    INFORMATION TILE
    =========================================== */
 
-.info-tile {
-  background: #ffffff;
-  border: 1px solid #e0e0e0;
-  padding: 1.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  transition: all 0.15s ease;
-}
-
-.info-tile:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
 .info-header {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1rem;
+  padding: 1.5rem;
   border-bottom: 1px solid #e0e0e0;
+  background: #f7f7f7;
+  margin-bottom: 0;
 }
 
 .info-title {
   font-size: 1.25rem;
   font-weight: 600;
   color: #161616;
-  margin: 0;
+  margin: 0 0 0.5rem 0;
   text-transform: uppercase;
   letter-spacing: 0.02em;
+}
+
+.info-subtitle {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+}
+
+.info-content {
+  padding: 1.5rem;
 }
 
 .info-grid {
@@ -258,24 +315,38 @@
    TOAST NOTIFICATION
    =========================================== */
 
-.toast-notification {
-  position: fixed;
-  top: 80px;
-  right: 1rem;
-  z-index: 9999;
-  max-width: 400px;
+.notifications-toast {
+  position: fixed !important;
+  top: 80px !important;
+  right: 1rem !important;
+  z-index: 9999 !important;
+  max-width: 400px !important;
 }
 
 /* ===========================================
    RESPONSIVE DESIGN
    =========================================== */
 
-@media (max-width: 768px) {
+@media (max-width: 1200px) {
   .notifications-grid {
     padding: 1rem;
   }
   
-  .tile-header {
+  /* Stack sections on medium and small screens with full width */
+  .main-content-row .cv-column {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Ensure tiles take full width when stacked */
+  .notification-tile,
+  .info-tile {
+    margin-bottom: 1.5rem;
+  }
+  
+  .tile-header,
+  .info-header {
     padding: 1rem;
   }
   
@@ -285,7 +356,8 @@
     align-items: center;
   }
   
-  .notification-content {
+  .notification-content,
+  .info-content {
     padding: 1rem;
   }
   
@@ -305,6 +377,22 @@
   }
 }
 
+@media (max-width: 768px) {
+  .notifications-grid {
+    padding: 0.5rem;
+  }
+  
+  .tile-header,
+  .info-header {
+    padding: 0.75rem;
+  }
+  
+  .notification-content,
+  .info-content {
+    padding: 0.75rem;
+  }
+}
+
 @media (max-width: 480px) {
   .header-icon {
     width: 32px;
@@ -317,5 +405,10 @@
   
   .tile-subtitle {
     font-size: 0.75rem;
+  }
+  
+  .notifications-toast {
+    right: 0.5rem !important;
+    max-width: calc(100% - 1rem) !important;
   }
 }

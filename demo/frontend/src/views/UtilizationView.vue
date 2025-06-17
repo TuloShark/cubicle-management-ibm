@@ -80,40 +80,26 @@ LAST UPDATED: June 2025
     
     <!-- Main Reports Dashboard -->
     <cv-grid class="utilization-grid">
-      <!-- Reports Controls and Quick Stats Row - Side by Side -->
-      <cv-row class="top-row">
-        <!-- Report Controls - Left Half -->
-        <cv-column :sm="4" :md="8" :lg="8">
-          <cv-tile class="controls-tile">
-            <div class="tile-header">
-              <h3 class="tile-title">Report Controls</h3>
-              <p class="tile-subtitle">Generate and manage utilization reports</p>
-            </div>
-            <div class="controls-content">
-              <div class="horizontal-controls">
+      <!-- Report Controls Row - Status Legend Style -->
+      <cv-row class="controls-row">
+        <cv-column :sm="4" :md="16" :lg="16">
+          <cv-tile class="controls-tile-legend">
+            <div class="controls-legend-layout">
+              <div class="controls-title-section">
+                <h3 class="controls-legend-title">REPORT CONTROLS</h3>
+              </div>
+              <div class="controls-buttons-section">
                 <div class="control-item" v-if="isAdminUser">
                   <cv-button 
                     @click="generateCurrentDayReport" 
                     kind="primary" 
-                    size="lg"
+                    size="md"
                     :disabled="loading.generateCurrent"
-                    class="control-button-consistent"
+                    class="control-button-legend"
+                    style="width: 100% !important; display: block !important; min-width: 100% !important;"
                   >
                     <span v-if="loading.generateCurrent">Generating...</span>
-                    <span v-else>Generate Report for Selected Date</span>
-                  </cv-button>
-                </div>
-                
-                <div class="control-item" v-if="isAdminUser">
-                  <cv-button 
-                    @click="openCustomDayModal" 
-                    kind="secondary" 
-                    size="lg"
-                    :disabled="loading.generateCustom"
-                    class="control-button-consistent"
-                  >
-                    <span v-if="loading.generateCustom">Processing...</span>
-                    <span v-else>Generate Custom Day Report</span>
+                    <span v-else>Generate Date Report</span>
                   </cv-button>
                 </div>
                 
@@ -121,9 +107,10 @@ LAST UPDATED: June 2025
                   <cv-button 
                     @click="refreshReports" 
                     kind="tertiary" 
-                    size="lg"
+                    size="md"
                     :disabled="loading.refresh"
-                    class="control-button-consistent"
+                    class="control-button-legend"
+                    style="width: 100% !important; display: block !important; min-width: 100% !important;"
                   >
                     <span v-if="loading.refresh">Refreshing...</span>
                     <span v-else>Refresh Reports</span>
@@ -133,56 +120,12 @@ LAST UPDATED: June 2025
             </div>
           </cv-tile>
         </cv-column>
-        
-        <!-- Quick Stats - Right Half -->
-        <cv-column :sm="4" :md="4" :lg="4">
-          <cv-tile class="quick-stats-tile">
-            <div class="tile-header">
-              <h3 class="tile-title">Quick Statistics</h3>
-              <p class="tile-subtitle">Latest report insights</p>
-            </div>
-            <div class="quick-stats-content">
-              <!-- Analytics Carousel Component -->
-              <AnalyticsCarousel
-                v-if="latestReport"
-                :stats="carouselStats"
-                :interval="3000"
-                :auto-rotate="true"
-                @stat-changed="onStatChanged"
-              />
-              
-              <!-- No Data State for Statistics -->
-              <div v-else class="no-data-state">
-                <div class="empty-state-content">
-                  <h4 class="empty-state-title">No Statistics Available</h4>
-                  <p class="empty-state-description">Statistics will appear here once you generate your first report.</p>
-                </div>
-              </div>
-              
-              <!-- Download Button - Always Present -->
-              <div class="quick-stats-download">
-                <cv-button 
-                  @click="exportLatestReport" 
-                  kind="primary" 
-                  size="lg"
-                  :disabled="loading.exportLatest"
-                  class="control-button-consistent download-button-centered"
-                >
-                  <template #icon>
-                    <Download16 />
-                  </template>
-                  <span v-if="loading.exportLatest">Downloading...</span>
-                  <span v-else>Download Latest Report</span>
-                </cv-button>
-              </div>
-            </div>
-          </cv-tile>
-        </cv-column>
       </cv-row>
       
-      <!-- Reports List Row -->
-      <cv-row class="reports-row">
-        <cv-column :sm="4" :md="16" :lg="16">
+      <!-- Main Content Row - Reports and Stats Side by Side -->
+      <cv-row class="main-content-row">
+        <!-- Available Reports - Left Side -->
+        <cv-column :sm="4" :md="8" :lg="8">
           <cv-tile class="reports-tile">
             <div class="tile-header">
               <div class="tile-title-section">
@@ -194,10 +137,10 @@ LAST UPDATED: June 2025
             </div>
             
             <!-- Pagination Controls -->
-            <div class="pagination-controls" v-if="pagination.totalPages > 1">
+            <div class="pagination-controls" v-if="filteredPagination.totalPages > 1">
               <cv-pagination 
                 v-model="currentPage"
-                :number-of-items="pagination.totalReports"
+                :number-of-items="filteredPagination.totalReports"
                 :page-size="pageSize"
                 :page-sizes="[5, 10, 20]"
                 @change="handlePaginationChange"
@@ -206,9 +149,9 @@ LAST UPDATED: June 2025
             
             <!-- Reports Cards -->
             <div class="reports-container">
-              <div v-if="reports.length > 0" class="reports-grid">
+              <div v-if="filteredReports.length > 0" class="reports-grid">
                 <div 
-                  v-for="report in reports" 
+                  v-for="report in filteredReports" 
                   :key="report._id"
                   class="report-card"
                   :class="{ 'latest-report': report === latestReport }"
@@ -321,11 +264,57 @@ LAST UPDATED: June 2025
               
               <div v-else class="no-data-state">
                 <div class="empty-state-content">
-                  <h4 class="empty-state-title">No Reports Available</h4>
+                  <h4 class="empty-state-title">No Reports Available for Selected Date</h4>
                   <p class="empty-state-description">
-                    Generated reports will appear here for viewing and downloading.
+                    No reports found for {{ formatDisplayDate(selectedDateString) }}. Generate a report for this date or select a different date.
                   </p>
                 </div>
+              </div>
+            </div>
+          </cv-tile>
+        </cv-column>
+        
+        <!-- Quick Statistics - Right Side (Smaller) -->
+        <cv-column :sm="4" :md="4" :lg="4">
+          <cv-tile class="quick-stats-tile">
+            <div class="tile-header">
+              <h3 class="tile-title">Quick Statistics</h3>
+              <p class="tile-subtitle">Latest report insights</p>
+            </div>
+            <div class="quick-stats-content">
+              <!-- Analytics Carousel Component -->
+              <AnalyticsCarousel
+                v-if="latestReport"
+                :stats="carouselStats"
+                :interval="3000"
+                :auto-rotate="true"
+                @stat-changed="onStatChanged"
+              />
+              
+              <!-- No Data State for Statistics -->
+              <div v-else class="no-data-state">
+                <div class="empty-state-content">
+                  <h4 class="empty-state-title">No Statistics Available</h4>
+                  <p class="empty-state-description">Statistics will appear here once you generate your first report.</p>
+                </div>
+              </div>
+              
+              <!-- Download Button - Always Present -->
+              <div class="quick-stats-download">
+                <cv-button 
+                  @click="exportLatestReport" 
+                  kind="primary" 
+                  size="lg"
+                  :disabled="loading.exportLatest"
+                  class="control-button-consistent download-button-centered"
+                  style="width: 100% !important; display: block !important; min-width: 100% !important;"
+                >
+                  <template #icon>
+                    <Download16 />
+                  </template>
+                  <span v-if="loading.exportLatest">Downloading...</span>
+                  <span v-else>Download Latest Report</span>
+                </cv-button>
               </div>
             </div>
           </cv-tile>
@@ -431,30 +420,30 @@ LAST UPDATED: June 2025
         <template v-slot:primary-button>Close</template>
       </cv-modal>
       
-      <!-- Custom Date Modal -->
+      <!-- Search Day Modal -->
       <cv-modal
-        :visible="showCustomDayModal"
+        :visible="showSearchDayModal"
         kind="default"
         size="md"
         :auto-hide-off="true"
-        @modal-hide-request="closeCustomDayModal"
-        @primary-click="handleCustomDayModalAction"
-        @secondary-click="closeCustomDayModal"
+        @modal-hide-request="closeSearchDayModal"
+        @primary-click="handleSearchDayModalAction"
+        @secondary-click="closeSearchDayModal"
       >
         <template v-slot:label>
-          Generate Custom Report
+          Search Reports
         </template>
         <template v-slot:title>
-          Select Date for Report Generation
+          Search Reports for Specific Date
         </template>
         <template v-slot:content>
-          <div class="custom-date-form">
+          <div class="search-date-form">
             <p class="form-description">
-              Select any date to generate a utilization report for that day.
+              Select a date to view all available reports for that day.
             </p>
             
             <cv-date-picker
-              v-model="customDayStart"
+              v-model="searchDayDate"
               kind="single"
               :date-format="dateFormat"
               placeholder="Select date (YYYY-MM-DD)"
@@ -592,6 +581,61 @@ export default {
     };
   },
   computed: {
+    // Filter reports by current selected date
+    filteredReports() {
+      const currentDate = this.selectedDateString; // From global dateStore
+      if (!currentDate) return this.reports; // If no date selected, show all reports
+      
+      return this.reports.filter(report => {
+        try {
+          // Check if report exists and has either reportDate or reportStartDate
+          if (!report) {
+            return false;
+          }
+          
+          // Try reportDate first, then reportStartDate as fallback
+          const dateToCheck = report.reportDate || report.reportStartDate;
+          if (!dateToCheck) {
+            return false;
+          }
+          
+          // Create date object and validate it
+          const reportDateObj = new Date(dateToCheck);
+          if (isNaN(reportDateObj.getTime())) {
+            console.warn('Invalid report date found:', dateToCheck);
+            return false;
+          }
+          
+          // Parse the report date and compare with current selected date
+          const reportDate = reportDateObj.toISOString().split('T')[0];
+          return reportDate === currentDate;
+        } catch (error) {
+          console.error('Error parsing report date:', error, report);
+          return false;
+        }
+      });
+    },
+    // Update pagination info based on filtered reports
+    filteredPagination() {
+      try {
+        const totalReports = this.filteredReports ? this.filteredReports.length : 0;
+        const totalPages = Math.ceil(totalReports / this.pageSize) || 1;
+        return {
+          totalReports,
+          totalPages,
+          hasNext: this.currentPage < totalPages,
+          hasPrev: this.currentPage > 1
+        };
+      } catch (error) {
+        console.error('Error calculating filtered pagination:', error);
+        return {
+          totalReports: 0,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false
+        };
+      }
+    },
     carouselStats() {
       if (!this.latestReport) return [];
       return [
@@ -631,6 +675,8 @@ export default {
     async '$route.params.date'(newDate) {
       if (newDate && typeof newDate === 'string') {
         await this.setSelectedDate(newDate);
+        // Refetch reports after date change
+        await this.fetchReports();
       }
     },
     // Watch for selected date changes and refetch reports
@@ -1028,6 +1074,8 @@ export default {
           throw new Error(`Invalid date format: ${dateToUse}. Expected YYYY-MM-DD format.`);
         }
         
+        console.log('Generating report for date:', dateToUse);
+        
         // Generate the report
         const requestConfig = {
           headers: { Authorization: `Bearer ${idToken}` },
@@ -1138,16 +1186,6 @@ export default {
       // Validate date format
       if (!/^\d{4}-\d{2}-\d{2}$/.test(this.customDayStart)) {
         this.showNotification('error', 'Invalid Date Format', 'Please select a valid date');
-        return;
-      }
-      
-      // Validate date is not in the future
-      const selectedDate = new Date(this.customDayStart + 'T00:00:00');
-      const today = new Date();
-      today.setHours(23, 59, 59, 999); // End of today
-      
-      if (selectedDate > today) {
-        this.showNotification('error', 'Future Date', 'Cannot generate reports for future dates');
         return;
       }
       
