@@ -613,3 +613,20 @@
   max-width: 400px;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Toast notification positioning - top right corner */
+.utilization-toast {
+  position: fixed !important;
+  top: 80px !important;
+  right: 1rem !important;
+  z-index: 9999 !important;
+  max-width: 400px !important;
+}
+
+/* Responsive design for mobile */
+@media (max-width: 768px) {
+  .utilization-toast {
+    right: 0.5rem !important;
+    max-width: calc(100% - 1rem) !important;
+  }
+}

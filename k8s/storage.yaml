@@ -1,0 +1,99 @@
+# ================================================================================
+# Persistent Storage Configuration
+# IBM Cubicle Management System - Data Persistence
+# ================================================================================
+
+# StorageClass for high-performance SSD storage
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-ssd
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: storage
+provisioner: kubernetes.io/aws-ebs  # Change based on your cloud provider
+parameters:
+  type: gp3
+  iops: "3000"
+  throughput: "125"
+  encrypted: "true"
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
+reclaimPolicy: Retain
+
+---
+# MongoDB Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-storage
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: fast-ssd
+  resources:
+    requests:
+      storage: 50Gi  # Adjust based on expected data volume
+  selector:
+    matchLabels:
+      app: cubicle-management
+      component: mongodb
+
+---
+# Application Logs Persistent Volume Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-logs-storage
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: logging
+spec:
+  accessModes:
+    - ReadWriteMany  # Multiple pods can write logs
+  storageClassName: standard  # Standard storage for logs
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+# Static Assets Persistent Volume Claim (for future file uploads)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: static-assets-storage
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: assets
+spec:
+  accessModes:
+    - ReadWriteMany
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+# MongoDB Backup Storage (for automated backups)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-backup-storage
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: backup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: standard
+  resources:
+    requests:
+      storage: 100Gi  # Larger for backup retention

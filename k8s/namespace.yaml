@@ -1,0 +1,18 @@
+# ================================================================================
+# Kubernetes Namespace Configuration
+# IBM Cubicle Management System - Production Namespace
+# ================================================================================
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cubicle-management
+  labels:
+    app: cubicle-management
+    version: v1.0.0
+    environment: production
+    team: space-optimization
+  annotations:
+    description: "IBM Cubicle Management System - Production Environment"
+    contact: "space-optimization@ibm.com"
+    created-by: "DevOps Team"

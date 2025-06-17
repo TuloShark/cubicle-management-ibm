@@ -945,16 +945,16 @@ utilizationReportSchema.index({
  */
 utilizationReportSchema.pre('save', async function(next) {
   try {
-    // Normalize dates to proper boundaries
+    // Normalize dates to proper boundaries using UTC to avoid timezone issues
     if (this.reportStartDate) {
       const startDate = new Date(this.reportStartDate);
-      startDate.setHours(0, 0, 0, 0);
+      startDate.setUTCHours(0, 0, 0, 0);
       this.reportStartDate = startDate;
     }
     
     if (this.reportEndDate) {
       const endDate = new Date(this.reportEndDate);
-      endDate.setHours(23, 59, 59, 999);
+      endDate.setUTCHours(23, 59, 59, 999);
       this.reportEndDate = endDate;
     }
     

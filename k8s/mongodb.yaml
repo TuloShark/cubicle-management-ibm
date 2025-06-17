@@ -1,0 +1,230 @@
+# ================================================================================
+# MongoDB StatefulSet Deployment
+# IBM Cubicle Management System - Database Layer
+# ================================================================================
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: database
+    version: "5.0"
+spec:
+  serviceName: mongodb-headless
+  replicas: 1  # Start with single instance, can be scaled to replica set
+  selector:
+    matchLabels:
+      app: cubicle-management
+      component: database
+  template:
+    metadata:
+      labels:
+        app: cubicle-management
+        component: database
+    spec:
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+        runAsNonRoot: true
+      containers:
+      - name: mongodb
+        image: mongo:5.0
+        ports:
+        - containerPort: 27017
+          name: mongodb
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          value: "admin"
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-credentials
+              key: root-password
+        - name: MONGO_INITDB_DATABASE
+          value: "cubicle_management_prod"
+        command:
+        - mongod
+        - --quiet
+        - --logpath=/var/log/mongodb/mongod.log
+        - --logappend
+        - --bind_ip_all
+        - --auth
+        - --replSet=rs0
+        volumeMounts:
+        - name: mongodb-storage
+          mountPath: /data/db
+        - name: mongodb-config
+          mountPath: /etc/mongo
+        - name: mongodb-logs
+          mountPath: /var/log/mongodb
+        - name: app-logs-storage
+          mountPath: /var/log/mongodb
+          subPath: mongodb
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1"
+        livenessProbe:
+          exec:
+            command:
+            - mongo
+            - --eval
+            - "db.adminCommand('ping')"
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          exec:
+            command:
+            - mongo
+            - --eval
+            - "db.runCommand('ping').ok"
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+          periodSeconds: 5
+          failureThreshold: 3
+      - name: mongodb-exporter
+        image: percona/mongodb_exporter:0.40
+        ports:
+        - containerPort: 9216
+          name: metrics
+        env:
+        - name: MONGODB_URI
+          value: "mongodb://admin:$(MONGO_ROOT_PASSWORD)@localhost:27017/admin"
+        - name: MONGO_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mongodb-credentials
+              key: root-password
+        resources:
+          requests:
+            memory: "50Mi"
+            cpu: "50m"
+          limits:
+            memory: "100Mi"
+            cpu: "100m"
+      volumes:
+      - name: mongodb-config
+        configMap:
+          name: mongodb-config
+  volumeClaimTemplates:
+  - metadata:
+      name: mongodb-storage
+      labels:
+        app: cubicle-management
+        component: database
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: fast-ssd
+      resources:
+        requests:
+          storage: 50Gi
+
+---
+# MongoDB Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: database
+spec:
+  type: ClusterIP
+  selector:
+    app: cubicle-management
+    component: database
+  ports:
+  - name: mongodb
+    port: 27017
+    targetPort: 27017
+  - name: metrics
+    port: 9216
+    targetPort: 9216
+
+---
+# MongoDB Headless Service (for StatefulSet)
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-headless
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: database
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: cubicle-management
+    component: database
+  ports:
+  - name: mongodb
+    port: 27017
+    targetPort: 27017
+
+---
+# MongoDB Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongodb-config
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: database
+data:
+  mongod.conf: |
+    # MongoDB Configuration File
+    storage:
+      dbPath: /data/db
+      journal:
+        enabled: true
+      wiredTiger:
+        engineConfig:
+          cacheSizeGB: 1.5
+    
+    systemLog:
+      destination: file
+      logAppend: true
+      path: /var/log/mongodb/mongod.log
+      logRotate: reopen
+      verbosity: 1
+    
+    net:
+      port: 27017
+      bindIp: 0.0.0.0
+    
+    security:
+      authorization: enabled
+    
+    replication:
+      replSetName: rs0
+    
+    operationProfiling:
+      slowOpThresholdMs: 100
+
+---
+# MongoDB Credentials Secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-credentials
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: database
+type: Opaque
+data:
+  # base64 encoded values - replace with actual values
+  # echo -n "your-strong-password" | base64
+  root-password: <BASE64_ENCODED_ROOT_PASSWORD>
+  app-password: <BASE64_ENCODED_APP_PASSWORD>

@@ -74,9 +74,9 @@ function isUserAdmin(user) {
  */
 function createDateRange(targetDate) {
   const startOfDay = new Date(targetDate);
-  startOfDay.setHours(0, 0, 0, 0);
+  startOfDay.setUTCHours(0, 0, 0, 0);
   const endOfDay = new Date(targetDate);
-  endOfDay.setHours(23, 59, 59, 999);
+  endOfDay.setUTCHours(23, 59, 59, 999);
   return { startOfDay, endOfDay };
 }
 
@@ -107,7 +107,7 @@ function isValidReservationDate(date) {
   const today = new Date();
   // Allow reservations up to 24 hours in the past to account for timezone differences
   const cutoffTime = new Date(today.getTime() - (24 * 60 * 60 * 1000));
-  cutoffTime.setHours(0, 0, 0, 0);
+  cutoffTime.setUTCHours(0, 0, 0, 0);
   return date >= cutoffTime;
 }
 
@@ -394,10 +394,14 @@ router.post('/reserve/date/:date', [
       displayName: req.user.name || req.user.displayName || null
     };
 
+    // Create reservation date using UTC to ensure consistency
+    const reservationDate = new Date(targetDate);
+    reservationDate.setUTCHours(12, 0, 0, 0); // Set to noon UTC to avoid timezone edge cases
+
     const reservation = new Reservation({
       cubicle: cubicleId,
       user: userInfo,
-      date: new Date(targetDate)
+      date: reservationDate
     });
 
     await reservation.save();

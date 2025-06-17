@@ -307,7 +307,7 @@ function generateDailyBreakdown(startDate, endDate, cubicles, reservations, tota
   while (currentDate <= endDate) {
     const dayStart = new Date(currentDate);
     const dayEnd = new Date(currentDate);
-    dayEnd.setHours(23, 59, 59, 999);
+    dayEnd.setUTCHours(23, 59, 59, 999);
     
     const dayReservations = reservations.filter(r => 
       r.date >= dayStart && r.date <= dayEnd

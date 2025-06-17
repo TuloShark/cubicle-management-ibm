@@ -135,11 +135,15 @@ function generateCubicleData() {
  */
 async function seedCubicles() {
   try {
-    // Clear existing cubicles
-    const deleteResult = await Cubicle.deleteMany({});
-    logger.info(`Cleared ${deleteResult.deletedCount} existing cubicles`);
+    // Check if cubicles already exist
+    const existingCount = await Cubicle.countDocuments();
     
-    // Generate and insert new cubicles
+    if (existingCount > 0) {
+      logger.info(`Database already has ${existingCount} cubicles, skipping seeding`);
+      return;
+    }
+    
+    // Generate and insert new cubicles only if database is empty
     const cubicles = generateCubicleData();
     const insertResult = await Cubicle.insertMany(cubicles);
     

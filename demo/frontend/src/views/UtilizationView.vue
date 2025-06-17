@@ -471,7 +471,7 @@ LAST UPDATED: June 2025
         :subtitle="notification.subtitle"
         :close-aria-label="'Close notification'"
         @close="notification.show = false"
-        class="notification"
+        class="utilization-toast"
       />
     </cv-grid>
   </div>
@@ -974,14 +974,9 @@ export default {
         // Improved date comparison - handle both string and Date formats
         let reportDateStr;
         if (typeof reportDate === 'string') {
-          // If it's already a string, check if it's ISO format or date-only
           reportDateStr = reportDate.includes('T') ? reportDate.split('T')[0] : reportDate;
         } else if (reportDate instanceof Date) {
-          // If it's a Date object, convert to YYYY-MM-DD format
-          const year = reportDate.getFullYear();
-          const month = String(reportDate.getMonth() + 1).padStart(2, '0');
-          const day = String(reportDate.getDate()).padStart(2, '0');
-          reportDateStr = `${year}-${month}-${day}`;
+          reportDateStr = reportDate.toISOString().split('T')[0];
         } else {
           return false;
         }

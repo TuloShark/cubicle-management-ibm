@@ -258,9 +258,9 @@ const ReservationSchema = new mongoose.Schema({
         
         // Check-in must be on the same date as reservation
         const checkedInDate = new Date(checkedInAt);
-        checkedInDate.setHours(0, 0, 0, 0);
+        checkedInDate.setUTCHours(0, 0, 0, 0);
         const reservationDate = new Date(this.date);
-        reservationDate.setHours(0, 0, 0, 0);
+        reservationDate.setUTCHours(0, 0, 0, 0);
         
         if (checkedInDate.getTime() !== reservationDate.getTime()) {
           return false;
@@ -301,9 +301,9 @@ const ReservationSchema = new mongoose.Schema({
         
         // Check-out should be on the same date as reservation (allow next day for overnight work)
         const checkoutDate = new Date(checkedOutAt);
-        checkoutDate.setHours(0, 0, 0, 0);
+        checkoutDate.setUTCHours(0, 0, 0, 0);
         const reservationDate = new Date(this.date);
-        reservationDate.setHours(0, 0, 0, 0);
+        reservationDate.setUTCHours(0, 0, 0, 0);
         const nextDay = new Date(reservationDate);
         nextDay.setDate(nextDay.getDate() + 1);
         
@@ -663,13 +663,13 @@ ReservationSchema.virtual('durationHours').get(function() {
  */
 ReservationSchema.virtual('isActiveToday').get(function() {
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
   
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   
   const reservationDate = new Date(this.date);
-  reservationDate.setHours(0, 0, 0, 0);
+  reservationDate.setUTCHours(0, 0, 0, 0);
   
   return reservationDate.getTime() === today.getTime() && 
          ['active', 'checked-in'].includes(this.status);
