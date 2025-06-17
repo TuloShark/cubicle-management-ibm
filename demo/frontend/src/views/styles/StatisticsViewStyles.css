@@ -434,13 +434,16 @@
    =========================================== */
 
 .statistics-notification {
-  position: fixed;
-  top: 80px;
-  right: 1rem;
-  z-index: 9999;
-  min-width: 300px;
-  max-width: 400px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: fixed !important;
+  top: 5rem !important;
+  right: 1rem !important;
+  z-index: 10000 !important;
+  min-width: 300px !important;
+  max-width: 400px !important;
+  margin: 0 !important;
+  transform: none !important;
+  animation: none !important;
+  transition: opacity 0.3s ease-in-out !important;
 }
 
 /* Real-time connection indicator */
@@ -652,6 +655,51 @@
   
   .chart-container {
     min-height: 250px;
+  }
+}
+
+/* ===========================================
+   RESPONSIVE NOTIFICATION STYLES
+   =========================================== */
+
+/* Tablets and small screens */
+@media (max-width: 768px) {
+  .statistics-notification {
+    top: 5rem !important;
+    right: 0.5rem !important;
+    max-width: 350px !important;
+  }
+}
+
+/* Extra small devices (phones, 480px and down) */
+@media (max-width: 480px) {
+  .statistics-notification {
+    top: 5rem !important;
+    right: 0.25rem !important;
+    max-width: 300px !important;
+    min-width: 250px !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Very small devices (320px and down) */
+@media (max-width: 320px) {
+  .statistics-notification {
+    top: 5rem !important;
+    right: 0.125rem !important;
+    max-width: 280px !important;
+    min-width: 220px !important;
+    font-size: 0.8rem !important;
+  }
+}
+
+/* Landscape orientation on small devices */
+@media (max-height: 500px) and (orientation: landscape) {
+  .statistics-notification {
+    top: 5rem !important;
+    right: 0.5rem !important;
+    max-width: 300px !important;
+    font-size: 0.875rem !important;
   }
 }
 

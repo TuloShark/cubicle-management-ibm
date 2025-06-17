@@ -78,6 +78,17 @@ performance optimizations, and production-ready improvements
       subtitle="Reserve, release, and manage office cubicle assignments"
     />
     
+    <!-- User Notification Toast -->
+    <cv-toast-notification
+      v-if="notification.show"
+      :kind="notification.type"
+      :title="notification.title"
+      :sub-title="notification.message"
+      :close-aria-label="'Dismiss notification'"
+      @close="dismissNotification"
+      class="reservations-notification"
+    />
+    
     <!-- Main Content Area -->
     <cv-grid class="reservations-grid">
       <!-- Quick Actions Panel - Simplified without date controls -->
@@ -283,9 +294,18 @@ export default {
     const socket = ref(null);
     const gridContainer = ref(null);
 
+    // Notification system for user feedback
+    const notification = ref({
+      show: false,
+      type: 'info', // 'success', 'warning', 'error', 'info'
+      title: '',
+      message: ''
+    });
+
     // Timer management for proper cleanup
     let socketUpdateTimeout = null;
     let errorDismissTimeout = null;
+    let notificationTimeout = null;
 
     // Computed properties - matching original (keeping the ones not in date store)
     const minDate = computed(() => {
@@ -306,15 +326,6 @@ export default {
       return `${year}-${month}-${day}`;
     });
 
-    // Check if selected date is in the past (for historical viewing mode)
-    const isHistoricalDate = computed(() => {
-      const today = new Date();
-      const selectedDate = new Date(selectedDateString.value + 'T00:00:00');
-      today.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
-      selectedDate.setHours(0, 0, 0, 0);
-      return selectedDate < today;
-    });
-
     // Format display date function to match the header
     const formatDisplayDate = (dateStr) => {
       if (!dateStr) return 'No date selected'
@@ -331,6 +342,15 @@ export default {
         return dateStr
       }
     }
+    
+    // Check if selected date is in the past (for historical viewing mode)
+    const isHistoricalDate = computed(() => {
+      const today = new Date();
+      const selectedDate = new Date(selectedDateString.value + 'T00:00:00');
+      today.setHours(0, 0, 0, 0); // Reset time for accurate date comparison
+      selectedDate.setHours(0, 0, 0, 0);
+      return selectedDate < today;
+    });
 
     /**
      * Fetch Cubicles for Date
@@ -820,6 +840,8 @@ export default {
       await fetchCubiclesForDate(selectedDate.value);
     });
 
+
+
     // Update cubicle global state (for Error state changes)
     const updateCubicleState = async (cubicle) => {
       // Store scroll position before making changes
@@ -919,6 +941,48 @@ export default {
     };
 
     /**
+     * Show User Notification
+     * 
+     * Displays user-friendly notifications with automatic dismissal.
+     * Supports different notification types for various scenarios.
+     * 
+     * @param {string} type - Notification type ('success', 'warning', 'error', 'info')
+     * @param {string} title - Notification title
+     * @param {string} message - Notification message
+     * @param {number} duration - Auto-dismiss duration in milliseconds (default: 5000)
+     */
+    const showNotification = (type, title, message, duration = 5000) => {
+      // Clear any existing notification timeout
+      if (notificationTimeout) {
+        clearTimeout(notificationTimeout);
+      }
+      
+      notification.value = {
+        show: true,
+        type,
+        title,
+        message
+      };
+      
+      // Auto-dismiss notification
+      notificationTimeout = setTimeout(() => {
+        notification.value.show = false;
+      }, duration);
+    };
+
+    /**
+     * Dismiss Notification
+     * 
+     * Manually dismisses the current notification and clears timeout.
+     */
+    const dismissNotification = () => {
+      if (notificationTimeout) {
+        clearTimeout(notificationTimeout);
+      }
+      notification.value.show = false;
+    };
+
+    /**
      * Debounced Socket Update Handler
      * 
      * Prevents excessive API calls from rapid WebSocket events by implementing
@@ -952,7 +1016,20 @@ export default {
         clearTimeout(errorDismissTimeout);
         errorDismissTimeout = null;
       }
+      if (notificationTimeout) {
+        clearTimeout(notificationTimeout);
+        notificationTimeout = null;
+      }
     };
+    
+    // Watch for historical date changes and show notification
+    watch(isHistoricalDate, (isHistorical) => {
+      if (isHistorical) {
+        showNotification('info', 'Historical View Mode', 
+          `You are viewing cubicle reservations for ${formatDisplayDate(selectedDateString.value)}. Editing is disabled for past dates.`, 
+          8000);
+      }
+    }, { immediate: true }); // Check immediately on component mount
 
     return {
       selectedDate,
@@ -984,6 +1061,10 @@ export default {
       showErrorWithTimeout,
       debouncedSocketUpdate,
       cleanupTimers,
+      // Notification system
+      notification,
+      showNotification,
+      dismissNotification,
       // Auth error management
       authError,
       clearError,

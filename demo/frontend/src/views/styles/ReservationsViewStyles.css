@@ -399,6 +399,37 @@
    RESPONSIVE DESIGN
    =========================================== */
 
+/* Toast Notification Positioning - Global Styles */
+.reservations-notification {
+  position: fixed !important;
+  top: 5rem !important;
+  right: 1rem !important;
+  z-index: 10000 !important;
+  max-width: 400px !important;
+  margin: 0 !important;
+  transform: none !important;
+  animation: none !important;
+  transition: opacity 0.3s ease-in-out !important;
+}
+
+/* Prevent any displacement or animation conflicts */
+.reservations-notification * {
+  position: relative !important;
+  transform: none !important;
+}
+
+/* Override Carbon's toast notification animations */
+.reservations-notification.bx--toast-notification {
+  transform: none !important;
+  animation: none !important;
+}
+
+/* Ensure notification container is stable */
+.reservations-container {
+  position: relative;
+  overflow: visible;
+}
+
 @media (max-width: 768px) {
   .reservations-grid {
     padding: 1rem;
@@ -433,5 +464,42 @@
   
   .user-reservations {
     grid-template-columns: 1fr;
+  }
+
+  /* Toast notification responsive overrides */
+  .reservations-notification {
+    top: 5rem !important;
+    right: 0.5rem !important;
+    max-width: 350px !important;
+  }
+}
+
+/* Extra small devices (phones, 480px and down) */
+@media (max-width: 480px) {
+  .reservations-notification {
+    top: 5rem !important;
+    right: 0.25rem !important;
+    max-width: 300px !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Very small devices (320px and down) */
+@media (max-width: 320px) {
+  .reservations-notification {
+    top: 5rem !important;
+    right: 0.125rem !important;
+    max-width: 280px !important;
+    font-size: 0.8rem !important;
+  }
+}
+
+/* Landscape orientation on small devices */
+@media (max-height: 500px) and (orientation: landscape) {
+  .reservations-notification {
+    top: 2rem !important;
+    right: 0.5rem !important;
+    max-width: 300px !important;
+    font-size: 0.875rem !important;
   }
 }
