@@ -552,6 +552,56 @@ ReservationSchema.index({
   background: true
 });
 
+// ================================================================================
+// DAY-OF-WEEK ANALYTICS INDEXES
+// ================================================================================
+
+// Day-of-week analytics optimization - primary index for date-based day filtering
+ReservationSchema.index({
+  date: 1
+}, {
+  name: 'day_of_week_analytics',
+  background: true,
+  partialFilterExpression: { 
+    status: { $in: ['active', 'checked-in', 'checked-out'] }
+  }
+});
+
+// Day-of-week with section analysis for section-specific day patterns
+ReservationSchema.index({
+  date: 1,
+  'cubicle.section': 1
+}, {
+  name: 'day_of_week_section_analytics',
+  background: true,
+  sparse: true
+});
+
+// Month-year analytics for day-of-week trends and comparisons
+ReservationSchema.index({
+  date: 1,
+  'user.email': 1,
+  status: 1
+}, {
+  name: 'monthly_trends_analytics',
+  background: true
+});
+
+// User pattern analysis for day-of-week preferences
+ReservationSchema.index({
+  'user.email': 1,
+  date: 1,
+  'cubicle.section': 1
+}, {
+  name: 'user_day_preferences',
+  background: true,
+  sparse: true
+});
+
+// ================================================================================
+// EXISTING INDEXES
+// ================================================================================
+
 // User activity and history tracking
 ReservationSchema.index({ 
   'user.uid': 1, 
@@ -1782,4 +1832,432 @@ ReservationSchema.pre('save', function(next) {
  * // Find active reservations for today
  * const todayReservations = await Reservation.findActiveForDate(new Date());
  */
+
+/**
+ * Get Day-of-Week Analytics
+ * 
+ * Calculates comprehensive analytics for a specific day of the week within a given month/year.
+ * Uses MongoDB aggregation pipeline for efficient data processing and statistical calculations.
+ * 
+ * @param {String} dayName - Day name (Monday, Tuesday, etc.)
+ * @param {Number} month - Month (1-12)
+ * @param {Number} year - Year
+ * @returns {Promise<Object>} Day-of-week analytics data
+ * 
+ * @example
+ * const mondayAnalytics = await Reservation.getDayOfWeekAnalytics('Monday', 6, 2025);
+ * // Returns: { dayName: 'Monday', totalReservations: 45, averageUtilization: 75, ... }
+ */
+ReservationSchema.statics.getDayOfWeekAnalytics = async function(dayName, month, year) {
+  try {
+    // Map day names to JavaScript day indices (0 = Sunday, 1 = Monday, etc.)
+    const dayMap = {
+      'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3,
+      'Thursday': 4, 'Friday': 5, 'Saturday': 6
+    };
+    
+    const dayIndex = dayMap[dayName];
+    if (dayIndex === undefined) {
+      throw new Error(`Invalid day name: ${dayName}`);
+    }
+    
+    // Create date range for the month
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    
+    const pipeline = [
+      {
+        $match: {
+          date: { $gte: startDate, $lte: endDate },
+          $expr: { $eq: [{ $dayOfWeek: '$date' }, dayIndex + 1] } // MongoDB uses 1-7 (Sunday = 1)
+        }
+      },
+      {
+        $group: {
+          _id: {
+            $dateToString: { format: '%Y-%m-%d', date: '$date' }
+          },
+          reservations: { $sum: 1 },
+          uniqueUsers: { $addToSet: '$user.email' },
+          sections: { $push: '$cubicle.section' },
+          avgDuration: { $avg: '$metadata.plannedDuration' }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalDays: { $sum: 1 },
+          totalReservations: { $sum: '$reservations' },
+          dailyReservations: { $push: '$reservations' },
+          allUniqueUsers: { $addToSet: { $size: '$uniqueUsers' } },
+          avgDailyReservations: { $avg: '$reservations' },
+          peakDayReservations: { $max: '$reservations' },
+          lowestDayReservations: { $min: '$reservations' },
+          totalUniqueSections: { $addToSet: '$sections' }
+        }
+      }
+    ];
+    
+    const result = await this.aggregate(pipeline).exec();
+    
+    if (!result || result.length === 0) {
+      return {
+        dayName,
+        month,
+        year,
+        totalOccurrences: 0,
+        totalReservations: 0,
+        averageReservationsPerDay: 0,
+        peakDayReservations: 0,
+        lowestDayReservations: 0,
+        totalUniqueUsers: 0,
+        metadata: {
+          analysisDate: new Date().toISOString(),
+          dataSource: 'aggregation'
+        }
+      };
+    }
+    
+    const data = result[0];
+    
+    return {
+      dayName,
+      month,
+      year,
+      totalOccurrences: data.totalDays,
+      totalReservations: data.totalReservations,
+      averageReservationsPerDay: Math.round(data.avgDailyReservations || 0),
+      peakDayReservations: data.peakDayReservations || 0,
+      lowestDayReservations: data.lowestDayReservations || 0,
+      totalUniqueUsers: data.allUniqueUsers ? Math.max(...data.allUniqueUsers) : 0,
+      consistency: data.totalDays > 1 ? {
+        standardDeviation: calculateStandardDeviation(data.dailyReservations),
+        variabilityScore: calculateVariabilityScore(data.dailyReservations)
+      } : null,
+      metadata: {
+        analysisDate: new Date().toISOString(),
+        dataSource: 'aggregation'
+      }
+    };
+    
+  } catch (error) {
+    logger.error('Error in getDayOfWeekAnalytics:', error);
+    throw new Error(`Failed to get day-of-week analytics: ${error.message}`);
+  }
+};
+
+/**
+ * Get All Days Comparison
+ * 
+ * Generates comparison analytics for all days of the week within a given month/year.
+ * Provides insights into which days perform best and usage patterns across the week.
+ * 
+ * @param {Number} month - Month (1-12)
+ * @param {Number} year - Year
+ * @returns {Promise<Object>} All days comparison data
+ * 
+ * @example
+ * const allDaysAnalytics = await Reservation.getAllDaysComparison(6, 2025);
+ * // Returns: { month: 6, year: 2025, days: [...], insights: {...} }
+ */
+ReservationSchema.statics.getAllDaysComparison = async function(month, year) {
+  try {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    // Get analytics for each day
+    const daysAnalytics = await Promise.all(
+      dayNames.map(async (dayName) => {
+        const analytics = await this.getDayOfWeekAnalytics(dayName, month, year);
+        return {
+          dayName,
+          ...analytics
+        };
+      })
+    );
+    
+    // Calculate insights
+    const validDays = daysAnalytics.filter(day => day.totalOccurrences > 0);
+    
+    if (validDays.length === 0) {
+      return {
+        month,
+        year,
+        days: daysAnalytics,
+        insights: {
+          message: 'No data available for comparison'
+        }
+      };
+    }
+    
+    const bestDay = validDays.reduce((a, b) => 
+      a.averageReservationsPerDay > b.averageReservationsPerDay ? a : b
+    );
+    
+    const worstDay = validDays.reduce((a, b) => 
+      a.averageReservationsPerDay < b.averageReservationsPerDay ? a : b
+    );
+    
+    const mostConsistent = validDays.reduce((a, b) => {
+      const aConsistency = a.consistency ? a.consistency.variabilityScore : Infinity;
+      const bConsistency = b.consistency ? b.consistency.variabilityScore : Infinity;
+      return aConsistency < bConsistency ? a : b;
+    });
+    
+    const totalReservations = validDays.reduce((sum, day) => sum + day.totalReservations, 0);
+    const avgAcrossAllDays = Math.round(
+      validDays.reduce((sum, day) => sum + day.averageReservationsPerDay, 0) / validDays.length
+    );
+    
+    return {
+      month,
+      year,
+      days: daysAnalytics,
+      insights: {
+        bestPerformingDay: bestDay.dayName,
+        worstPerformingDay: worstDay.dayName,
+        mostConsistentDay: mostConsistent.dayName,
+        totalReservationsInMonth: totalReservations,
+        averageReservationsAcrossAllDays: avgAcrossAllDays,
+        weekdaysVsWeekends: calculateWeekdayWeekendComparison(daysAnalytics)
+      },
+      metadata: {
+        analysisDate: new Date().toISOString(),
+        dataSource: 'aggregation',
+        validDaysAnalyzed: validDays.length
+      }
+    };
+    
+  } catch (error) {
+    logger.error('Error in getAllDaysComparison:', error);
+    throw new Error(`Failed to get all days comparison: ${error.message}`);
+  }
+};
+
+/**
+ * Get Day-of-Week Trends
+ * 
+ * Analyzes trends for a specific day across multiple months to identify patterns,
+ * seasonal variations, and growth/decline trends.
+ * 
+ * @param {String} dayName - Day name (Monday, Tuesday, etc.)
+ * @param {Number} months - Number of months to analyze (default: 6)
+ * @param {Date} endDate - End date for analysis (default: current date)
+ * @returns {Promise<Object>} Day-of-week trends data
+ * 
+ * @example
+ * const mondayTrends = await Reservation.getDayOfWeekTrends('Monday', 6);
+ * // Returns: { dayName: 'Monday', trends: [...], insights: {...} }
+ */
+ReservationSchema.statics.getDayOfWeekTrends = async function(dayName, months = 6, endDate = new Date()) {
+  try {
+    const trends = [];
+    const currentDate = new Date(endDate);
+    
+    // Analyze each month going backwards
+    for (let i = 0; i < months; i++) {
+      const monthToAnalyze = new Date(currentDate.getFullYear(), currentDate.getMonth() - i, 1);
+      const month = monthToAnalyze.getMonth() + 1;
+      const year = monthToAnalyze.getFullYear();
+      
+      const monthAnalytics = await this.getDayOfWeekAnalytics(dayName, month, year);
+      
+      trends.unshift({
+        month,
+        year,
+        monthName: monthToAnalyze.toLocaleDateString('en-US', { month: 'long' }),
+        ...monthAnalytics
+      });
+    }
+    
+    // Calculate trend insights
+    const validTrends = trends.filter(trend => trend.totalOccurrences > 0);
+    
+    if (validTrends.length < 2) {
+      return {
+        dayName,
+        trends,
+        insights: {
+          message: 'Insufficient data for trend analysis',
+          trendDirection: 'unknown'
+        }
+      };
+    }
+    
+    // Calculate trend direction
+    const firstHalf = validTrends.slice(0, Math.floor(validTrends.length / 2));
+    const secondHalf = validTrends.slice(Math.floor(validTrends.length / 2));
+    
+    const firstHalfAvg = firstHalf.reduce((sum, t) => sum + t.averageReservationsPerDay, 0) / firstHalf.length;
+    const secondHalfAvg = secondHalf.reduce((sum, t) => sum + t.averageReservationsPerDay, 0) / secondHalf.length;
+    
+    const trendPercentage = firstHalfAvg > 0 ? 
+      Math.round(((secondHalfAvg - firstHalfAvg) / firstHalfAvg) * 100) : 0;
+    
+    let trendDirection = 'stable';
+    if (trendPercentage > 10) trendDirection = 'increasing';
+    else if (trendPercentage < -10) trendDirection = 'decreasing';
+    
+    const peakMonth = validTrends.reduce((a, b) => 
+      a.averageReservationsPerDay > b.averageReservationsPerDay ? a : b
+    );
+    
+    const lowestMonth = validTrends.reduce((a, b) => 
+      a.averageReservationsPerDay < b.averageReservationsPerDay ? a : b
+    );
+    
+    return {
+      dayName,
+      trends,
+      insights: {
+        trendDirection,
+        trendPercentage,
+        peakMonth: `${peakMonth.monthName} ${peakMonth.year}`,
+        lowestMonth: `${lowestMonth.monthName} ${lowestMonth.year}`,
+        averageGrowthRate: trendPercentage / months,
+        seasonalPattern: detectSeasonalPattern(validTrends),
+        consistency: calculateTrendsConsistency(validTrends)
+      },
+      metadata: {
+        analysisDate: new Date().toISOString(),
+        dataSource: 'aggregation',
+        monthsAnalyzed: validTrends.length
+      }
+    };
+    
+  } catch (error) {
+    logger.error('Error in getDayOfWeekTrends:', error);
+    throw new Error(`Failed to get day-of-week trends: ${error.message}`);
+  }
+};
+
+// ================================================================================
+// HELPER FUNCTIONS FOR DAY-OF-WEEK ANALYTICS
+// ================================================================================
+
+/**
+ * Calculate standard deviation for a set of values
+ * @param {Array} values - Array of numbers
+ * @returns {Number} Standard deviation
+ */
+function calculateStandardDeviation(values) {
+  if (!values || values.length === 0) return 0;
+  
+  const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+  const squaredDiffs = values.map(val => Math.pow(val - mean, 2));
+  const avgSquaredDiff = squaredDiffs.reduce((sum, val) => sum + val, 0) / values.length;
+  
+  return Math.round(Math.sqrt(avgSquaredDiff) * 100) / 100;
+}
+
+/**
+ * Calculate variability score (coefficient of variation)
+ * @param {Array} values - Array of numbers
+ * @returns {Number} Variability score
+ */
+function calculateVariabilityScore(values) {
+  if (!values || values.length === 0) return 0;
+  
+  const mean = values.reduce((sum, val) => sum + val, 0) / values.length;
+  if (mean === 0) return 0;
+  
+  const stdDev = calculateStandardDeviation(values);
+  return Math.round((stdDev / mean) * 100);
+}
+
+/**
+ * Calculate weekdays vs weekends comparison
+ * @param {Array} daysAnalytics - Analytics for all days
+ * @returns {Object} Weekdays vs weekends comparison
+ */
+function calculateWeekdayWeekendComparison(daysAnalytics) {
+  const weekdays = daysAnalytics.filter(day => 
+    ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(day.dayName)
+  );
+  
+  const weekends = daysAnalytics.filter(day => 
+    ['Saturday', 'Sunday'].includes(day.dayName)
+  );
+  
+  const weekdayAvg = weekdays.length > 0 ? 
+    Math.round(weekdays.reduce((sum, day) => sum + day.averageReservationsPerDay, 0) / weekdays.length) : 0;
+  
+  const weekendAvg = weekends.length > 0 ? 
+    Math.round(weekends.reduce((sum, day) => sum + day.averageReservationsPerDay, 0) / weekends.length) : 0;
+  
+  return {
+    weekdayAverage: weekdayAvg,
+    weekendAverage: weekendAvg,
+    difference: weekdayAvg - weekendAvg,
+    weekdaysDominant: weekdayAvg > weekendAvg
+  };
+}
+
+/**
+ * Detect seasonal patterns in trends data
+ * @param {Array} trends - Trends data
+ * @returns {String} Seasonal pattern description
+ */
+function detectSeasonalPattern(trends) {
+  if (trends.length < 4) return 'insufficient data';
+  
+  // Simple seasonal detection based on month numbers
+  const monthlyAvgs = {};
+  
+  trends.forEach(trend => {
+    const month = trend.month;
+    if (!monthlyAvgs[month]) {
+      monthlyAvgs[month] = [];
+    }
+    monthlyAvgs[month].push(trend.averageReservationsPerDay);
+  });
+  
+  // Calculate average for each month
+  const monthlyAverages = Object.entries(monthlyAvgs).map(([month, values]) => ({
+    month: parseInt(month),
+    average: values.reduce((sum, val) => sum + val, 0) / values.length
+  }));
+  
+  if (monthlyAverages.length < 3) return 'no clear pattern';
+  
+  monthlyAverages.sort((a, b) => a.average - b.average);
+  
+  const lowestMonths = monthlyAverages.slice(0, Math.ceil(monthlyAverages.length / 3))
+    .map(m => m.month);
+  const highestMonths = monthlyAverages.slice(-Math.ceil(monthlyAverages.length / 3))
+    .map(m => m.month);
+  
+  // Check for winter (Dec, Jan, Feb) vs summer (Jun, Jul, Aug) patterns
+  const winterMonths = [12, 1, 2];
+  const summerMonths = [6, 7, 8];
+  
+  const winterLow = winterMonths.some(m => lowestMonths.includes(m));
+  const summerHigh = summerMonths.some(m => highestMonths.includes(m));
+  
+  if (winterLow && summerHigh) return 'summer peak, winter low';
+  if (!winterLow && !summerHigh) return 'winter peak, summer low';
+  
+  return 'no clear seasonal pattern';
+}
+
+/**
+ * Calculate consistency score for trends
+ * @param {Array} trends - Trends data
+ * @returns {Object} Consistency metrics
+ */
+function calculateTrendsConsistency(trends) {
+  const values = trends.map(t => t.averageReservationsPerDay);
+  const stdDev = calculateStandardDeviation(values);
+  const variability = calculateVariabilityScore(values);
+  
+  let consistencyRating = 'high';
+  if (variability > 30) consistencyRating = 'low';
+  else if (variability > 15) consistencyRating = 'moderate';
+  
+  return {
+    standardDeviation: stdDev,
+    variabilityScore: variability,
+    consistencyRating
+  };
+}
+
 module.exports = mongoose.model('Reservation', ReservationSchema);

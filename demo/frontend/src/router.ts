@@ -31,6 +31,7 @@ import ReservationsView from './views/ReservationsView.vue';
 import StatisticsView from './views/StatisticsView.vue';
 import UtilizationView from './views/UtilizationView.vue';
 import NotificationsView from './views/NotificationsView.vue';
+import DayOfWeekAnalyticsView from './views/DayOfWeekAnalyticsView.vue';
 import useAuth from './composables/useAuth';
 
 /**
@@ -50,6 +51,8 @@ export const RouteNames = {
   UTILIZATION: 'utilization',
   UTILIZATION_WITH_DATE: 'utilization-with-date',
   NOTIFICATIONS: 'notifications',
+  DAY_OF_WEEK_ANALYTICS: 'day-of-week-analytics',
+  DAY_OF_WEEK_ANALYTICS_WITH_PARAMS: 'day-of-week-analytics-with-params',
 } as const;
 
 /**
@@ -251,6 +254,46 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true,
       description: 'Manage notification settings and view notification history',
       breadcrumb: 'Notifications',
+    },
+  },
+  {
+    path: '/analytics/day-of-week',
+    name: RouteNames.DAY_OF_WEEK_ANALYTICS,
+    component: DayOfWeekAnalyticsView,
+    meta: {
+      title: 'Day-of-Week Analytics - IBM Space Optimization',
+      requiresAuth: true,
+      description: 'Analyze cubicle usage patterns by specific days of the week',
+      breadcrumb: 'Day-of-Week Analytics',
+    },
+  },
+  {
+    path: '/analytics/day-of-week/:day/:month/:year',
+    name: RouteNames.DAY_OF_WEEK_ANALYTICS_WITH_PARAMS,
+    component: DayOfWeekAnalyticsView,
+    meta: {
+      title: 'Day-of-Week Analytics - IBM Space Optimization',
+      requiresAuth: true,
+      description: 'Analyze cubicle usage patterns for specific day and time period',
+      breadcrumb: 'Day-of-Week Analytics',
+    },
+    beforeEnter: (to, from, next) => {
+      const day = to.params.day as string;
+      const month = to.params.month as string;
+      const year = to.params.year as string;
+      
+      const validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+      const monthNum = parseInt(month);
+      const yearNum = parseInt(year);
+      
+      if (!validDays.includes(day) || 
+          isNaN(monthNum) || monthNum < 1 || monthNum > 12 ||
+          isNaN(yearNum) || yearNum < 2020 || yearNum > 2030) {
+        console.warn(`Invalid day-of-week analytics parameters: day=${day}, month=${month}, year=${year}`);
+        next({ name: RouteNames.DAY_OF_WEEK_ANALYTICS });
+        return;
+      }
+      next();
     },
   },
 ];

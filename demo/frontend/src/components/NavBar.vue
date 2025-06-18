@@ -89,14 +89,21 @@ LAST UPDATED: June 2025
               aria-label="View cubicle usage statistics"
             >
               Statistics
-            </cv-side-nav-menu-item>
-            <cv-side-nav-menu-item 
+            </cv-side-nav-menu-item>            <cv-side-nav-menu-item 
               href="javascript:void(0)" 
               :active="$route.name === 'utilization' || $route.name === 'utilization-with-date'" 
               @click="navigate('utilization')"
               aria-label="View utilization reports"
             >
               Utilization Reports
+            </cv-side-nav-menu-item>
+            <cv-side-nav-menu-item 
+              href="javascript:void(0)" 
+              :active="$route.name === 'day-of-week-analytics' || $route.name === 'day-of-week-analytics-with-params'" 
+              @click="navigate('day-of-week-analytics')"
+              aria-label="Analyze usage patterns by day of week"
+            >
+              Day-of-Week Analytics
             </cv-side-nav-menu-item>
             <cv-side-nav-menu-item 
               href="javascript:void(0)" 

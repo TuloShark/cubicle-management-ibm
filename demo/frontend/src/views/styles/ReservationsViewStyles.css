@@ -120,6 +120,7 @@
   border: 1px solid #e0e0e0;
   padding: 1rem;
   margin-bottom: 1.5rem;
+  border-radius: 0px;
 }
 
 .date-selector-group {
@@ -128,6 +129,7 @@
   gap: 1rem;
   margin-bottom: 1rem;
   flex-wrap: wrap;
+  border-radius: 0px;
 }
 
 .date-label {
@@ -135,6 +137,7 @@
   font-weight: 600;
   color: #161616;
   min-width: fit-content;
+  border-radius: 0px;
 }
 
 .date-input {
@@ -146,16 +149,19 @@
   color: #161616;
   font-size: 0.875rem;
   transition: all 0.15s ease;
+  border-radius: 0px;
 }
 
 .date-input:focus {
   outline: 2px solid #0f62fe;
   outline-offset: -2px;
   border-color: #0f62fe;
+  border-radius: 0px;
 }
 
 .date-input:hover:not(:focus) {
   border-color: #393939;
+  border-radius: 0px;
 }
 
 .action-button {
@@ -165,6 +171,7 @@
   transition: all 0.15s ease;
   border: none;
   cursor: pointer;
+  border-radius: 0px;
 }
 
 /* ===========================================

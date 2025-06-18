@@ -487,6 +487,10 @@ async function startApplication() {
     const dateCubicleController = require('./controllers/dateCubicleController');
     app.use('/api/cubicles', dateCubicleController);
     
+    // Day-of-week analytics controller
+    const dayOfWeekAnalyticsController = require('./controllers/dayOfWeekAnalyticsController');
+    app.use('/api/analytics', dayOfWeekAnalyticsController);
+    
     // Utilization and notification controllers
     app.use('/api/utilization-reports', utilizationController);
     app.use('/api/notifications', notificationController);

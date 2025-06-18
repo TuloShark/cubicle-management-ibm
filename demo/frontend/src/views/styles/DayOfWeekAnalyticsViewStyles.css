@@ -1,0 +1,1203 @@
+/* ===========================================
+   DAY-OF-WEEK ANALYTICS - CONSISTENT DESIGN
+   IBM Carbon Design System Compliant
+   =========================================== */
+
+/* Main Container */
+.day-of-week-analytics-container {
+  padding: 0;
+  margin-top: 48px;
+  background: #f4f4f4;
+  flex: 1;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+/* Grid Layout */
+.analytics-grid {
+  padding: 1.5rem;
+  max-width: 1584px;
+  margin: 0 auto;
+}
+
+/* Content Wrapper */
+.analytics-content-wrapper {
+  padding-bottom: 1rem;
+}
+
+/* Row Layouts */
+.controls-row,
+.summary-row,
+.charts-row,
+.pattern-row,
+.table-row,
+.no-data-row {
+  margin-bottom: 2rem;
+}
+
+/* ===========================================
+   TILES - CONSISTENT DESIGN
+   =========================================== */
+
+.controls-tile,
+.summary-tile,
+.chart-tile,
+.data-tile,
+.no-data-tile {
+  background: #ffffff;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  height: 100%;
+  transition: all 0.2s ease;
+}
+
+.controls-tile:hover,
+.summary-tile:hover,
+.chart-tile:hover,
+.data-tile:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-color: #0f62fe;
+}
+
+/* Tile Modifiers */
+.formatted-tile {
+  border-width: 2px;
+  position: relative;
+}
+
+.formatted-tile::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #0f62fe, #0043ce);
+}
+
+/* ===========================================
+   TILE HEADERS
+   =========================================== */
+
+.tile-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tile-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #161616;
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.tile-subtitle {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  margin: 0;
+}
+
+/* ===========================================
+   LOADING AND NOTIFICATIONS
+   =========================================== */
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.analytics-notification {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1001;
+  max-width: 400px;
+}
+
+/* ===========================================
+   CONTROLS SECTION
+   =========================================== */
+
+.controls-grid {
+  position: relative;
+  margin: 0;
+  /* Add a min-height to ensure consistent spacing regardless of dropdown state */
+  min-height: 140px;
+}
+
+.basic-controls-row,
+.advanced-controls-row,
+.comparison-controls-row {
+  margin-bottom: 1rem;
+}
+
+.comparison-controls-row {
+  border-top: 1px solid #e0e0e0;
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.action-buttons {
+  display: flex;
+  align-items: flex-end;
+  height: 100%;
+}
+
+.day-selector,
+.month-selector,
+.year-selector,
+.comparison-day-selector {
+  margin-bottom: 0;
+}
+
+/* Dropdown Wrapper Styling */
+.dropdown-wrapper {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.dropdown-wrapper .bx--label {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: #393939;
+  margin-bottom: 0.5rem;
+  line-height: 1rem;
+}
+
+/* Action Buttons Layout */
+.day-selection-row {
+  margin-bottom: 1.5rem;
+  position: relative;
+  z-index: 20;
+  margin-bottom: 2rem !important; /* Add more space to accommodate the dropdown menu */
+}
+
+.action-buttons-row {
+  margin-top: 1rem;
+}
+
+.full-width-button {
+  width: 100% !important;
+  min-height: 48px;
+}
+
+.blue-button {
+  background-color: #0f62fe !important;
+  border-color: #0f62fe !important;
+  color: #ffffff !important;
+}
+
+.blue-button:hover {
+  background-color: #0050e6 !important;
+  border-color: #0050e6 !important;
+}
+
+.blue-button:focus {
+  outline: 2px solid #0f62fe;
+  outline-offset: 2px;
+}
+
+.refresh-button,
+.comparison-button,
+.reset-button {
+  min-width: 120px;
+  margin-right: 0.5rem;
+}
+
+/* ===========================================
+   SUMMARY CARDS
+   =========================================== */
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  min-height: 80px;
+  justify-content: center;
+}
+
+.summary-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 0.5rem;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+.summary-label {
+  font-size: 0.875rem;
+  color: #6f6f6f;
+  text-transform: uppercase;
+  letter-spacing: 0.16px;
+}
+
+/* Color-coded summary values */
+.primary-value {
+  color: #0f62fe;
+}
+
+.success-value {
+  color: #198038;
+}
+
+.info-value {
+  color: #8a3ffc;
+}
+
+.secondary-value {
+  color: #fa4d56;
+}
+
+.danger-value {
+  color: #da1e28;
+}
+
+.warning-value {
+  color: #ff832b;
+}
+
+.neutral-value {
+  color: #6f6f6f;
+}
+  
+.loading-text {
+  font-size: 1.1rem;
+  color: #525252;
+}
+
+.error-notification {
+  margin-bottom: 2rem;
+}
+
+.analytics-content {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.controls-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 0px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 2rem;
+}
+
+.action-row {
+  margin-top: 1.5rem;
+}
+
+.day-selector,
+.month-selector,
+.year-selector,
+.comparison-day-selector {
+  width: 100%;
+}
+
+.refresh-button,
+.comparison-button,
+.compare-button,
+.reset-button,
+.full-width-button {
+  width: 100% !important;
+}
+
+.comparison-controls {
+  background: #e8f4fd;
+  padding: 1.5rem;
+  border-radius: 0px;
+  border-left: 4px solid #0f62fe;
+  margin-bottom: 2rem;
+}
+
+.analytics-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.summary-cards {
+  background: white;
+  padding: 2rem;
+  border-radius: 0px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.metric-card {
+  text-align: center;
+  padding: 1.5rem;
+  background: #f9f9f9;
+  border-radius: 0px;
+  border-left: 4px solid #0f62fe;
+}
+
+.metric-card h4 {
+  margin: 0 0 0.5rem 0;
+  color: #525252;
+  font-weight: 400;
+  font-size: 0.9rem;
+}
+
+.metric-value {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+  color: #161616;
+}
+
+.charts-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 0px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container {
+  position: relative;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-container-large {
+  min-height: 400px;
+}
+
+.chart-canvas {
+  max-width: 100%;
+  max-height: 400px;
+}
+
+.chart-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  opacity: 0.7;
+}
+
+/* ===========================================
+   DATA CONTENT SECTION
+   =========================================== */
+
+.data-content {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #f7f7f7;
+  border-radius: 0px;
+  border-left: 4px solid #0f62fe;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.user-name {
+  font-weight: 600;
+  color: #161616;
+  font-size: 0.875rem;
+}
+
+.user-count {
+  font-size: 0.75rem;
+  color: #6f6f6f;
+}
+
+.user-progress {
+  display: flex;
+  align-items: center;
+  min-width: 100px;
+}
+
+/* ===========================================
+   TABLE SECTION
+   =========================================== */
+
+.table-container {
+  overflow-x: auto;
+  max-height: 500px;
+}
+
+.analytics-table {
+  margin: 0;
+}
+
+/* ===========================================
+   NO DATA STATE
+   =========================================== */
+
+.no-data-tile {
+  text-align: center;
+  padding: 3rem 1.5rem;
+}
+
+.no-data-content h3 {
+  font-size: 1.5rem;
+  color: #161616;
+  margin-bottom: 1rem;
+}
+
+.no-data-content p {
+  color: #6f6f6f;
+  margin-bottom: 2rem;
+  font-size: 1rem;
+}
+
+.no-data {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100px;
+  opacity: 0.7;
+}
+
+/* ===========================================
+   RESPONSIVE DESIGN
+   =========================================== */
+
+@media (max-width: 768px) {
+  .analytics-grid {
+    padding: 1rem;
+  }
+  
+  .tile-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+  }
+  
+  .tile-title {
+    font-size: 1.125rem;
+  }
+  
+  .summary-value {
+    font-size: 1.5rem;
+  }
+  
+  .chart-container {
+    min-height: 250px;
+  }
+  
+  .chart-container-large {
+    min-height: 300px;
+  }
+  
+  .user-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .user-progress {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .refresh-button,
+  .comparison-button,
+  .compare-button,
+  .reset-button,
+  .full-width-button {
+    width: 100% !important;
+    min-width: 100px;
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Force everything to full width on mobile */
+  .summary-row .bx--col,
+  .charts-row .bx--col,
+  .action-buttons-row .bx--col,
+  .bx--col-sm-4,
+  .bx--col-md-3,
+  .bx--col-md-6,
+  .bx--col-md-12 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Remove default column padding on mobile */
+  .bx--col-sm-4 {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  /* Full width columns on mobile */
+  .full-width-mobile {
+    width: 100% !important;
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Action button fixes */
+  .action-button-column {
+    padding: 0.5rem !important;
+  }
+  
+  .full-width-button {
+    width: 100% !important;
+    display: block !important;
+    min-width: 100% !important;
+    margin-bottom: 0.5rem !important;
+    height: 48px !important;
+    max-height: 48px !important;
+  }
+  
+  /* Summary card fixes */
+  .summary-column {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Remove margin from last elements */
+  .action-buttons-row .bx--col:last-child,
+  .summary-row .bx--col:last-child,
+  .charts-row .bx--col:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  .action-buttons-row .bx--col:last-child .full-width-button {
+    margin-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 672px) {
+  /* Carbon's sm breakpoint - force all columns to full width */
+  .bx--row > .bx--col,
+  .bx--row > [class*="bx--col-"] {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  
+  /* Ensure proper spacing between stacked elements */
+  .summary-row .bx--col,
+  .charts-row .bx--col,
+  .action-buttons-row .bx--col {
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Remove last margin bottom to prevent extra space */
+  .summary-row .bx--col:last-child,
+  .charts-row .bx--col:last-child,
+  .action-buttons-row .bx--col:last-child {
+    margin-bottom: 0 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .analytics-grid {
+    padding: 0.5rem !important;
+  }
+  
+  .controls-tile,
+  .summary-tile,
+  .chart-tile,
+  .data-tile {
+    padding: 0.75rem !important;
+  }
+  
+  .summary-value {
+    font-size: 1.25rem;
+  }
+  
+  .tile-title {
+    font-size: 1rem;
+  }
+  
+  .chart-container,
+  .chart-container-large {
+    min-height: 200px;
+  }
+  
+  .advanced-controls-row .cv-column {
+    margin-bottom: 0.5rem;
+  }
+  
+  /* Force all columns to be full width on very small screens */
+  .bx--col-sm-4,
+  .bx--col-md-3,
+  .bx--col-md-6,
+  .bx--col-md-12,
+  .full-width-mobile,
+  .summary-column,
+  .action-button-column {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-bottom: 0.75rem !important;
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+  }
+  
+  /* Summary cards specific adjustments */
+  .summary-tile {
+    margin-bottom: 0.5rem !important;
+  }
+  
+  .tile-header {
+    padding-bottom: 0.5rem !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* Button specific adjustments */
+  .full-width-button {
+    height: 44px !important;
+    font-size: 0.9rem !important;
+  }
+}
+
+/* ===========================================
+   ANIMATION AND TRANSITIONS
+   =========================================== */
+
+.controls-tile,
+.summary-tile,
+.chart-tile,
+.data-tile {
+  transition: all 0.2s cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+.user-item {
+  transition: all 0.15s ease;
+}
+
+.user-item:hover {
+  background: rgba(15, 98, 254, 0.05);
+  transform: translateX(2px);
+}
+
+.summary-tile:hover .summary-value {
+  transform: scale(1.05);
+  transition: transform 0.15s ease;
+}
+
+/* ===========================================
+   TRANSITIONS AND ANIMATIONS
+   =========================================== */
+
+.fade-transition {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.fade-enter-to, .fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.chart-transition {
+  transition: all 0.6s cubic-bezier(0.2, 0, 0.38, 0.9);
+}
+
+.chart-container, .summary-tile {
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.chart-enter, .summary-enter {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+.chart-leave, .summary-leave {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.charts-row, .summary-row {
+  transition: opacity 0.5s ease;
+}
+
+/* ===========================================
+   ACCESSIBILITY ENHANCEMENTS
+   =========================================== */
+
+.refresh-button:focus,
+.comparison-button:focus,
+.reset-button:focus {
+  outline: 2px solid #0f62fe;
+  outline-offset: 2px;
+}
+
+.chart-canvas:focus {
+  outline: 2px solid #0f62fe;
+  outline-offset: 4px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .controls-tile,
+  .summary-tile,
+  .chart-tile,
+  .data-tile {
+    border-width: 2px;
+    border-color: #161616;
+  }
+  
+  .tile-title {
+    color: #000000;
+  }
+  
+  .summary-value {
+    color: #000000;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .controls-tile,
+  .summary-tile,
+  .chart-tile,
+  .data-tile,
+  .user-item {
+    transition: none;
+  }
+  
+  .summary-tile:hover .summary-value {
+    transform: none;
+  }
+}
+
+/* Day Selector Form Group */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.bx--label {
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.125rem;
+  color: #393939;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.bx--select-input {
+  background-color: #f4f4f4;
+  border: 1px solid #8d8d8d;
+  border-radius: 0;
+  color: #161616;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 400;
+  height: 2.5rem;
+  line-height: 1.125rem;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
+  padding: 0 1rem;
+  transition: background-color 70ms cubic-bezier(0.2, 0, 0.38, 0.9), outline 70ms cubic-bezier(0.2, 0, 0.38, 0.9);
+  width: 100%;
+}
+
+.bx--select-input:focus {
+  border-color: #0f62fe;
+  outline: 2px solid #0f62fe;
+  outline-offset: -2px;
+}
+
+.bx--select-input:hover {
+  background-color: #e8e8e8;
+}
+
+/* ===========================================
+   PLACEHOLDER AND TRANSITIONS
+   =========================================== */
+
+/* Placeholder Content */
+.placeholder-content {
+  opacity: 0.7;
+}
+
+/* Dropdown Fix - Ensure Selected Text is Visible */
+.bx--list-box__selection, 
+.bx--list-box__menu-item--highlighted,
+.cv-dropdown-selected {
+  font-weight: 600 !important;
+  color: #161616 !important;
+}
+
+/* Force the selected text to be visible in dropdown */
+.bx--list-box__label {
+  display: block !important;
+  visibility: visible !important;
+}
+
+/* When an item is selected, ensure the text is visible */
+.day-selector .bx--list-box__menu-item--active {
+  background-color: #e8e8e8 !important;
+  font-weight: 600 !important;
+}
+
+/* Fix for dropdown placeholder vs selected value display */
+.day-selector[data-value] .bx--list-box__label {
+  color: #161616 !important;
+  font-weight: 500 !important;
+}
+
+/* ===========================================
+   CHART STYLES
+   =========================================== */
+
+.chart-placeholder {
+  border: 2px dashed #e0e0e0;
+  background: #f4f4f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  text-align: center;
+}
+
+.placeholder-instruction {
+  transition: all 0.4s cubic-bezier(0.2, 0, 0.38, 0.9);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  background-color: #edf5ff;
+  border-left: 4px solid #0f62fe;
+}
+
+.placeholder-instruction p {
+  color: #0f62fe;
+  font-size: 1rem;
+  margin: 0;
+  transition: color 0.4s ease;
+}
+
+/* Fade transition specific to instruction banner */
+.fade-instruction-enter-active, 
+.fade-instruction-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.fade-instruction-enter-from,
+.fade-instruction-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.fade-instruction-enter-to,
+.fade-instruction-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.refresh-instruction {
+  background-color: #fff3cd !important;
+  border-color: #ffb001 !important;
+  color: #856404 !important;
+}
+
+@keyframes pulse-yellow {
+  0% { 
+    background-color: #fff8e1; 
+    box-shadow: 0 0 0 0 rgba(241, 194, 27, 0.4);
+  }
+  50% { 
+    background-color: #fff3d1; 
+    box-shadow: 0 0 0 10px rgba(241, 194, 27, 0);
+  }
+  100% { 
+    background-color: #fff8e1; 
+    box-shadow: 0 0 0 0 rgba(241, 194, 27, 0);
+  }
+}
+
+/* Fix for dropdown layout shift issues */
+.day-selector, 
+.bx--dropdown,
+.bx--list-box {
+  height: 40px !important; /* Fixed height for the dropdown */
+  min-height: 40px !important;
+  box-sizing: border-box !important;
+}
+
+/* Prevent dropdown from causing layout shifts */
+.day-selector {
+  position: relative !important;
+  z-index: 10 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Dropdown spacer to prevent layout shifts */
+.dropdown-fixed-height {
+  position: relative;
+  overflow: visible;
+  z-index: 10;
+}
+
+.dropdown-spacer {
+  height: 8px;
+  display: block;
+}
+
+/* Override Carbon's default behavior when dropdown is open */
+.bx--list-box--expanded {
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+/* Fix for dropdown to not push content when open */
+.bx--list-box__menu {
+  position: absolute !important;
+  top: 100% !important;
+  margin-top: 0 !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Comprehensive dropdown layout fix */
+.dropdown-container {
+  position: relative;
+  height: 40px;
+  margin-bottom: 0;
+  z-index: 100;
+}
+
+/* Create a placeholder for the dropdown menu to prevent layout shifts */
+.dropdown-menu-placeholder {
+  height: 0;
+  visibility: hidden;
+  overflow: hidden;
+}
+
+/* Make dropdown position absolute to avoid layout shifts */
+.dropdown-container .bx--list-box {
+  width: 100%;
+}
+
+.dropdown-container .bx--list-box__menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+}
+
+/* Keep buttons below in proper position */
+.action-buttons-row {
+  padding-top: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Placeholder instruction responsive styles */
+.placeholder-instruction-column {
+  width: 100% !important;
+}
+
+.placeholder-instruction {
+  padding: 1rem !important;
+  text-align: center !important;
+  border-radius: 4px !important;
+  background-color: #e8f4fd !important;
+  border: 1px solid #0f62fe !important;
+  margin: 0.5rem 0 !important;
+}
+
+@media (max-width: 768px) {
+  .placeholder-instruction {
+    padding: 0.75rem !important;
+    margin: 0.5rem 0 !important;
+  }
+  
+  .placeholder-instruction p {
+    margin: 0 !important;
+    font-size: 0.9rem !important;
+    line-height: 1.4 !important;
+  }
+  
+  .placeholder-instruction-column {
+    margin-bottom: 1rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .placeholder-instruction {
+    padding: 0.5rem !important;
+    font-size: 0.85rem !important;
+  }
+  
+  .placeholder-instruction p {
+    font-size: 0.85rem !important;
+  }
+}
+
+/* ===========================================
+   INTERMEDIATE SCREEN SIZE FIXES (1050px range)
+   =========================================== */
+
+@media (max-width: 1056px) and (min-width: 672px) {
+  /* Handle the problematic 1050px range where layout breaks */
+  
+  /* Force summary cards to stack in pairs then single column */
+  .summary-row .bx--col-md-3 {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+    width: 50% !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* At smaller widths within this range, go full width */
+  @media (max-width: 900px) {
+    .summary-row .bx--col-md-3 {
+      flex: 0 0 100% !important;
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+  }
+  
+  /* Charts section - stack vertically */
+  .charts-row .bx--col-md-6 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Action buttons - handle stacking */
+  .action-buttons-row .bx--col-md-6 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  /* Ensure buttons maintain full width */
+  .action-buttons-row .full-width-button {
+    width: 100% !important;
+    margin-bottom: 0.5rem !important;
+  }
+  
+  /* Remove margin from last button */
+  .action-buttons-row .bx--col-md-6:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  .action-buttons-row .bx--col-md-6:last-child .full-width-button {
+    margin-bottom: 0 !important;
+  }
+}
+
+/* Additional fix for 1024px range (common tablet landscape) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .analytics-grid {
+    padding: 1rem !important;
+  }
+  
+  /* Ensure all columns behave predictably */
+  .bx--col-md-3,
+  .bx--col-md-6,
+  .summary-column,
+  .action-button-column {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  /* Summary cards - 2 per row */
+  .summary-row .bx--col-md-3 {
+    flex: 0 0 50% !important;
+    max-width: 50% !important;
+  }
+  
+  /* Charts and buttons - full width */
+  .charts-row .bx--col-md-6,
+  .action-buttons-row .bx--col-md-6 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    margin-bottom: 1rem !important;
+  }
+}
+
+/* ===========================================
+   CARBON GRID SYSTEM BREAKPOINT OVERRIDES
+   =========================================== */
+
+/* Carbon's md breakpoint issues around 1056px */
+@media (min-width: 672px) and (max-width: 1055px) {
+  /* Override Carbon's default md behavior */
+  .bx--row {
+    margin-left: -0.5rem !important;
+    margin-right: -0.5rem !important;
+  }
+  
+  .bx--row > .bx--col,
+  .bx--row > [class*="bx--col-"] {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  /* Specific fixes for problematic layouts */
+  .summary-row,
+  .charts-row,
+  .action-buttons-row {
+    margin-bottom: 1.5rem !important;
+  }
+  
+  /* Ensure proper flex behavior */
+  .bx--col-md-3 {
+    flex-basis: 50% !important;
+    max-width: 50% !important;
+  }
+  
+  .bx--col-md-6 {
+    flex-basis: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* At very narrow end of this range, go full width */
+  @media (max-width: 850px) {
+    .bx--col-md-3,
+    .bx--col-md-6 {
+      flex-basis: 100% !important;
+      max-width: 100% !important;
+    }
+  }
+}
+
+/* Additional safety net for common breakpoints */
+@media (max-width: 1200px) and (min-width: 769px) {
+  .analytics-grid {
+    max-width: 100% !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  
+  /* Prevent horizontal overflow */
+  .bx--row {
+    margin-left: -0.5rem !important;
+    margin-right: -0.5rem !important;
+  }
+}
