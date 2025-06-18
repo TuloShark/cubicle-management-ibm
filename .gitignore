@@ -589,6 +589,19 @@ secrets/
 .oauth
 .jwt-secret
 
+# Environment configuration files with sensitive data
+.env
+.env.local
+.env.dev
+.env.development
+.env.production
+.env.test
+.env.staging
+*.env
+demo/frontend/.env.dev
+demo/frontend/.env.production
+demo/api/.env.local
+
 # ================================================================================
 # APPLICATION SPECIFIC EXCLUSIONS
 # ================================================================================
