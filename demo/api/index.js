@@ -130,31 +130,96 @@ function generateCubicleData() {
 }
 
 /**
- * Seed database with cubicle data
+ * Seed database with cubicle data using distributed locking
  * @returns {Promise<void>}
  */
 async function seedCubicles() {
+  const lockKey = 'cubicle-seeding-lock';
+  const lockExpiry = new Date(Date.now() + 60000); // 1 minute lock
+  const podId = process.env.HOSTNAME || `pod-${Math.random().toString(36).substr(2, 9)}`;
+  
   try {
-    // Check if cubicles already exist
+    // First check if cubicles already exist (fast check)
     const existingCount = await Cubicle.countDocuments();
-    
     if (existingCount > 0) {
       logger.info(`Database already has ${existingCount} cubicles, skipping seeding`);
       return;
     }
     
-    // Generate and insert new cubicles only if database is empty
-    const cubicles = generateCubicleData();
-    const insertResult = await Cubicle.insertMany(cubicles);
+    // Try to acquire distributed lock using MongoDB's atomic operation
+    const lockCollection = mongoose.connection.db.collection('seeding_locks');
     
-    logger.info(`Successfully seeded ${insertResult.length} cubicles in ${config.GRID_CONFIG.TOTAL_ROWS}x${config.GRID_CONFIG.TOTAL_COLS} grid layout`, {
-      sections: config.GRID_CONFIG.SECTION_IDS,
-      totalCubicles: insertResult.length
-    });
+    try {
+      // Attempt to insert lock document atomically
+      await lockCollection.insertOne({
+        _id: lockKey,
+        lockedBy: podId,
+        lockedAt: new Date(),
+        expiresAt: lockExpiry
+      });
+      
+      logger.info(`Acquired seeding lock`, { podId, lockKey });
+      
+      // Double-check cubicles don't exist (after acquiring lock)
+      const doubleCheckCount = await Cubicle.countDocuments();
+      if (doubleCheckCount > 0) {
+        logger.info(`Database already has ${doubleCheckCount} cubicles after lock acquisition, skipping seeding`);
+        return;
+      }
+      
+      // Generate and insert new cubicles
+      logger.info('Generating cubicle data for seeding', {
+        totalRows: config.GRID_CONFIG.TOTAL_ROWS,
+        totalCols: config.GRID_CONFIG.TOTAL_COLS,
+        totalCubicles: config.GRID_CONFIG.TOTAL_ROWS * config.GRID_CONFIG.TOTAL_COLS
+      });
+      
+      const cubicles = generateCubicleData();
+      const insertResult = await Cubicle.insertMany(cubicles);
+      
+      logger.info(`Successfully seeded ${insertResult.length} cubicles in ${config.GRID_CONFIG.TOTAL_ROWS}x${config.GRID_CONFIG.TOTAL_COLS} grid layout`, {
+        sections: config.GRID_CONFIG.SECTION_IDS,
+        totalCubicles: insertResult.length,
+        seededBy: podId
+      });
+      
+    } catch (lockError) {
+      if (lockError.code === 11000) {
+        // Lock already exists - another pod is seeding
+        logger.info(`Seeding lock already acquired by another pod, skipping seeding`, { podId });
+        
+        // Wait a bit and check if seeding completed
+        let attempts = 0;
+        const maxAttempts = 30; // 30 seconds max wait
+        
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          const currentCount = await Cubicle.countDocuments();
+          if (currentCount > 0) {
+            logger.info(`Seeding completed by another pod, found ${currentCount} cubicles`, { podId });
+            return;
+          }
+          attempts++;
+        }
+        
+        logger.warn(`Waited ${maxAttempts} seconds but no cubicles found, seeding may have failed`, { podId });
+      } else {
+        throw lockError;
+      }
+    }
     
   } catch (error) {
-    logger.error('Error seeding cubicles:', error);
+    logger.error('Error during cubicle seeding:', error);
     throw new Error(`Cubicle seeding failed: ${error.message}`);
+  } finally {
+    // Clean up lock (best effort)
+    try {
+      const lockCollection = mongoose.connection.db.collection('seeding_locks');
+      await lockCollection.deleteOne({ _id: lockKey, lockedBy: podId });
+      logger.info(`Released seeding lock`, { podId });
+    } catch (cleanupError) {
+      logger.warn('Failed to cleanup seeding lock:', cleanupError);
+    }
   }
 }
 

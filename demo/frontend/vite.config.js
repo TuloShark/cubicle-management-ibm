@@ -4,15 +4,20 @@ import { resolve } from 'path';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
-  const apiBase = env.VITE_API_BASE_URL || 'http://localhost:3000';
-  return {
+  
+  const config = {
     plugins: [vue()],
     resolve: {
       alias: {
         '@': resolve(__dirname, 'src'),
       },
     },
-    server: {
+  };
+
+  // Only add proxy configuration in development mode
+  if (mode === 'development') {
+    const apiBase = env.VITE_API_BASE_URL || 'http://localhost:3000';
+    config.server = {
       proxy: {
         '/users': apiBase,
         '/cubicles': apiBase,
@@ -25,7 +30,9 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           ws: true
         }
-      },
-    },
-  };
+      }
+    };
+  }
+
+  return config;
 });

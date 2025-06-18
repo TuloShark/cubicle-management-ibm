@@ -141,9 +141,41 @@ function validateCredentialsString(credentialsJson) {
 
 /**
  * Initialize Firebase Admin SDK with comprehensive error handling
+ * Uses individual environment variables (more reliable than JSON parsing)
  * @returns {Object|null} Firebase admin instance or null if initialization fails
  */
 function initializeFirebase() {
+  // Try individual environment variables first (most reliable)
+  const firebaseConfig = {
+    type: 'service_account',
+    project_id: process.env.FIREBASE_PROJECT_ID,
+    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+    private_key: process.env.FIREBASE_PRIVATE_KEY,
+    client_email: process.env.FIREBASE_CLIENT_EMAIL,
+    client_id: process.env.FIREBASE_CLIENT_ID,
+    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: 'https://oauth2.googleapis.com/token',
+    auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+    client_x509_cert_url: `https://www.googleapis.com/robot/v1/metadata/x509/${encodeURIComponent(process.env.FIREBASE_CLIENT_EMAIL || '')}`,
+    universe_domain: 'googleapis.com'
+  };
+
+  if (firebaseConfig.project_id && firebaseConfig.private_key && firebaseConfig.client_email) {
+    try {
+      console.log('[FIREBASE] Using individual environment variables for configuration');
+      admin.initializeApp({
+        credential: admin.credential.cert(firebaseConfig),
+        projectId: firebaseConfig.project_id
+      });
+      console.log(`[FIREBASE] ${FIREBASE_CONFIG.INITIALIZATION_SUCCESS} (from env vars)`);
+      return admin;
+    } catch (error) {
+      console.error(`[FIREBASE] Failed to initialize from individual env vars: ${error.message}`);
+      console.error('[FIREBASE] Falling back to JSON method...');
+    }
+  }
+
+  // Fallback to JSON environment variable method
   const firebaseCredentialsJson = process.env[FIREBASE_CONFIG.CREDENTIALS_ENV_VAR];
 
   if (!firebaseCredentialsJson) {

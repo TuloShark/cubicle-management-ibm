@@ -15,11 +15,11 @@ data:
   # Application Configuration
   NODE_ENV: "production"
   PORT: "3000"
-  FRONTEND_URL: "https://cubicle-management.company.com"
+  FRONTEND_URL: "http://localhost:8080"
   
   # Database Configuration
   MONGO_DB_NAME: "cubicle_management_prod"
-  SEED: "false"
+  SEED: "true"
   
   # Logging Configuration
   LOG_LEVEL: "info"
@@ -62,8 +62,9 @@ data:
                        '$status $body_bytes_sent "$http_referer" '
                        '"$http_user_agent" "$http_x_forwarded_for"';
         
-        access_log /var/log/nginx/access.log main;
-        error_log /var/log/nginx/error.log warn;
+        # Simplified logging for development
+        access_log /dev/stdout main;
+        error_log /dev/stderr warn;
         
         # Performance optimizations
         sendfile on;
@@ -89,9 +90,8 @@ data:
             application/atom+xml
             image/svg+xml;
         
-        # Rate limiting
-        limit_req_zone $binary_remote_addr zone=api:10m rate=10r/s;
-        limit_req_zone $binary_remote_addr zone=frontend:10m rate=50r/s;
+        # Simplified rate limiting for development
+        limit_req_zone $binary_remote_addr zone=general:10m rate=100r/s;
         
         upstream api-backend {
             server cubicle-api-service:3000;
@@ -104,24 +104,19 @@ data:
             root /usr/share/nginx/html;
             index index.html;
             
-            # Security headers
-            add_header X-Frame-Options DENY;
+            # Basic security headers (CSP removed for development)
+            add_header X-Frame-Options SAMEORIGIN;
             add_header X-Content-Type-Options nosniff;
-            add_header X-XSS-Protection "1; mode=block";
             add_header Referrer-Policy strict-origin-when-cross-origin;
-            add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';";
             
-            # API proxy
+            # API proxy - simplified
             location /api/ {
-                limit_req zone=api burst=20 nodelay;
+                limit_req zone=general burst=50 nodelay;
                 proxy_pass http://api-backend;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
                 proxy_set_header X-Forwarded-Proto $scheme;
-                proxy_connect_timeout 60s;
-                proxy_send_timeout 60s;
-                proxy_read_timeout 60s;
             }
             
             # Socket.IO proxy
@@ -143,13 +138,10 @@ data:
                 add_header Vary Accept-Encoding;
             }
             
-            # SPA fallback
+            # SPA fallback - simplified
             location / {
-                limit_req zone=frontend burst=100 nodelay;
+                limit_req zone=general burst=100 nodelay;
                 try_files $uri $uri/ /index.html;
-                add_header Cache-Control "no-cache, no-store, must-revalidate";
-                add_header Pragma "no-cache";
-                add_header Expires "0";
             }
             
             # Health check

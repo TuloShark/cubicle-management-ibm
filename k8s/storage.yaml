@@ -1,51 +1,52 @@
 # ================================================================================
 # Persistent Storage Configuration
-# IBM Cubicle Management System - Data Persistence
+# IBM Cubicle Management System - Enterprise Storage Classes
 # ================================================================================
 
-# StorageClass for high-performance SSD storage
+# High-Performance SSD StorageClass for production workloads
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: fast-ssd
-  namespace: cubicle-management
   labels:
     app: cubicle-management
     component: storage
-provisioner: kubernetes.io/aws-ebs  # Change based on your cloud provider
+    tier: performance
+provisioner: k8s.io/minikube-hostpath  # Local development with minikube
 parameters:
-  type: gp3
-  iops: "3000"
-  throughput: "125"
-  encrypted: "true"
-volumeBindingMode: WaitForFirstConsumer
+  # Minikube hostpath doesn't support these parameters, but keeping for documentation
+  # type: gp3
+  # iops: "3000" 
+  # throughput: "125"
+  # encrypted: "true"
+  fsType: ext4
+volumeBindingMode: Immediate
 allowVolumeExpansion: true
-reclaimPolicy: Retain
+reclaimPolicy: Retain  # Enterprise: Retain data on PVC deletion
 
 ---
-# MongoDB Persistent Volume Claim
-apiVersion: v1
-kind: PersistentVolumeClaim
+# Standard Storage Class for logs and temporary data
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
 metadata:
-  name: mongodb-storage
-  namespace: cubicle-management
+  name: standard-ssd
   labels:
     app: cubicle-management
-    component: database
-spec:
-  accessModes:
-    - ReadWriteOnce
-  storageClassName: fast-ssd
-  resources:
-    requests:
-      storage: 50Gi  # Adjust based on expected data volume
-  selector:
-    matchLabels:
-      app: cubicle-management
-      component: mongodb
+    component: storage
+    tier: standard
+provisioner: k8s.io/minikube-hostpath  # Local development with minikube
+parameters:
+  # Minikube hostpath doesn't support these parameters, but keeping for documentation
+  # type: gp3
+  # iops: "1000"
+  # encrypted: "true"
+  fsType: ext4
+volumeBindingMode: Immediate
+allowVolumeExpansion: true
+reclaimPolicy: Delete  # Standard: Clean up automatically
 
 ---
-# Application Logs Persistent Volume Claim
+# Application Logs Storage - Shared across API pods
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -54,34 +55,24 @@ metadata:
   labels:
     app: cubicle-management
     component: logging
+    tier: standard
+  annotations:
+    # Enterprise annotations for monitoring and management
+    storage.kubernetes.io/description: "Application logs storage for API and frontend"
+    backup.policy: "weekly"
+    retention.policy: "30d"
 spec:
   accessModes:
-    - ReadWriteMany  # Multiple pods can write logs
-  storageClassName: standard  # Standard storage for logs
+    - ReadWriteMany  # Multiple API pods can write logs
+  storageClassName: standard-ssd
   resources:
     requests:
       storage: 10Gi
+    limits:
+      storage: 50Gi  # Prevent runaway log growth
 
 ---
-# Static Assets Persistent Volume Claim (for future file uploads)
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: static-assets-storage
-  namespace: cubicle-management
-  labels:
-    app: cubicle-management
-    component: assets
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: standard
-  resources:
-    requests:
-      storage: 5Gi
-
----
-# MongoDB Backup Storage (for automated backups)
+# Backup Storage - For automated and manual backups
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -90,10 +81,65 @@ metadata:
   labels:
     app: cubicle-management
     component: backup
+    tier: critical
+  annotations:
+    storage.kubernetes.io/description: "MongoDB backup storage for disaster recovery"
+    backup.policy: "daily"
+    retention.policy: "365d"
+    encryption.required: "true"
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: standard
+  storageClassName: fast-ssd  # High performance for backup operations
   resources:
     requests:
-      storage: 100Gi  # Larger for backup retention
+      storage: 100Gi
+    limits:
+      storage: 500Gi  # Room for growth and retention
+
+---
+# Resource Quotas for Storage (Enterprise governance)
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: storage-quota
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: governance
+spec:
+  hard:
+    # Limit total storage to prevent cost overruns
+    requests.storage: "1Ti"
+    persistentvolumeclaims: "10"
+    # Specific limits by storage class
+    fast-ssd.storageclass.storage.k8s.io/requests.storage: "500Gi"
+    standard-ssd.storageclass.storage.k8s.io/requests.storage: "500Gi"
+
+---
+# Network Policies for Storage Security (Enterprise security)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: storage-access-policy
+  namespace: cubicle-management
+  labels:
+    app: cubicle-management
+    component: security
+spec:
+  podSelector:
+    matchLabels:
+      app: cubicle-management
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: cubicle-management
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          app: cubicle-management

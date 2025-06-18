@@ -139,23 +139,17 @@ export function isAdminUid(uid: string): boolean {
  */
 export function getApiBaseUrl(): string {
   const configuredUrl = import.meta.env.VITE_API_BASE_URL;
-  const isDev = getCurrentEnvironment() === 'development';
   
-  // In development, use relative URLs to leverage Vite's proxy
-  if (isDev && !configuredUrl) {
-    return '';
+  // If no URL is configured or empty, determine based on build mode
+  if (!configuredUrl || configuredUrl.trim() === '') {
+    // In production builds, return empty string for relative URLs
+    // In development, return localhost for dev server proxy
+    return import.meta.env.MODE === 'production' ? '' : 'http://localhost:3000';
   }
   
-  // In production or when explicitly configured, use the full URL
-  const fallbackUrl = 'http://localhost:3000';
-  
-  // Return fallback if no URL configured
-  if (!configuredUrl) {
-    return fallbackUrl;
-  }
-  
-  // Validate URL format
+  // Validate URL format if configured
   if (!URL_PATTERN.test(configuredUrl)) {
+    const fallbackUrl = import.meta.env.MODE === 'production' ? '' : 'http://localhost:3000';
     console.warn(`Invalid API base URL format: ${configuredUrl}. Using fallback: ${fallbackUrl}`);
     return fallbackUrl;
   }

@@ -6,6 +6,38 @@ The IBM Cubicle Management System is a comprehensive, production-ready enterpris
 
 ---
 
+## 🚀 Quick Start (Zero Configuration)
+
+**New users can deploy the entire application with just one command:**
+
+```bash
+./scripts/deploy.sh
+```
+
+**Prerequisites:**
+- Docker installed and running
+- minikube installed
+- kubectl installed
+
+**What it does automatically:**
+- ✅ Sets up environment configuration
+- ✅ Starts minikube if needed
+- ✅ Builds Docker images
+- ✅ Deploys to Kubernetes
+- ✅ Configures database seeding
+- ✅ Sets up localhost access at http://localhost:8080
+- ✅ Runs health checks
+
+**Note:** Firebase credentials are configured via Kubernetes secrets during deployment.
+
+**To stop the application:**
+```bash
+./scripts/stop.sh        # Stop localhost access only
+./scripts/stop.sh --all  # Stop entire application
+```
+
+---
+
 ## 🏗️ System Architecture
 
 ### Technical Stack

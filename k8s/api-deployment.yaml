@@ -40,8 +40,8 @@ spec:
       serviceAccountName: cubicle-api-sa
       containers:
       - name: api
-        image: cubicle-api:latest  # Update with your registry
-        imagePullPolicy: Always
+        image: cubicle-api:latest
+        imagePullPolicy: Never  # Use local images in minikube
         ports:
         - containerPort: 3000
           name: http
@@ -85,11 +85,27 @@ spec:
             secretKeyRef:
               name: cubicle-secrets
               key: MONGO_URI
-        - name: FIREBASE_CREDENTIALS_JSON
+        # Firebase credentials as individual environment variables
+        - name: FIREBASE_PROJECT_ID
           valueFrom:
             secretKeyRef:
               name: cubicle-secrets
-              key: FIREBASE_CREDENTIALS_JSON
+              key: FIREBASE_PROJECT_ID
+        - name: FIREBASE_CLIENT_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: cubicle-secrets
+              key: FIREBASE_CLIENT_EMAIL
+        - name: FIREBASE_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: cubicle-secrets
+              key: FIREBASE_PRIVATE_KEY
+        - name: FIREBASE_PRIVATE_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: cubicle-secrets
+              key: FIREBASE_PRIVATE_KEY_ID
         - name: ADMIN_UIDS
           valueFrom:
             secretKeyRef:
@@ -115,9 +131,8 @@ spec:
         - name: TZ
           value: "America/Costa_Rica"
         
+        # Removed volumeMounts - using emptyDir for temp storage only
         volumeMounts:
-        - name: app-logs
-          mountPath: /app/logs
         - name: temp-storage
           mountPath: /tmp
         
@@ -164,9 +179,7 @@ spec:
             - ALL
       
       volumes:
-      - name: app-logs
-        persistentVolumeClaim:
-          claimName: app-logs-storage
+      # Removed PVC dependency - using emptyDir for temp storage only
       - name: temp-storage
         emptyDir: {}
       

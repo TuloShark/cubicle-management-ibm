@@ -117,7 +117,8 @@ COPY . .
 # - Asset optimization and minification
 # - Tree shaking for bundle size optimization
 # - Static asset generation and optimization
-RUN npm run build
+# Use production mode to use .env.production file
+RUN npm run build -- --mode production
 
 # ================================================================================
 # RUNTIME STAGE - Nginx Static File Server

@@ -77,8 +77,8 @@ spec:
             - name: MONGO_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: mongodb-credentials
-                  key: root-password
+                  name: mongodb-secrets
+                  key: mongodb-root-password
             - name: MONGO_DATABASE
               value: "cubicle_management_prod"
             - name: AWS_S3_BUCKET
