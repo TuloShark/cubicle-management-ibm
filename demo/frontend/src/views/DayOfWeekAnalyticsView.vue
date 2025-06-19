@@ -199,7 +199,7 @@ LAST UPDATED: December 2024
                   <h4 class="tile-title">Avg Utilization</h4>
                 </div>
                 <div class="summary-content">
-                  <span class="summary-value secondary-value">{{ formatAverageUtilization(comparisonData.overallMetrics?.averageReservations) }}</span>
+                  <span class="summary-value secondary-value">{{ formatAverageUtilization(comparisonData.overallMetrics) }}</span>
                   <span class="summary-label">on {{ selectedDay }}s</span>
                 </div>
               </cv-tile>
@@ -210,10 +210,11 @@ LAST UPDATED: December 2024
                 <div class="tile-header">
                   <h4 class="tile-title">Performance</h4>
                 </div>
-                <div class="summary-content">                <span class="summary-value" :class="getPerformanceClass(comparisonData.overallMetrics?.todayVsAverage)">
-                  {{ formatPerformanceVsAverage(comparisonData.overallMetrics?.todayVsAverage) }}
-                </span>
-                <span class="summary-label">vs other {{ selectedDay }}s</span>
+                <div class="summary-content">
+                  <span class="summary-value" :class="getPerformanceClass(comparisonData.overallMetrics)">
+                    {{ formatPerformanceVsAverage(comparisonData.overallMetrics) }}
+                  </span>
+                  <span class="summary-label">vs other {{ selectedDay }}s</span>
                 </div>
               </cv-tile>
             </cv-column>
@@ -698,18 +699,16 @@ function calculateDayStats(cubicles: any[]) {
 function calculateOverallMetrics(todayStats: any, dayOccurrences: any[]) {
   const averageReservations = dayOccurrences.reduce((sum, day) => sum + day.stats.totalReservations, 0) / dayOccurrences.length;
   
-  // Handle edge case where average is 0
-  let todayVsAverage = 0;
-  if (averageReservations > 0) {
-    todayVsAverage = todayStats.totalReservations / averageReservations;
-  } else if (todayStats.totalReservations > 0) {
-    // If today has reservations but average is 0, it's infinitely better
-    todayVsAverage = Number.MAX_SAFE_INTEGER;
-  }
+  // Calculate average utilization rate
+  const averageUtilizationRate = dayOccurrences.reduce((sum, day) => sum + day.stats.utilizationRate, 0) / dayOccurrences.length;
+  
+  // Simple percentage point difference: today - average
+  const performanceDiff = todayStats.utilizationRate - averageUtilizationRate;
   
   return {
     averageReservations,
-    todayVsAverage,
+    averageUtilizationRate,
+    performanceDiff, // This is the percentage point difference for performance
     totalOccurrences: dayOccurrences.length,
     bestDay: dayOccurrences.reduce((best, current) => 
       current.stats.totalReservations > best.stats.totalReservations ? current : best
@@ -763,19 +762,18 @@ function formatUtilizationPercentage(rate: number | undefined): string {
  * @param ratio Ratio of today's performance compared to the average 
  * @returns CSS class name: 'success-value', 'warning-value', or 'danger-value'
  */
-function getPerformanceClass(ratio: number | undefined): string {
-  if (ratio === undefined || isNaN(ratio)) return 'neutral-value';
+function getPerformanceClass(overallMetrics: any): string {
+  if (!overallMetrics || overallMetrics.performanceDiff === undefined) return 'neutral-value';
   
-  // Handle edge cases
-  if (ratio === Number.MAX_SAFE_INTEGER) return 'success-value';
+  const diff = overallMetrics.performanceDiff;
   
-  // Performance is better than average
-  if (ratio > 1.05) return 'success-value';
+  // Green for positive performance (better than average)
+  if (diff > 0.05) return 'success-value'; // > 5 percentage points
   
-  // Performance is worse than average
-  if (ratio < 0.95) return 'danger-value';
+  // Red for negative performance (worse than average)  
+  if (diff < -0.05) return 'danger-value'; // < -5 percentage points
   
-  // Performance is about the same as average (within 5%)
+  // Yellow for neutral performance
   return 'warning-value';
 }
 
@@ -934,35 +932,19 @@ function createPlaceholderCharts() {
 
 /**
  * Format average utilization as a percentage
- * @param avgReservations Average number of reservations
- * @returns Formatted percentage string based on total cubicles (54)
  */
-function formatAverageUtilization(avgReservations: number | undefined): string {
-  if (avgReservations === undefined || isNaN(avgReservations)) return '0%';
-  
-  // Calculate percentage based on total cubicles (54)
-  const totalCubicles = 54;
-  const percentage = Math.min(Math.max(Math.round((avgReservations / totalCubicles) * 100), 0), 100);
-  return `${percentage}%`;
+function formatAverageUtilization(overallMetrics: any): string {
+  if (!overallMetrics || overallMetrics.averageUtilizationRate === undefined) return '0%';
+  return Math.round(overallMetrics.averageUtilizationRate * 100) + '%';
 }
 
 /**
- * Format performance ratio as a percentage difference from average
- * @param ratio Ratio of today's reservations to average reservations
- * @returns Formatted string showing performance vs average (e.g., "+25%" or "-10%")
+ * Format performance difference as percentage points
  */
-function formatPerformanceVsAverage(ratio: number | undefined): string {
-  if (ratio === undefined || isNaN(ratio)) return '0%';
-  
-  // Handle edge cases
-  if (ratio === Number.MAX_SAFE_INTEGER) return '+∞%';
-  if (ratio === 0) return '-100%';
-  
-  // Calculate percentage difference
-  const percentageDiff = Math.round((ratio - 1) * 100);
-  
-  // Format with sign
-  return percentageDiff >= 0 ? `+${percentageDiff}%` : `${percentageDiff}%`;
+function formatPerformanceVsAverage(overallMetrics: any): string {
+  if (!overallMetrics || overallMetrics.performanceDiff === undefined) return '0%';
+  const diff = Math.round(overallMetrics.performanceDiff * 100);
+  return diff >= 0 ? `+${diff}%` : `${diff}%`;
 }
 
 /**
