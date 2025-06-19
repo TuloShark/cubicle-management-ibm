@@ -54,7 +54,7 @@ const DEFAULT_RATE_LIMITS = {
   
   [RATE_LIMIT_TYPES.RESERVATION]: {
     windowMs: 15 * 60 * 1000,        // 15 minutes  
-    max: 50,                         // 50 reservations per window (reduced from 100)
+    max: 200,                        // 200 reservations per window (increased for better UX)
     skipSuccessfulRequests: false,
     skipFailedRequests: true,
     envPrefix: 'RESERVATION'
@@ -102,7 +102,7 @@ const DEFAULT_RATE_LIMITS = {
   
   [RATE_LIMIT_TYPES.GENERAL_API]: {
     windowMs: 15 * 60 * 1000,        // 15 minutes
-    max: 500,                        // 500 general API calls per window (reduced from 1000)
+    max: 1000,                       // 1000 general API calls per window (increased for better UX)
     skipSuccessfulRequests: false,
     skipFailedRequests: false,       // Count all general API requests
     envPrefix: 'API'

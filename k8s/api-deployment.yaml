@@ -111,6 +111,19 @@ spec:
             secretKeyRef:
               name: cubicle-secrets
               key: ADMIN_UIDS
+        
+        # Rate limiting configuration
+        - name: RESERVATION_RATE_LIMIT
+          valueFrom:
+            secretKeyRef:
+              name: cubicle-secrets
+              key: RESERVATION_RATE_LIMIT
+        - name: API_RATE_LIMIT
+          valueFrom:
+            secretKeyRef:
+              name: cubicle-secrets
+              key: API_RATE_LIMIT
+        
         - name: EMAIL_HOST
           valueFrom:
             secretKeyRef:

@@ -899,7 +899,7 @@ export default {
           comparisonStats.value = [
             { id: 'comp-0', metric: 'Peak Hour Usage', value: `${Math.max(generalStats.value.percentReserved, 0)}%` },
             { id: 'comp-1', metric: 'Total Active Users', value: userStats.value.length },
-            { id: 'comp-2', metric: 'Avg. Reservations/User', value: userStats.value.length > 0 ? Math.round(userStats.value.reduce((sum, u) => sum + (u.reserved || 0), 0) / userStats.value.length) : 0 },
+            { id: 'comp-2', metric: 'Avg. Reservations', value: userStats.value.length > 0 ? Math.round(userStats.value.reduce((sum, u) => sum + (u.reserved || 0), 0) / userStats.value.length) : 0 },
             { id: 'comp-3', metric: 'Error Rate', value: `${generalStats.value.percentError || 0}%` }
           ];
         }

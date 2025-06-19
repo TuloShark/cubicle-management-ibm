@@ -204,19 +204,19 @@ function generatePeakHoursData(avgUtilization) {
   return [
     { 
       hour: 9, 
-      utilizationPercent: Math.round(avgUtilization * PEAK_HOURS_MULTIPLIERS.MORNING_LOW) 
+      utilizationPercent: Math.min(100, Math.round(avgUtilization * PEAK_HOURS_MULTIPLIERS.MORNING_LOW))
     },
     { 
       hour: 10, 
-      utilizationPercent: Math.round(avgUtilization * PEAK_HOURS_MULTIPLIERS.MORNING_HIGH) 
+      utilizationPercent: Math.min(100, Math.round(avgUtilization * PEAK_HOURS_MULTIPLIERS.MORNING_HIGH))
     },
     { 
       hour: 14, 
-      utilizationPercent: Math.round(avgUtilization * PEAK_HOURS_MULTIPLIERS.AFTERNOON_HIGH) 
+      utilizationPercent: Math.min(100, Math.round(avgUtilization * PEAK_HOURS_MULTIPLIERS.AFTERNOON_HIGH))
     },
     { 
       hour: 15, 
-      utilizationPercent: Math.round(avgUtilization * PEAK_HOURS_MULTIPLIERS.AFTERNOON_MID) 
+      utilizationPercent: Math.min(100, Math.round(avgUtilization * PEAK_HOURS_MULTIPLIERS.AFTERNOON_MID))
     }
   ];
 }
