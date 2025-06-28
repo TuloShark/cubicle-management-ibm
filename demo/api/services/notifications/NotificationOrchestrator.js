@@ -153,6 +153,13 @@ class NotificationOrchestrator {
         throw new Error(`User not found or has no reservations${dateMsg}`);
       }
 
+      // Format sentBy data for logging
+      const sentByData = sentBy ? {
+        uid: sentBy,
+        email: user.email, // Use recipient's email as fallback
+        displayName: user.displayName || ''
+      } : null;
+
       const results = {
         email: null,
         slack: null,
@@ -168,11 +175,11 @@ class NotificationOrchestrator {
           
           // Log successful email
           await this.logNotification({
-            type: 'individual_email',
+            type: 'email',
             status: 'success',
             message: `Individual cubicle sequence email sent to ${user.email}${date ? ` for date ${date}` : ''}`,
             recipients: [user.email],
-            sentBy,
+            sentBy: sentByData,
             data: { 
               cubicleSequence: user.cubicleSequence, 
               reservationCount: user.totalReservations,
@@ -185,12 +192,12 @@ class NotificationOrchestrator {
           
           // Log email error
           await this.logNotification({
-            type: 'individual_email',
+            type: 'email',
             status: 'error',
             message: `Failed to send individual email to ${user.email}`,
             recipients: [user.email],
             error: emailError.message,
-            sentBy
+            sentBy: sentByData
           });
         }
       } else {
@@ -205,11 +212,11 @@ class NotificationOrchestrator {
           
           // Log successful Slack
           await this.logNotification({
-            type: 'individual_slack',
+            type: 'slack',
             status: 'success',
             message: `Individual cubicle sequence Slack sent to ${user.email}${date ? ` for date ${date}` : ''}`,
             recipients: [user.email],
-            sentBy,
+            sentBy: sentByData,
             data: { 
               cubicleSequence: user.cubicleSequence, 
               reservationCount: user.totalReservations,
@@ -222,12 +229,12 @@ class NotificationOrchestrator {
           
           // Log Slack error
           await this.logNotification({
-            type: 'individual_slack',
+            type: 'slack',
             status: 'error',
             message: `Failed to send individual Slack to ${user.email}`,
             recipients: [user.email],
             error: slackError.message,
-            sentBy
+            sentBy: sentByData
           });
         }
       } else {
@@ -254,7 +261,11 @@ class NotificationOrchestrator {
         message: `Failed to send individual notification to user ${userId}`,
         recipients: [],
         error: error.message,
-        sentBy
+        sentBy: sentBy ? {
+          uid: sentBy,
+          email: 'unknown@example.com', // Fallback email
+          displayName: 'Unknown User'
+        } : null
       });
       
       throw error;
@@ -276,6 +287,13 @@ class NotificationOrchestrator {
         return { sentCount: 0, users: [], totalUsers: 0 };
       }
 
+      // Format sentBy data for logging
+      const sentByData = sentBy ? {
+        uid: sentBy,
+        email: 'system@ibm.com', // System email for bulk operations
+        displayName: 'System'
+      } : null;
+
       const results = {
         email: null,
         slack: null,
@@ -294,7 +312,7 @@ class NotificationOrchestrator {
             status: 'success',
             message: `Bulk email notifications completed - ${results.email.sentCount}/${results.email.totalUsers} sent`,
             recipients: results.email.successEmails,
-            sentBy,
+            sentBy: sentByData,
             data: { totalUsers: results.email.totalUsers, successCount: results.email.sentCount }
           });
         } catch (emailError) {
@@ -308,7 +326,7 @@ class NotificationOrchestrator {
             message: `Bulk email notifications failed: ${emailError.message}`,
             recipients: [],
             error: emailError.message,
-            sentBy
+            sentBy: sentByData
           });
         }
       } else {
@@ -326,7 +344,7 @@ class NotificationOrchestrator {
             status: 'success',
             message: `Bulk Slack notifications completed - ${results.slack.sentCount}/${results.slack.totalUsers} sent`,
             recipients: results.slack.successEmails,
-            sentBy,
+            sentBy: sentByData,
             data: { totalUsers: results.slack.totalUsers, successCount: results.slack.sentCount }
           });
         } catch (slackError) {
@@ -340,7 +358,7 @@ class NotificationOrchestrator {
             message: `Bulk Slack notifications failed: ${slackError.message}`,
             recipients: [],
             error: slackError.message,
-            sentBy
+            sentBy: sentByData
           });
         }
       } else {
@@ -533,6 +551,13 @@ class NotificationOrchestrator {
         throw new Error('User not found or has no reservations');
       }
 
+      // Format sentBy data for logging
+      const sentByData = {
+        uid: userId,
+        email: user.email,
+        displayName: user.displayName || ''
+      };
+
       const result = {
         success: false,
         user: user.email,
@@ -545,20 +570,22 @@ class NotificationOrchestrator {
           result.success = true;
           
           await this.logNotification({
-            type: 'custom_email',
+            type: 'email',
             status: 'success',
             message: `Custom email sent to ${user.email}`,
             recipients: [user.email],
+            sentBy: sentByData,
             data: { customMessage: message }
           });
         } catch (error) {
           result.error = error.message;
           await this.logNotification({
-            type: 'custom_email',
+            type: 'email',
             status: 'error',
             message: `Failed to send custom email to ${user.email}`,
             recipients: [user.email],
-            error: error.message
+            error: error.message,
+            sentBy: sentByData
           });
         }
       } else if (type === 'slack' && this.slackService.isConfigured()) {
@@ -567,20 +594,22 @@ class NotificationOrchestrator {
           result.success = true;
           
           await this.logNotification({
-            type: 'custom_slack',
+            type: 'slack',
             status: 'success',
             message: `Custom Slack message sent to ${user.email}`,
             recipients: [user.email],
+            sentBy: sentByData,
             data: { customMessage: message }
           });
         } catch (error) {
           result.error = error.message;
           await this.logNotification({
-            type: 'custom_slack',
+            type: 'slack',
             status: 'error',
             message: `Failed to send custom Slack message to ${user.email}`,
             recipients: [user.email],
-            error: error.message
+            error: error.message,
+            sentBy: sentByData
           });
         }
       } else {
@@ -650,7 +679,7 @@ class NotificationOrchestrator {
           userId,
           email: `${userId}@example.com`, // This should be updated with real email
           emailEnabled: true,
-          slackEnabled: false
+          slackEnabled: true
         });
         await defaultSettings.save();
         return type === 'email'; // Default to email enabled

@@ -160,9 +160,21 @@ class SlackNotificationService {
     }
 
     const slackMessage = this.formatCubicleSequenceMessage(user, date);
-    
-    await axios.post(this.slackWebhookUrl, slackMessage);
-    logger.info(`Slack cubicle sequence notification sent for ${user.email}`);
+    try {
+      const response = await axios.post(this.slackWebhookUrl, slackMessage);
+      logger.info(`Slack cubicle sequence notification sent for ${user.email}`, { status: response.status, data: response.data });
+    } catch (error) {
+      logger.error(`Slack API error for ${user.email}:`, {
+        error: error.message,
+        response: error.response ? {
+          status: error.response.status,
+          data: error.response.data
+        } : null,
+        payload: slackMessage,
+        webhook: this.slackWebhookUrl ? this.slackWebhookUrl.slice(0, 40) + '...' : null
+      });
+      throw error;
+    }
   }
 
   /**
@@ -186,7 +198,13 @@ class SlackNotificationService {
         successCount++;
         logger.debug(`Slack notification sent successfully to ${user.email}`);
       } catch (error) {
-        logger.error(`Failed to send Slack notification to ${user.email}:`, error.message);
+        logger.error(`Failed to send Slack notification to ${user.email}:`, {
+          error: error.message,
+          response: error.response ? {
+            status: error.response.status,
+            data: error.response.data
+          } : null
+        });
         results.push({ email: user.email, status: 'error', error: error.message });
       }
     }
@@ -215,8 +233,6 @@ class SlackNotificationService {
     const slackMessage = {
       text: message || 'Cubicle utilization update is now available.',
       channel: '#all-cubicle-managment-testing',
-      username: 'Cubicle Management Bot',
-      icon_emoji: ':office:',
       attachments: [
         {
           color: 'good',
@@ -406,7 +422,7 @@ class SlackNotificationService {
    * @param {string} message - Custom message content
    */
   async sendCustomMessage(user, message) {
-    if (!this.webhookUrl) {
+    if (!this.isConfigured()) {
       throw new Error('Slack service not configured');
     }
 
@@ -437,7 +453,7 @@ class SlackNotificationService {
       ]
     };
 
-    await this.sendMessage(slackMessage);
+    await axios.post(this.slackWebhookUrl, slackMessage);
     logger.info(`Custom Slack message sent for ${user.email}`);
   }
 

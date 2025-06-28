@@ -436,11 +436,11 @@ async function startApplication() {
       port: config.ENV.PORT
     });
     
-    // Initialize notification orchestrator
-    const notificationOrchestrator = new NotificationOrchestrator();
-    
-    // Initialize database connection
+    // Initialize database connection first
     await initializeDatabase();
+    
+    // Initialize notification orchestrator after database connection
+    const notificationOrchestrator = new NotificationOrchestrator();
     
     // Seed data if requested
     if (config.ENV.SEED_DATA) {

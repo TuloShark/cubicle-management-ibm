@@ -124,21 +124,34 @@ spec:
               name: cubicle-secrets
               key: API_RATE_LIMIT
         
-        - name: EMAIL_HOST
+        # Email Service Configuration (mapped from secrets)
+        - name: SMTP_HOST
           valueFrom:
             secretKeyRef:
               name: cubicle-secrets
               key: EMAIL_HOST
-        - name: EMAIL_USER
+        - name: SMTP_PORT
+          valueFrom:
+            secretKeyRef:
+              name: cubicle-secrets
+              key: EMAIL_PORT
+        - name: SMTP_USER
           valueFrom:
             secretKeyRef:
               name: cubicle-secrets
               key: EMAIL_USER
-        - name: EMAIL_PASS
+        - name: SMTP_PASSWORD
           valueFrom:
             secretKeyRef:
               name: cubicle-secrets
               key: EMAIL_PASS
+        
+        # Slack Service Configuration
+        - name: SLACK_WEBHOOK_URL
+          valueFrom:
+            secretKeyRef:
+              name: cubicle-secrets
+              key: SLACK_WEBHOOK_URL
         
         # Timezone setting
         - name: TZ
